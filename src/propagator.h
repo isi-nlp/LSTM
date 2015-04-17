@@ -131,44 +131,7 @@ namespace nplm
 				}		   
 		   
 			}
-	        // Output embedding layer
-		    
 
-	        //start_timer(7);
-
-		 	//stop_timer(7);
-			/*
-		    start_timer(8);
-		  if (parameter_update == "SGD") {
-		    output_layer_node.param->computeGradient(second_hidden_activation_node.fProp_matrix,
-		               output,
-		               learning_rate,
-		               momentum);
-		  } else if (parameter_update == "ADA") {
-		    output_layer_node.param->computeGradientAdagrad(second_hidden_activation_node.fProp_matrix,
-		               output,
-		               learning_rate);
-		  } else if (parameter_update == "ADAD") {
-		    //std::cerr<<"Adadelta gradient"<<endl;
-		    int current_minibatch_size = second_hidden_activation_node.fProp_matrix.cols();
-		    output_layer_node.param->computeGradientAdadelta(second_hidden_activation_node.fProp_matrix,
-		               output,
-		               1.0/current_minibatch_size,
-		               conditioning_constant,
-		               decay);
-		  } else {
-		    std::cerr<<"Parameter update :"<<parameter_update<<" is unrecognized"<<std::endl;
-		  }
-			stop_timer(8);
-			
-			bPropRest(data, 
-		      learning_rate,
-		      momentum,
-		      L2_reg,
-		      parameter_update,
-		      conditioning_constant,
-		      decay);
-			*/
 	  }
  };		
 } // namespace nplm
