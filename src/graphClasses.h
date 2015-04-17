@@ -314,7 +314,7 @@ public:
 											input_layer_node.fProp_matrix);			
 		
 		//Derivatives of the input embeddings							
-	    input_layer_node.param->computeGradient(o_t_node.bProp_matrix + 
+	    input_layer_node.param->updateGradient(o_t_node.bProp_matrix + 
 												f_t_node.bProp_matrix + 
 												i_t_node.bProp_matrix + 
 												tanh_c_prime_t_node.bProp_matrix,
