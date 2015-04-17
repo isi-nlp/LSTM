@@ -99,24 +99,7 @@ public:
 		tanh_c_prime_t_node(),
 		tanh_c_t_node(),
 		input_layer_node() {}
-	/*	
-	LSTM_node(Linear_layer *W_x_to_i,
-			  Linear_layer *W_x_to_f,
-			  Linear_layer *W_x_to_c,
-			  Linear_layer *W_x_to_o,
-			  Linear_layer *W_h_to_i,
-  			  Linear_layer *W_h_to_f,
-  			  Linear_layer *W_h_to_c,
-  			  Linear_layer *W_h_to_o,
-			  Linear_diagonal_layer *W_c_to_i_node,
-			  Linear_diagonal_layer *W_c_to_f_node,
-			  Linear_diagonal_layer *W_c_to_o_node,
-			  Hidden_layer *i_t,
-			  Hidden_layer *f_t,
-			  Hidden_layer *o_t,
-			  Hidden_layer *tanh_c_prime_t,
-			  Hidden_layer *tanh_c_t) : W_x_to_i_node()
-	*/
+
 	LSTM_node(model &lstm, int minibatch_size): 
 		W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
 		W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
