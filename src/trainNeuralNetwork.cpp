@@ -106,10 +106,7 @@ int main(int argc, char** argv)
 
       ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      ValueArg<int> rhs_rule_vocab_size("", "rhs_rule_vocab_size", "RHS RULE Vocabulary size. Default: auto.", false, 0, "int", cmd);
-	  ValueArg<int> Td_vocab_size("", "Td_vocab_size", "T(d) Vocabulary size. Default: auto.", false, 0, "int", cmd);
-	  ValueArg<int> d_vocab_size("", "d_vocab_size", "d Vocabulary size. Default: auto.", false, 0, "int", cmd);
-	  ValueArg<int> output_vocab_size("", "output_vocab_size", "Output Vocabulary size. Default: auto.", false, 0, "int", cmd);
+      ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
 
       ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , false, "", "string", cmd);
@@ -123,14 +120,7 @@ int main(int argc, char** argv)
       ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
-	  
-	  ValueArg<int> rhs_rule_index("", "rhs_rule_index", "rhs rule index: 15.", false, 15, "int", cmd);
-	  ValueArg<int> Td_index("", "Td_index", "Td index 16.", false, 16, "int", cmd);
-      ValueArg<string> Td_words_file("", "Td_words_file", "Td words Vocabulary." , false, "", "string", cmd);
-      ValueArg<string> rhs_rule_words_file("", "rhs_rule_words_file", "rhs rule Vocabulary." , false, "", "string", cmd);
-      ValueArg<string> d_words_file("", "d_words_file", "d Vocabulary." , false, "", "string", cmd);
-	  
-	  
+
 
       cmd.parse(argc, argv);
 
@@ -142,10 +132,6 @@ int main(int argc, char** argv)
       myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
-	  myParam.Td_words_file = Td_words_file.getValue();
-	  myParam.rhs_rule_words_file = rhs_rule_words_file.getValue();
-	  myParam.d_words_file = d_words_file.getValue();
-	  
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
 
@@ -158,11 +144,6 @@ int main(int argc, char** argv)
       if (vocab_size.getValue() >= 0) {
 	      myParam.input_vocab_size = myParam.output_vocab_size = vocab_size.getValue();
       }
-	  //GETTING THE VOCAB SIZES FOR THE VARIOUS OUTPUTS
-	  myParam.rhs_rule_vocab_size = rhs_rule_vocab_size.getValue();
-	  myParam.Td_vocab_size = Td_vocab_size.getValue();
-	  myParam.d_vocab_size = d_vocab_size.getValue();
-	  
       myParam.num_hidden = num_hidden.getValue();
       myParam.activation_function = activation_function.getValue();
       myParam.loss_function = loss_function.getValue();
@@ -194,11 +175,6 @@ int main(int argc, char** argv)
       myParam.init_range = init_range.getValue();
       myParam.normalization_init = normalization_init.getValue();
       myParam.parameter_update = parameter_update.getValue();
-	  
-	  myParam.Td_index = Td_index.getValue();
-	  myParam.rhs_rule_index = rhs_rule_index.getValue();
-	  myParam.d_words_file = d_words_file.getValue();
-	  myParam.Td_words_file = Td_words_file.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -214,14 +190,7 @@ int main(int argc, char** argv)
       cerr << input_vocab_size.getDescription() << sep << input_vocab_size.getValue() << endl;
       cerr << output_vocab_size.getDescription() << sep << output_vocab_size.getValue() << endl;
       cerr << mmap_file.getDescription() << sep << mmap_file.getValue() << endl;
-	  
-	  cerr << d_words_file.getDescription() << sep << d_words_file.getValue() << endl;
-	  cerr << Td_words_file.getDescription() << sep << Td_words_file.getValue() << endl;
-	  cerr << rhs_rule_words_file.getDescription() << sep << rhs_rule_words_file.getValue() << endl;
-	  
-	  cerr << Td_index.getDescription() << sep << Td_index.getValue() << endl;
-	  cerr << rhs_rule_index.getDescription() << sep << rhs_rule_index.getValue() << endl;
-	  
+
       if (embedding_dimension.getValue() >= 0)
       {
 	      cerr << embedding_dimension.getDescription() << sep << embedding_dimension.getValue() << endl;
@@ -271,7 +240,7 @@ int main(int argc, char** argv)
       if (myParam.normalization){
 	      cerr << normalization_init.getDescription() << sep << normalization_init.getValue() << endl;
       }
-	  
+
       cerr << use_momentum.getDescription() << sep << use_momentum.getValue() << endl;
       if (myParam.use_momentum)
       {
@@ -448,49 +417,24 @@ int main(int argc, char** argv)
     ///// Read in vocabulary file. We don't actually use it; it just gets reproduced in the output file
 
     vector<string> input_words;
-    if (myParam.input_words_file != "") {
-	    readWordsFile(myParam.input_words_file, input_words);
-	
-	
-		if (myParam.input_vocab_size == 0) {
-		    myParam.input_vocab_size = input_words.size();
-		}
+    if (myParam.input_words_file != "")
+    {
+        readWordsFile(myParam.input_words_file, input_words);
+	if (myParam.input_vocab_size == 0)
+	    myParam.input_vocab_size = input_words.size();
     }
-	
+
     vector<string> output_words;
-    if (myParam.output_words_file != "") {
-	    readWordsFile(myParam.output_words_file, output_words);
-	
-		if (myParam.output_vocab_size == 0)
-		    myParam.output_vocab_size = output_words.size();
+    if (myParam.output_words_file != "")
+    {
+        readWordsFile(myParam.output_words_file, output_words);
+	if (myParam.output_vocab_size == 0)
+	    myParam.output_vocab_size = output_words.size();
     }
-	
-	//READING THE Td, rhs_rule and d word vocabularies
-	vector<string> rhs_rule_words;
-	if (myParam.rhs_rule_words_file != "") {
-		readWordsFile(myParam.rhs_rule_words_file, rhs_rule_words);
-		if (myParam.rhs_rule_vocab_size == 0)
-			myParam.rhs_rule_vocab_size = rhs_rule_words.size();
-	}
-	
-	vector<string> Td_words;
-	if (myParam.Td_words_file != ""){
-		readWordsFile(myParam.Td_words_file, Td_words);
-		if (myParam.Td_vocab_size == 0)
-			myParam.Td_vocab_size = Td_words.size();
-	}
-	
-	vector<string> d_words;
-	if (myParam.d_words_file != ""){
-		readWordsFile(myParam.d_words_file, d_words);
-		if (myParam.d_vocab_size == 0)
-			myParam.d_vocab_size = d_words.size();
-	}
-	
-	cerr<< "Just read d words"<<endl;
+
     ///// Construct unigram model and sampler that will be used for NCE
 
-    vector<data_size_t> unigram_counts(myParam.d_vocab_size);
+    vector<data_size_t> unigram_counts(myParam.output_vocab_size);
     for (data_size_t train_id=0; train_id < training_data_size; train_id++)
     {
         int output_word;
@@ -504,7 +448,7 @@ int main(int argc, char** argv)
 	    unigram_counts[output_word] += 1;
     }
     multinomial<data_size_t> unigram (unigram_counts);
-	cerr<<" Read unigram counts "<<endl;
+
     ///// Create and initialize the neural network and associated propagators.
     model nn;
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
@@ -513,28 +457,21 @@ int main(int argc, char** argv)
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
     } else {
-	  cerr<<" Creating the model "<<endl;
       nn.resize(myParam.ngram_size,
           myParam.input_vocab_size,
-          myParam.d_vocab_size,
+          myParam.output_vocab_size,
           myParam.input_embedding_dimension,
           myParam.num_hidden,
-          myParam.output_embedding_dimension,
-		  myParam.rhs_rule_vocab_size,
-		  myParam.Td_vocab_size);
-	  cerr<<" Created the model"<<endl;
+          myParam.output_embedding_dimension);
+
       nn.initialize(rng,
           myParam.init_normal,
           myParam.init_range,
-          -log(myParam.d_vocab_size),
-		  -log(myParam.Td_vocab_size),
-		  -log(myParam.rhs_rule_vocab_size),
+          -log(myParam.output_vocab_size),
           myParam.parameter_update,
           myParam.adagrad_epsilon);
-		  cerr<<" Initialized the model "<<endl;
       nn.set_activation_function(string_to_activation_function(myParam.activation_function));
     }
-	cerr<<" Created the model"<<endl;
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     propagator prop(nn, myParam.minibatch_size);
@@ -586,55 +523,27 @@ int main(int argc, char** argv)
         cerr << "Current learning rate: " << current_learning_rate << endl;
 
         if (myParam.use_momentum) 
-	    	cerr << "Current momentum: " << current_momentum << endl;
-		else
+	    cerr << "Current momentum: " << current_momentum << endl;
+	else
             current_momentum = -1;
 
 	cerr << "Training minibatches: ";
 
+	double log_likelihood = 0.0;
 
 	int num_samples = 0;
-	int num_d_samples = 0;
-	int num_Td_samples = myParam.Td_vocab_size;
-	int num_rhs_rule_samples = myParam.rhs_rule_vocab_size;
-	
-	//int rhs_rule_index = 15;
-	//int Td_index = 16;
-	//int d_index = 17;
-	
-	if (loss_function == LogLoss) {
+	if (loss_function == LogLoss)
 	    num_samples = output_vocab_size;
-		num_d_samples = myParam.d_vocab_size;
-	}
-	else if (loss_function == NCELoss) {
+	else if (loss_function == NCELoss)
 	    num_samples = 1+num_noise_samples;
-		num_d_samples = 1+num_noise_samples;
-	}
-	Matrix<double,Dynamic,Dynamic> minibatch(ngram_size, minibatch_size);
 
 	Matrix<double,Dynamic,Dynamic> minibatch_weights(num_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> d_minibatch_weights(num_d_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> Td_minibatch_weights(num_Td_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> rhs_rule_minibatch_weights(num_rhs_rule_samples, minibatch_size);
-	
 	Matrix<int,Dynamic,Dynamic> minibatch_samples(num_samples, minibatch_size);
-	Matrix<int,Dynamic,Dynamic> d_minibatch_samples(num_d_samples, minibatch_size);
-		
 	Matrix<double,Dynamic,Dynamic> scores(num_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> d_scores(num_d_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> Td_scores(num_Td_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> rhs_rule_scores(num_rhs_rule_samples, minibatch_size);
-	
 	Matrix<double,Dynamic,Dynamic> probs(num_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> d_probs(num_d_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> Td_probs(num_Td_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> rhs_rule_probs(num_rhs_rule_samples, minibatch_size);
-	
-	
-    double log_likelihood = 0.0;
-	
-   for(data_size_t batch=0;batch<num_batches;batch++)
-   {
+
+        for(data_size_t batch=0;batch<num_batches;batch++)
+        {
             if (batch > 0 && batch % 10000 == 0)
             {
 	        cerr << batch <<"...";
@@ -642,15 +551,15 @@ int main(int argc, char** argv)
 
             data_size_t minibatch_start_index = minibatch_size * batch;
 
-	      int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
-	    #ifdef MAP
-		    Matrix<int,Dynamic,Dynamic> minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-	    #else 
-	      //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
-	      Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-		  //cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
-		  //cerr<<"Minibatch size "<<current_minibatch_size<<endl;
-          if (use_mmap_file == true) {
+      int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
+      #ifdef MAP
+	    Matrix<int,Dynamic,Dynamic> minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
+      #else 
+      //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
+	    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
+		//cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
+		//cerr<<"Minibatch size "<<current_minibatch_size<<endl;
+            if (use_mmap_file == true) {
             minibatch.setZero(ngram_size,current_minibatch_size);
             //now reading the ngrams from the mmaped file
               for (int k=0; k<ngram_size; k++){
@@ -660,196 +569,89 @@ int main(int argc, char** argv)
                   minibatch(k,index) = training_data_flat_mmap->at(current_index*ngram_size+k);
                 }
               }
-          } else {
+            } else {
               minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-          }
-      	#endif 
-        double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
-        //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
+            }
+      #endif 
+            double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+            //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
-        /*
-        if (batch == rand() % num_batches)
-        {
-            cerr<<"we are checking the gradient in batch "<<batch<<endl;
-            /////////////////////////CHECKING GRADIENTS////////////////////////////////////////
-            gradientChecking(myParam,minibatch_start_index,current_minibatch_size,word_nodes,context_nodes,hidden_layer_node,hidden_layer_to_output_node,
-                          shuffled_training_data,c_h,unif_real_vector,eng_real_vector,unif_int_vector,eng_int_vector,unigram_probs_vector,
-                          q_vector,J_vector,D_prime);
-        }
-        */
+            /*
+            if (batch == rand() % num_batches)
+            {
+                cerr<<"we are checking the gradient in batch "<<batch<<endl;
+                /////////////////////////CHECKING GRADIENTS////////////////////////////////////////
+                gradientChecking(myParam,minibatch_start_index,current_minibatch_size,word_nodes,context_nodes,hidden_layer_node,hidden_layer_to_output_node,
+                              shuffled_training_data,c_h,unif_real_vector,eng_real_vector,unif_int_vector,eng_int_vector,unigram_probs_vector,
+                              q_vector,J_vector,D_prime);
+            }
+            */
 
-        ///// Forward propagation
-		//Note that for FPROP, we need to send all the input words except the last one, because they participat in predicting the next word
-		prop.fProp(minibatch.topRows(ngram_size-1),
-					myParam.rhs_rule_index,
-					myParam.Td_index); 
+            ///// Forward propagation
 
-	  	//LOG LIKELIHOOD LOSS FOR RHS_RULE
-	    ///// Standard log-likelihood
-	    start_timer(1);
-	    prop.rhs_rule_output_layer_node.param->fProp(prop.first_hidden_activation_node.fProp_matrix, rhs_rule_scores);
-	    stop_timer(1);
+            prop.fProp(minibatch.topRows(ngram_size-1));
 
-	    double rhs_rule_minibatch_log_likelihood = 0.;
-	    start_timer(2);
-	    SoftmaxLogLoss().fProp(rhs_rule_scores.leftCols(current_minibatch_size), 
-	               minibatch.row(myParam.rhs_rule_index-1), 
-	               rhs_rule_probs, 
-	               rhs_rule_minibatch_log_likelihood);
-	    stop_timer(2);
-	    log_likelihood += rhs_rule_minibatch_log_likelihood;
-
-	    ///// Backward propagation
-  
-	    start_timer(3);
-	    SoftmaxLogLoss().bProp(minibatch.row(myParam.rhs_rule_index-1).leftCols(current_minibatch_size), 
-	               rhs_rule_probs.leftCols(current_minibatch_size), 
-	               rhs_rule_minibatch_weights);
-	    stop_timer(3);
-
-	  //LOG LIKELIHOOD LOSS FOR Td
-	  ///// Standard log-likelihood
-	  start_timer(4);
-	    prop.Td_output_layer_node.param->fProp(prop.Td1_hidden_activation_node.fProp_matrix, Td_scores);
-	    stop_timer(4);
-
-	    double Td_minibatch_log_likelihood = 0.;
-	    start_timer(5);
-	    SoftmaxLogLoss().fProp(Td_scores.leftCols(current_minibatch_size), 
-	                 minibatch.row(myParam.Td_index-1), 
-	                 Td_probs, 
-	                 Td_minibatch_log_likelihood);
-	    stop_timer(5);
-	    log_likelihood += Td_minibatch_log_likelihood;
-
-	    ///// Backward propagation
-
-	    start_timer(6);
-	    SoftmaxLogLoss().bProp(minibatch.row(myParam.Td_index-1).leftCols(current_minibatch_size), 
-	                 Td_probs.leftCols(current_minibatch_size), 
-	                 Td_minibatch_weights);
-		   			
-	    stop_timer(6);		  
-		
-		//LOG LOSS OR NCE LOSS FOR THE OUTPUT LAYER
 	    if (loss_function == NCELoss)
 	    {
-		    ///// Noise-contrastive estimation
 
-		    // Generate noise samples. Gather positive and negative samples into matrix.
-
-	      	start_timer(7);
-
-	        d_minibatch_samples.block(0, 0, 1, current_minibatch_size) = minibatch.bottomRows(1);
-        	//cerr<<"Training data is"<<minibatch.bottomRows(1)<<endl;
-	        for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++)
-	            for (int train_id = 0; train_id < current_minibatch_size; train_id++)
-	                d_minibatch_samples(sample_id, train_id) = unigram.sample(rng);
-          
-	        stop_timer(7);
-			//cerr<<"D minibatch samples is "<<d_minibatch_samples.topRows(1)<<endl;
-			//getchar();
-	        // Final forward propagation step (sparse)
-	        start_timer(8);
-	        prop.d_output_layer_node.param->fProp(prop.d1_hidden_activation_node.fProp_matrix,
-	                    d_minibatch_samples,
-						d_scores);
-	        stop_timer(8);
-
-	        // Apply normalization parameters
-	        if (myParam.normalization)
-	        {
-	            for (int train_id = 0;train_id < current_minibatch_size;train_id++)
-	            {
-		          Matrix<int,Dynamic,1> context = minibatch.block(0, train_id, ngram_size-3, 1);	
-		          d_scores.col(train_id).array() += c_h[context];
-	            }
-	        }
-
-	        double d_minibatch_log_likelihood = 0;
-	        start_timer(9);
-	        softmax_loss.fProp(d_scores.leftCols(current_minibatch_size), 
-	               d_minibatch_samples,
-	               d_probs,
-				   d_minibatch_log_likelihood);
-	        stop_timer(9);
-	        log_likelihood += d_minibatch_log_likelihood;
-
-	        ///// Backward propagation
-
-	        start_timer(10);
-	        softmax_loss.bProp(d_probs, d_minibatch_weights);
-	        stop_timer(10);
-        
-	        // Update the normalization parameters
-        
-	        if (myParam.normalization)
-	        {
-	          for (int train_id = 0;train_id < current_minibatch_size;train_id++)
-	          {
-	            Matrix<int,Dynamic,1> context = minibatch.block(0, train_id, ngram_size-3, 1); 
-	            c_h[context] += adjusted_learning_rate * minibatch_weights.col(train_id).sum();
-	          }
-	        }
-			// BACKPROPAGATION
-	        // Be careful of short minibatch
-	        prop.bProp(minibatch.topRows(myParam.ngram_size-1),//.leftCols(current_minibatch_size),
-	             d_minibatch_samples.leftCols(current_minibatch_size), 
-	             d_minibatch_weights.leftCols(current_minibatch_size),
-				 rhs_rule_minibatch_weights,
-				 Td_minibatch_weights,
-	             adjusted_learning_rate, 
-	             current_momentum,
-	             myParam.L2_reg,
-	             myParam.parameter_update,
-	             myParam.conditioning_constant,
-	             myParam.decay,
-				 myParam.rhs_rule_index,
-				 myParam.Td_index);
 	    }
 	    else if (loss_function == LogLoss)
 	    {
-		      ///// Standard log-likelihood
-		    start_timer(7);
-			//LOG LIKELIHOOD FPROP
-	        prop.d_output_layer_node.param->fProp(prop.d1_hidden_activation_node.fProp_matrix,
-											d_scores);
-	        stop_timer(7);
+			/*
+	      ///// Standard log-likelihood
+	    start_timer(4);
+        prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
+        stop_timer(4);
 
-	        double d_minibatch_log_likelihood=0.;
-	        start_timer(8);
-	        SoftmaxLogLoss().fProp(d_scores.leftCols(current_minibatch_size), 
-	                   minibatch.row(ngram_size-1), 
-	                   d_probs, 
-	                   d_minibatch_log_likelihood);
-	        stop_timer(8);
-	        log_likelihood += d_minibatch_log_likelihood;
+        double minibatch_log_likelihood;
+        start_timer(5);
+        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+                   minibatch.row(ngram_size-1), 
+                   probs, 
+                   minibatch_log_likelihood);
+        stop_timer(5);
+        log_likelihood += minibatch_log_likelihood;
 
-	        ///// Backward propagation
+        ///// Backward propagation
         
-	        start_timer(9);
-	        SoftmaxLogLoss().bProp(minibatch.row(ngram_size-1).leftCols(current_minibatch_size), 
-	                   d_probs.leftCols(current_minibatch_size), 
-	                   d_minibatch_weights);
-	        stop_timer(9);
-        	
-			// BACKPROPAGATION
-	        prop.bProp(minibatch.topRows(myParam.ngram_size-1).leftCols(current_minibatch_size),
-	             d_minibatch_weights,
-				 rhs_rule_minibatch_weights,
-				 Td_minibatch_weights,				 
-	             adjusted_learning_rate,
-	             current_momentum,
-	             myParam.L2_reg,
-	             myParam.parameter_update,
-	             myParam.conditioning_constant,
-	             myParam.decay,
-				 myParam.rhs_rule_index,
-				 myParam.Td_index);
+        start_timer(6);
+        SoftmaxLogLoss().bProp(minibatch.row(ngram_size-1).leftCols(current_minibatch_size), 
+                   probs.leftCols(current_minibatch_size), 
+                   minibatch_weights);
+        stop_timer(6);
+        
+        prop.bProp(minibatch.topRows(ngram_size-1).leftCols(current_minibatch_size),
+             minibatch_weights,
+             adjusted_learning_rate,
+             current_momentum,
+             myParam.L2_reg,
+             myParam.parameter_update,
+             myParam.conditioning_constant,
+             myParam.decay);
           }
-		  
+  	    ///// Standard log-likelihood for rhs rule output layer
+  	    start_timer(4);
+          prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
+          stop_timer(4);
 
-    }
+          double minibatch_log_likelihood;
+          start_timer(5);
+          SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+                     minibatch.row(ngram_size-1), 
+                     probs, 
+                     minibatch_log_likelihood);
+          stop_timer(5);
+          log_likelihood += minibatch_log_likelihood;
+
+          ///// Backward propagation
+        
+          start_timer(6);
+          SoftmaxLogLoss().bProp(minibatch.row(ngram_size-1).leftCols(current_minibatch_size), 
+                     probs.leftCols(current_minibatch_size), 
+                     minibatch_weights);
+          stop_timer(6);		
+		  */  
+      }
 	cerr << "done." << endl;
 
 	if (loss_function == LogLoss)
@@ -868,8 +670,7 @@ int main(int argc, char** argv)
 	  cerr << " " << timer.get(i);
 	cerr << endl;
 	#endif
-	//NO WRITING MODEL AT THIS TIME
-	/*
+
 	if (myParam.model_prefix != "")
 	{
 	    cerr << "Writing model" << endl;
@@ -878,9 +679,7 @@ int main(int argc, char** argv)
 	    else
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
 	}
-	*/
-		//current_learning_rate = current_learning_rate/(1+epoch*0.001);
-		
+	/*
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
             //////COMPUTING VALIDATION SET PERPLEXITY///////////////////////
@@ -888,95 +687,35 @@ int main(int argc, char** argv)
 
             double log_likelihood = 0.0;
 
-		    //Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
-		    //Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
-		    Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
+	    Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
+	    Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
+	    Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
 
-			Matrix<double,Dynamic,Dynamic> minibatch_weights(num_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> d_minibatch_weights(num_d_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> Td_minibatch_weights(num_Td_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> rhs_rule_minibatch_weights(num_rhs_rule_samples, validation_minibatch_size);
-	
-			Matrix<double,Dynamic,Dynamic> scores(num_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> d_scores(num_d_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> Td_scores(num_Td_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> rhs_rule_scores(num_rhs_rule_samples, validation_minibatch_size);
-	
-			Matrix<double,Dynamic,Dynamic> probs(num_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> d_probs(num_d_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> Td_probs(num_Td_samples, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> rhs_rule_probs(num_rhs_rule_samples, validation_minibatch_size);
-			
             for (int validation_batch =0;validation_batch < num_validation_batches;validation_batch++)
             {
                 int validation_minibatch_start_index = validation_minibatch_size * validation_batch;
-				int current_minibatch_size = min(validation_minibatch_size,
-								 validation_data_size - validation_minibatch_start_index);
-				minibatch.leftCols(current_minibatch_size) = validation_data.middleCols(validation_minibatch_start_index, 
-													current_minibatch_size);
-				prop_validation.fProp(minibatch.topRows(ngram_size-1),
-										myParam.rhs_rule_index,
-										myParam.Td_index);
-				//WE DONT HAVE THE STANDARD OUTPUT LAYER
-				/*
-				// Do full forward prop through output word embedding layer
-				start_timer(4);
-				prop_validation.output_layer_node.param->fProp(prop_validation.second_hidden_activation_node.fProp_matrix, scores);
-				stop_timer(4);
+		int current_minibatch_size = min(validation_minibatch_size,
+						 validation_data_size - validation_minibatch_start_index);
+		minibatch.leftCols(current_minibatch_size) = validation_data.middleCols(validation_minibatch_start_index, 
+											current_minibatch_size);
+		prop_validation.fProp(minibatch.topRows(ngram_size-1));
 
-				// And softmax and loss. Be careful of short minibatch
-				double minibatch_log_likelihood;
-				start_timer(5);
-				SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
-						       minibatch.row(ngram_size-1),
-						       output_probs,
-						       minibatch_log_likelihood);
-				stop_timer(5);
-				log_likelihood += minibatch_log_likelihood;
-				*/
-										
-				///LOG LIKELIHOOD FOR Td, RHS_RULE AND d
-			    prop_validation.rhs_rule_output_layer_node.param->fProp(prop_validation.first_hidden_activation_node.fProp_matrix, rhs_rule_scores);
-			    //stop_timer(1);
+		// Do full forward prop through output word embedding layer
+		start_timer(4);
+		prop_validation.output_layer_node.param->fProp(prop_validation.second_hidden_activation_node.fProp_matrix, scores);
+		stop_timer(4);
 
-			    double rhs_rule_minibatch_log_likelihood;
-			    //start_timer(2);
-			    SoftmaxLogLoss().fProp(rhs_rule_scores.leftCols(current_minibatch_size), 
-			               minibatch.row(myParam.rhs_rule_index-1), 
-			               rhs_rule_probs, 
-			               rhs_rule_minibatch_log_likelihood);
-			    //stop_timer(2);
-			    log_likelihood += rhs_rule_minibatch_log_likelihood;
-
-			    ///// Backward propagation
-  
-			    //LOG LIKELIHOOD LOSS FOR Td
-			    ///// Standard log-likelihood
-			    //start_timer(4);
-			    prop_validation.Td_output_layer_node.param->fProp(prop_validation.Td1_hidden_activation_node.fProp_matrix, Td_scores);
-			    //stop_timer(4);
-
-			    double Td_minibatch_log_likelihood;
-			    //start_timer(5);
-			    SoftmaxLogLoss().fProp(Td_scores.leftCols(current_minibatch_size), 
-			                 minibatch.row(myParam.Td_index-1), 
-			                 Td_probs, 
-			                 Td_minibatch_log_likelihood);
-			    //stop_timer(5);
-			    log_likelihood += Td_minibatch_log_likelihood;
-
-		        double d_minibatch_log_likelihood;
-		        prop_validation.d_output_layer_node.param->fProp(prop_validation.d1_hidden_activation_node.fProp_matrix,
-												d_scores);
-		        //start_timer(8);
-		        SoftmaxLogLoss().fProp(d_scores.leftCols(current_minibatch_size), 
-		                   minibatch.row(ngram_size-1), 
-		                   d_probs, 
-		                   d_minibatch_log_likelihood);
-		        //stop_timer(8);
-		        log_likelihood += d_minibatch_log_likelihood;
-		    }
-
+		// And softmax and loss. Be careful of short minibatch
+		double minibatch_log_likelihood;
+		start_timer(5);
+		SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+				       minibatch.row(ngram_size-1),
+				       output_probs,
+				       minibatch_log_likelihood);
+		stop_timer(5);
+		log_likelihood += minibatch_log_likelihood;
+	    }
+		
             cerr << "Validation log-likelihood: "<< log_likelihood << endl;
             cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
 
@@ -986,8 +725,9 @@ int main(int argc, char** argv)
                 current_learning_rate /= 2;
             }
             current_validation_ll = log_likelihood;
+	 */
 	}
-
+	
     }
     return 0;
 }

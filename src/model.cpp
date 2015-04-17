@@ -5,7 +5,7 @@
 #include "model.h"
 #include "param.h"
 
-using namespace std	;
+using namespace std;
 using namespace boost;
 using namespace boost::random;
 
@@ -17,118 +17,49 @@ void model::resize(int ngram_size,
     int output_vocab_size,
     int input_embedding_dimension,
     int num_hidden,
-    int output_embedding_dimension,
-	int rhs_rule_vocab_size,
-	int Td_vocab_size)
+    int output_embedding_dimension)
 {
-	cerr<<"ngram size"<<ngram_size<<endl;
-	cerr<<Td_vocab_size<<endl;
-	cerr<<rhs_rule_vocab_size<<endl;
-	cerr<<" About to resize the layers"<<endl;
-	cerr<<input_embedding_dimension<<endl;
-	cerr<<output_embedding_dimension<<endl;
-	cerr<<num_hidden<<endl;
-	
-    input_layer.resize(input_vocab_size, input_embedding_dimension, ngram_size-3);
-    first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-3));
+    input_layer.resize(input_vocab_size, input_embedding_dimension, ngram_size-1);
+    first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-1));
     first_hidden_activation.resize(num_hidden);
     second_hidden_linear.resize(output_embedding_dimension, num_hidden);
     second_hidden_activation.resize(output_embedding_dimension);
-	//Resizing the hidden layers for variout outputs
-	Td1_hidden_activation.resize(output_embedding_dimension);
-	d1_hidden_activation.resize(output_embedding_dimension);
-	//cerr<<"resize"<<endl;
     output_layer.resize(output_vocab_size, output_embedding_dimension);
-	//cerr<<"resize"<<endl;
-	
-	d_output_layer.resize(output_vocab_size,output_embedding_dimension);
-	
-	rhs_rule_output_layer.resize(rhs_rule_vocab_size,output_embedding_dimension);
-	Td_output_layer.resize(Td_vocab_size,output_embedding_dimension);
-	//cerr<<"resize"<<endl;
-	rhs_rule_linear_layer.resize(output_embedding_dimension,input_embedding_dimension);
-	Td_linear_layer.resize(output_embedding_dimension,input_embedding_dimension);
-	//cerr<<"resize"<<endl;
-	rhs_rule_input_layer.resize(rhs_rule_vocab_size, input_embedding_dimension,1);
-	Td_input_layer.resize(Td_vocab_size,input_embedding_dimension,1);
-	//cerr<<" Resized the layers"<<endl;
-	
-		
     this->ngram_size = ngram_size;
     this->input_vocab_size = input_vocab_size;
     this->output_vocab_size = output_vocab_size;
     this->input_embedding_dimension = input_embedding_dimension;
     this->num_hidden = num_hidden;
     this->output_embedding_dimension = output_embedding_dimension;
-	this->rhs_rule_vocab_size = rhs_rule_vocab_size;
-	this->Td_vocab_size = Td_vocab_size;
-	this->d_vocab_size = output_vocab_size;
     premultiplied = false;
 }
-
-//I HAVE TO ADD THE INITIALIZERS
   
 void model::initialize(mt19937 &init_engine,
     bool init_normal,
     double init_range,
-    double init_d_bias,
-	double init_Td_bias,
-	double init_rhs_rule_bias,
+    double init_bias,
     string &parameter_update,
     double adagrad_epsilon)
 {
-	cerr<<"1"<<endl;
     input_layer.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
-		cerr<<"1"<<endl;
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
-        init_d_bias,
+        init_bias,
         parameter_update,
         adagrad_epsilon);
-		cerr<<"1"<<endl;
     first_hidden_linear.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
-		cerr<<"1"<<endl;
     second_hidden_linear.initialize(init_engine,
         init_normal,
         init_range,
-        parameter_update,
-        adagrad_epsilon);
-		cerr<<"1"<<endl;
-    rhs_rule_linear_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-    Td_linear_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-    rhs_rule_output_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        init_rhs_rule_bias,
-        parameter_update,
-        adagrad_epsilon);
-    Td_output_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        init_Td_bias,
-        parameter_update,
-        adagrad_epsilon); 
-    d_output_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        init_d_bias,
         parameter_update,
         adagrad_epsilon);
 }
@@ -137,7 +68,7 @@ void model::premultiply()
 {
     // Since input and first_hidden_linear are both linear,
     // we can multiply them into a single linear layer *if* we are not training
-    int context_size = ngram_size-3;
+    int context_size = ngram_size-1;
     Matrix<double,Dynamic,Dynamic> U = first_hidden_linear.U;
     first_hidden_linear.U.resize(num_hidden, input_vocab_size * context_size);
     for (int i=0; i<context_size; i++)
@@ -188,9 +119,7 @@ void model::readConfig(ifstream &config_file)
         output_vocab_size,
         input_embedding_dimension,
         num_hidden,
-        output_embedding_dimension,
-		45,
-		45);
+        output_embedding_dimension);
     set_activation_function(activation_function);
 }
 

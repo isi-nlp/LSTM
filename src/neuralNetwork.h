@@ -87,7 +87,7 @@ public:
 	mkl_set_num_threads(1);
 	#endif
 
-        prop.fProp(ngram.col(0),15,16);
+        prop.fProp(ngram.col(0));
 
 	int output = ngram(m->ngram_size-1, 0);
 	double log_prob;
@@ -96,13 +96,13 @@ public:
 	if (normalization)
 	{
 	    Eigen::Matrix<double,Eigen::Dynamic,1> scores(m->output_vocab_size);
-	    prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
+	    //prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 	    double logz = logsum(scores.col(0));
 	    log_prob = weight * (scores(output, 0) - logz);
 	}
 	else
 	{
-	    log_prob = weight * prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, output, 0);
+	    //log_prob = weight * prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, output, 0);
 	}
 	stop_timer(3);
 
@@ -130,12 +130,12 @@ public:
 	assert (ngram.rows() == m->ngram_size);
 	//assert (ngram.cols() <= prop.get_minibatch_size());
 
-        prop.fProp(ngram,15,16);
+        prop.fProp(ngram);
 
 	if (normalization)
 	{
 	    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> scores(m->output_vocab_size, ngram.cols());
-	    prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
+	    //prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 
 	    // And softmax and loss
 	    Matrix<double,Dynamic,Dynamic> output_probs(m->output_vocab_size, ngram.cols());
@@ -152,7 +152,7 @@ public:
 	    for (int j=0; j<ngram.cols(); j++)
 	    {
 	        int output = ngram(m->ngram_size-1, j);
-	        log_probs(0, j) = weight * prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, output, j);
+	        //log_probs(0, j) = weight * prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, output, j);
 	    }
 	}
     }

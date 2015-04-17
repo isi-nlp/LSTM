@@ -50,15 +50,7 @@ struct SoftmaxLogLoss
 	for (int train_id = 0; train_id < input.cols(); train_id++)
 	{
 	    double normalization = logsum(input.col(train_id));
-		/*
-		cerr<<"normalization is "<<normalization<<endl;
-		cerr<<"train id is"<<train_id<<endl;
-		cerr<<"number of input cols is "<<input.cols()<<" and number of output cols is "<<output.cols()<<endl;
-		cerr<<"number of input rows is "<<input.rows()<<" and number of output rows is "<<output.rows()<<endl;
-		*/
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
-
-		//cerr<<"before computing the log likelihood"<<output(output_words(train_id), train_id)<<endl;
 	    log_likelihood += output(output_words(train_id), train_id);
 	}
 	loss = log_likelihood;

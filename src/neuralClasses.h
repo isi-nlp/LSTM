@@ -11,7 +11,7 @@
 #include "maybe_omp.h"
 
 #include "util.h"
-#include "graphClasses.h"
+//#include "graphClasses.h"
 #include "USCMatrix.h"
 
 // classes for various kinds of layers
@@ -35,7 +35,7 @@ typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(0.5, std::max(x,-0.5));
+    return std::min(5., std::max(x,-5.));
     //return(x);
   }
 };
@@ -169,19 +169,69 @@ class Linear_layer
       }
       else
       {
+		  /*
           U += learning_rate * U_gradient;
           b += learning_rate * b_gradient;
-          /* 
+		  */
+           
           //UPDATE CLIPPING
           U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
           b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
           //GRADIENT CLIPPING
           //U += learning_rate*(U_gradient.array().unaryExpr(Clipper())).matrix();
           //b += learning_rate*(b_gradient.array().unaryExpr(Clipper())).matrix();
-          */
+          
       }
 	}
+	
+    template <typename DerivedGOut, typename DerivedIn>
+    void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
+       const MatrixBase<DerivedIn> &fProp_input)
+    {
+        U_gradient += bProp_input*fProp_input.transpose();
+      
+        // get the bias gradient for all dimensions in parallel
+        //int size = b.size();
+        //b_gradient += bProp_input.rowwise().sum();
 
+  	}
+		
+    void updateParams(double learning_rate,
+                      double momentum,
+					  double L2_reg){
+						  
+      // get the bias gradient for all dimensions in parallel
+      int size = b.size();
+      // This used to be multithreaded, but there was no measureable difference
+      if (L2_reg > 0.0)
+      {
+          U_gradient -=  2*L2_reg*U;
+          //b_gradient -= 2*L2_reg*b;
+      }
+      if (momentum > 0.0)
+      {
+          U_velocity = momentum*U_velocity + U_gradient;
+          U += learning_rate * U_velocity;
+          //b_velocity = momentum*b_velocity + b_gradient;
+          //b += learning_rate * b_velocity;
+      }
+      else
+      {
+		  
+          U += learning_rate * U_gradient;
+          b += learning_rate * b_gradient;
+		  
+		  /*
+          U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
+          b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
+		  */
+		  
+      } 	
+  }
+  void resetGradient(){
+	  U_gradient.setZero();
+	  //b_gradient.setZero();
+  }
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
@@ -284,6 +334,158 @@ class Linear_layer
   }
 };
 
+
+class Linear_diagonal_layer
+{
+    private: 
+        Matrix<double,Dynamic,1> U;
+        Matrix<double,Dynamic,1> U_gradient;
+        Matrix<double,Dynamic,1> U_velocity;
+        Matrix<double,Dynamic,1> U_running_gradient;
+        Matrix<double,Dynamic,1> U_running_parameter_update;
+        // Biases
+        Matrix<double,Dynamic,1> b;
+        Matrix<double,Dynamic,1> b_velocity;
+        Matrix<double,Dynamic,1> b_running_gradient;
+        Matrix<double,Dynamic,1> b_running_parameter_update;
+        Matrix<double,Dynamic,1> b_gradient;
+
+    friend class model;
+
+    public:
+	Linear_diagonal_layer() { }
+        Linear_diagonal_layer(int rows) { resize(rows); }
+
+	void resize(int rows)
+	{
+	    U.setZero(rows);
+        U_gradient.setZero(rows);
+      //U_running_gradient.setZero(rows, cols);
+      //U_running_parameter_updates.setZero(rows, cols);
+      //U_velocity.setZero(rows, cols);
+      b.resize(rows);
+      b_gradient.setZero(rows);
+      //b_running_gradient.resize(rows);
+      //b_velocity.resize(rows);
+	}
+
+	void read_weights(std::ifstream &U_file) { readMatrix(U_file, U); }
+	void write_weights(std::ofstream &U_file) { writeMatrix(U, U_file); }
+  void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
+  void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
+
+
+	template <typename Engine>
+	void initialize(Engine &engine,
+      bool init_normal,
+      double init_range,
+      string &parameter_update,
+      double adagrad_epsilon)
+	{
+      if (parameter_update == "ADA") {
+        U_running_gradient = Matrix<double,Dynamic,Dynamic>::Ones(U.rows(),U.cols())*adagrad_epsilon;
+        b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
+      }
+      if (parameter_update == "ADAD") {
+        U_running_gradient.setZero(U.rows(),U.cols());
+        b_running_gradient.setZero(b.size());
+        U_running_parameter_update.setZero(U.rows(),U.cols());
+        b_running_parameter_update.setZero(b.size());
+      }
+
+	    initMatrix(engine, U, init_normal, init_range);
+      initBias(engine, b, init_normal, init_range);
+	}	  
+
+	int n_inputs () const { return U.rows(); }
+	int n_outputs () const { return U.rows(); }
+
+  template <typename DerivedIn, typename DerivedOut>
+	void fProp(const MatrixBase<DerivedIn> &input,
+      const MatrixBase<DerivedOut> &output) const
+  {
+      UNCONST(DerivedOut, output, my_output);
+	  int num_examples = input.cols();
+	  for (int i=0; i<num_examples; i++){
+	  	my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
+	  }
+      //my_output.leftCols(input.cols()).noalias() = U.array()*input.array();
+	  /*
+      int num_examples = input.cols();
+      for (int example = 0;example < num_examples;example++) 
+      {
+          my_output.leftCols(input.cols()).col(example) += b;
+      }
+	  */
+  }
+   
+
+  
+    template <typename DerivedGOut, typename DerivedGIn>
+	void bProp(const MatrixBase<DerivedGOut> &input,
+      MatrixBase<DerivedGIn> &output) const
+    {
+		
+	    UNCONST(DerivedGIn, output, my_output);
+  	    int num_examples = input.cols();
+  	    for (int i=0; i<num_examples; i++){
+  	  	  my_output.col(i).noalias() = U.array()*input.array();
+  	    }
+	    //my_output.noalias() = U.array()*input.array();
+	}
+	
+	
+    template <typename DerivedGOut, typename DerivedIn>
+    void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
+       const MatrixBase<DerivedIn> &fProp_input)
+    {
+        U_gradient += bProp_input.array()*fProp_input.array();
+      
+        // get the bias gradient for all dimensions in parallel
+        //int size = b.size();
+        //b_gradient += bProp_input.rowwise().sum();
+
+  	}
+		
+    void updateParams(double learning_rate,
+                      double momentum,
+					  double L2_reg){
+						  
+      // get the bias gradient for all dimensions in parallel
+      int size = b.size();
+      // This used to be multithreaded, but there was no measureable difference
+      if (L2_reg > 0.0)
+      {
+          U_gradient -=  2*L2_reg*U;
+          //b_gradient -= 2*L2_reg*b;
+      }
+      if (momentum > 0.0)
+      {
+          U_velocity = momentum*U_velocity + U_gradient;
+          U += learning_rate * U_velocity;
+          //b_velocity = momentum*b_velocity + b_gradient;
+          //b += learning_rate * b_velocity;
+      }
+      else
+      {
+		  
+          U += learning_rate * U_gradient;
+          //b += learning_rate * b_gradient;
+		  
+		  /*
+          U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
+          b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
+		  */
+		  
+      } 	
+  }
+  void resetGradient(){
+	  U_gradient.setZero();
+	  //b_gradient.setZero();
+  }
+
+};
+
 class Output_word_embeddings
 {
     private:
@@ -356,8 +558,6 @@ class Output_word_embeddings
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-		//cerr<<"the dimensions of W are "<<W->rows()<<" and "<<W->cols()<<endl;
-		//cerr<<"the dimensions of b are "<<b.rows()<<" and "<<b.cols()<<endl;
         my_output = ((*W) * input).colwise() + b;
 	  }
 
@@ -414,21 +614,61 @@ class Output_word_embeddings
         // b is vocab_size x 1
         // predicted_embeddings is output_embedding_dimension x minibatch_size
         // bProp_input is vocab_size x minibatch_size
+		/*
         W->noalias() += learning_rate * bProp_input * predicted_embeddings.transpose();
         b += learning_rate * bProp_input.rowwise().sum();
-
+		*/
         /*
         //GRADIENT CLIPPING
         W->noalias() += learning_rate * 
           ((bProp_input * predicted_embeddings.transpose()).array().unaryExpr(Clipper())).matrix();
         b += learning_rate * (bProp_input.rowwise().sum().array().unaryExpr(Clipper())).matrix();
+		*/
         //UPDATE CLIPPING
         W->noalias() += (learning_rate * 
         (bProp_input * predicted_embeddings.transpose())).array().unaryExpr(Clipper()).matrix();
         b += (learning_rate * (bProp_input.rowwise().sum())).array().unaryExpr(Clipper()).matrix();
-        */
+        
 	  }
 
+template <typename DerivedIn, typename DerivedGOut>
+      void updateGradient(const MatrixBase<DerivedIn> &predicted_embeddings,
+         const MatrixBase<DerivedGOut> &bProp_input) 
+{
+    // W is vocab_size x output_embedding_dimension
+    // b is vocab_size x 1
+    // predicted_embeddings is output_embedding_dimension x minibatch_size
+    // bProp_input is vocab_size x minibatch_size
+	
+    W_gradient += bProp_input * predicted_embeddings.transpose();
+    b_gradient += bProp_input.rowwise().sum();
+	
+    /*
+    //GRADIENT CLIPPING
+    W->noalias() += learning_rate * 
+      ((bProp_input * predicted_embeddings.transpose()).array().unaryExpr(Clipper())).matrix();
+    b += learning_rate * (bProp_input.rowwise().sum().array().unaryExpr(Clipper())).matrix();
+	*/
+	/*
+    //UPDATE CLIPPING
+    W->noalias() += (learning_rate * 
+    (bProp_input * predicted_embeddings.transpose())).array().unaryExpr(Clipper()).matrix();
+    b += (learning_rate * (bProp_input.rowwise().sum())).array().unaryExpr(Clipper()).matrix();
+    */
+  }
+  
+  void updateParams(double learning_rate,
+  		double momentum,
+		double L2_reg37){
+	  W->noalias() += learning_rate*W_gradient;
+	  b += learning_rate*b_gradient;
+  }
+  
+  void resetGradient(){
+	  W_gradient.setZero();
+	  b_gradient.setZero();
+  }
+  
     template <typename DerivedIn, typename DerivedGOut>
           void computeGradientAdagrad(
              const MatrixBase<DerivedIn> &predicted_embeddings,
@@ -512,6 +752,7 @@ class Output_word_embeddings
 			     double learning_rate, double momentum) //not sure if we want to use momentum here
 	{
       //cerr<<"in gradient"<<endl;
+		/*
 	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
 	    uscgemm(learning_rate,
           gradient_output,
@@ -521,7 +762,8 @@ class Output_word_embeddings
           gradient_output,
 		      Matrix<double,Dynamic,1>::Ones(gradient_output.cols()),
           b);
-      /*
+		*/
+      
       //IN ORDER TO IMPLEMENT CLIPPING, WE HAVE TO COMPUTE THE GRADIENT
       //FIRST
 	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
@@ -559,7 +801,7 @@ class Output_word_embeddings
             W_gradient.row(update_item).setZero();
             b_gradient(update_item) = 0.;
         }
-        */
+        
       //cerr<<"Finished gradient"<<endl;
 	}
 
@@ -715,6 +957,7 @@ class Input_word_embeddings
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_running_gradient;
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_running_parameter_update;
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_gradient;
+		int_map update_map; //stores all the parameters that have been updated
 
 	friend class model;
 
@@ -778,7 +1021,7 @@ class Input_word_embeddings
 		   const MatrixBase<DerivedOut> &output) const
         {
             int embedding_dimension = W->cols();
-			//cerr<<"context size is"<<context_size<<endl;
+
 	    // W      is vocab_size                        x embedding_dimension
 	    // input  is ngram_size*vocab_size             x minibatch_size
 	    // output is ngram_size*embedding_dimension x minibatch_size
@@ -788,18 +1031,11 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	        output.middleRows(ngram*embedding_dimension, embedding_dimension) = W.transpose() * input.middleRows(ngram*vocab_size, vocab_size);
 	    */
-		//cerr<<" The input is "<<input<<endl; 
+
 	    UNCONST(DerivedOut, output, my_output);
 	    my_output.setZero();
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
-			/*
-			cerr<<"ngram is "<<ngram<<endl;
-			cerr<<"W size is "<<W->rows()<<W->cols()<<endl;
-			cerr<<"Input size is "<<input.cols()<<endl;
-			cerr<<"Input rows are "<<input.rows()<<endl;
-			cerr<<"Size of my output is rows"<<my_output.rows()<<" cols:"<<my_output.cols()<<endl;
-			*/
 	        // input might be narrower than expected due to a short minibatch,
 	        // so narrow output to match
 	        uscgemm(1.0,
@@ -837,7 +1073,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	        W += learning_rate * input_words.middleRows(ngram*vocab_size, vocab_size) * bProp_input.middleRows(ngram*embedding_dimension, embedding_dimension).transpose()
 	    */
-
+	  /*
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(learning_rate, 
@@ -845,8 +1081,8 @@ class Input_word_embeddings
 			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
       	  	*W);
 	    }
-
-      /*
+	  */
+      
       //IF WE WANT TO DO GRADIENT CLIPPING, THEN WE FIRST COMPUTE THE GRADIENT AND THEN
       //PERFORM CLIPPING WHILE UPDATING
 
@@ -887,9 +1123,83 @@ class Input_word_embeddings
             //SETTING THE GRADIENT TO ZERO
             W_gradient.row(update_item).setZero();
         }
-      */
+		
   }
 
+  template <typename DerivedGOut, typename DerivedIn>
+  void updateGradient(const MatrixBase<DerivedGOut> &bProp_input,
+     const MatrixBase<DerivedIn> &input_words)
+  {
+      int embedding_dimension = W->cols();
+
+	    // W           is vocab_size                        x embedding_dimension
+	    // input       is ngram_size*vocab_size             x minibatch_size
+	    // bProp_input is ngram_size*embedding_dimension x minibatch_size
+
+	    /*
+	    // Dense version:
+	    for (int ngram=0; ngram<context_size; ngram++)
+	        W += learning_rate * input_words.middleRows(ngram*vocab_size, vocab_size) * bProp_input.middleRows(ngram*embedding_dimension, embedding_dimension).transpose()
+	    */
+	  /*
+	    for (int ngram=0; ngram<context_size; ngram++)
+	    {
+	        uscgemm(learning_rate, 
+			USCMatrix<double>(W->rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
+      	  	*W);
+	    }
+	  */
+      
+      //IF WE WANT TO DO GRADIENT CLIPPING, THEN WE FIRST COMPUTE THE GRADIENT AND THEN
+      //PERFORM CLIPPING WHILE UPDATING
+
+	    for (int ngram=0; ngram<context_size; ngram++)
+	    {
+	      uscgemm(1.0, 
+          USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+          bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
+          W_gradient);
+	    }
+      //int_map update_map; //stores all the parameters that have been updated
+	    for (int ngram=0; ngram<context_size; ngram++)
+	    {
+        for (int train_id=0; train_id<input_words.cols(); train_id++)
+        {
+          this->update_map[input_words(ngram,train_id)] = 1;
+        }
+      }
+
+
+		
+  }
+   
+  void updateParams(double learning_rate,
+  					double momentum,
+					double L2_reg){
+						
+	    // Convert to std::vector for parallelization
+        std::vector<int> update_items;
+        for (int_map::iterator it = this->update_map.begin(); it != this->update_map.end(); ++it)
+        {
+            update_items.push_back(it->first);
+        }
+        int num_items = update_items.size();
+
+        #pragma omp parallel for
+        for (int item_id=0; item_id<num_items; item_id++)
+        {
+            int update_item = update_items[item_id];
+            //UPDATE CLIPPING
+            W->row(update_item) += (learning_rate*
+                W_gradient.row(update_item).array().unaryExpr(Clipper())).matrix();
+            //GRADIENT CLIPPING
+            //W->row(update_item) += learning_rate*
+            //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
+            //SETTING THE GRADIENT TO ZERO
+            W_gradient.row(update_item).setZero();
+        }
+  }
     template <typename DerivedGOut, typename DerivedIn>
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
@@ -1023,6 +1333,61 @@ class Input_word_embeddings
 			  bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
         my_gradient);
     }
+};
+
+class Hidden_layer
+{
+    private:
+        // Biases
+        Matrix<double,Dynamic,1> b;
+		Matrix<double,Dynamic,1> b_gradient;
+		Activation_function hidden_activation;
+	public:
+	Hidden_layer(): hidden_activation(Activation_function()){}
+	void resize(int size) { hidden_activation.resize(size); }
+	void set_activation_function(activation_function_type f) {
+		 hidden_activation.set_activation_function(f);
+	 }
+	int n_outputs(){return b.rows();}
+	int n_inputs(){return b.rows();}
+
+   template <typename DerivedIn, typename DerivedOut>
+     void fProp(const MatrixBase<DerivedIn> &input,
+	   const MatrixBase<DerivedOut> &output) const
+     {
+		 hidden_activation.fProp(input,output);
+		 UNCONST(DerivedOut, output, my_output);
+		 int num_examples = input.cols();
+		 for (int i=0;i<num_examples; i++){
+			 my_output.col(i) += b;
+		 }
+	 }	
+     template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
+     void bProp(const MatrixBase<DerivedGOut> &input, 
+      MatrixBase<DerivedGIn> &output,
+		   const MatrixBase<DerivedIn> &finput,
+       const MatrixBase<DerivedOut> &foutput) const
+     {
+		 hidden_activation.bProp(input,
+		 						output,
+								finput,
+								foutput);		 
+	 }
+     template <typename DerivedGOut, typename DerivedIn>
+     void updateGradient(const MatrixBase<DerivedGOut> &bProp_input)
+     {
+         b_gradient += bProp_input.rowwise().sum();
+	 } 
+	 //The accumulated gradient is now added to the parameters
+	 void updateParams(double learning_rate,
+	 					double momentum,
+						double L2_reg){
+		//as of now, only SGD
+		b += learning_rate*b_gradient;					
+	}
+	void resetGradient(){
+		b_gradient.setZero();
+	}
 };
 
 } // namespace nplm

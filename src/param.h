@@ -23,9 +23,6 @@ struct param
     int vocab_size;
     int input_vocab_size;
     int output_vocab_size;
-	int rhs_rule_vocab_size;
-	int Td_vocab_size;
-	int d_vocab_size;
     int num_hidden;
     int embedding_dimension;
     int input_embedding_dimension;
@@ -58,13 +55,6 @@ struct param
     int num_threads;
   
     bool share_embeddings;
-	
-	int Td_index;
-	int rhs_rule_index;
-	
-	std::string Td_words_file;
-	std::string rhs_rule_words_file;
-	std::string d_words_file;	
 
 };
 

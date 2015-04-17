@@ -14,7 +14,7 @@ namespace nplm
 using Eigen::Matrix;
 using Eigen::MatrixBase;
 
-enum activation_function_type { Tanh, HardTanh, Rectifier, Identity, InvalidFunction };
+enum activation_function_type { Tanh, HardTanh, Rectifier, Identity, Sigmoid, InvalidFunction };
 
 inline activation_function_type string_to_activation_function (const std::string &s)
 {
@@ -26,6 +26,8 @@ inline activation_function_type string_to_activation_function (const std::string
         return Tanh;
     else if (s == "hardtanh")
         return HardTanh;
+    else if (s == "sigmoid")
+        return Sigmoid;
     else
         return InvalidFunction;
 }
@@ -40,6 +42,8 @@ inline std::string activation_function_to_string (activation_function_type f)
         return "tanh";
     else if (f == HardTanh)
         return "hardtanh";
+    else if (f == Sigmoid)
+        return "sigmoid";
 }
 
 struct hardtanh_functor {
@@ -58,6 +62,14 @@ struct dtanh_functor {
   double operator() (double x) const { return 1-x*x; }
 };
 
+struct sigmoid_functor {
+  double operator() (double x) const { return 1./(1+std::exp(-x)); }
+};
+
+struct dsigmoid_functor {
+  double operator() (double x) const { return x*(1.-x); }
+};
+
 struct rectifier_functor {
   double operator() (double x) const { return std::max(x, 0.); }
 };
@@ -68,7 +80,7 @@ struct drectifier_functor {
 
 class Activation_function
 {
-        int size;
+    int size;
 	activation_function_type f;
 
     public:
@@ -93,6 +105,7 @@ class Activation_function
 	    case Identity: my_output = input; break;
 	    case Rectifier: my_output = input.unaryExpr(rectifier_functor()); break;
 	    case Tanh: my_output = input.unaryExpr(tanh_functor()); break;
+		case Sigmoid: my_output = input.unaryExpr(sigmoid_functor()); break;
 	    case HardTanh: my_output = input.unaryExpr(hardtanh_functor()); break;
 	    }
         }
@@ -105,12 +118,13 @@ class Activation_function
         {
 	    UNCONST(DerivedGIn, output, my_output);
 
-	    switch (f)
+	    switch (f)	
 	    {
 	    case Identity: my_output = input; break;
 	    case Rectifier: my_output = finput.array().unaryExpr(drectifier_functor()) * input.array(); break;
-	    case Tanh: my_output = foutput.array().unaryExpr(tanh_functor()) * input.array(); break;
-	    case HardTanh: my_output = finput.array().unaryExpr(hardtanh_functor()) * input.array(); break;
+	    case Tanh: my_output = foutput.array().unaryExpr(dtanh_functor()) * input.array(); break;
+		case Sigmoid: my_output = foutput.array().unaryExpr(dsigmoid_functor()) * input.array(); break;
+	    case HardTanh: my_output = finput.array().unaryExpr(dhardtanh_functor()) * input.array(); break;
 	    }
         }
 };

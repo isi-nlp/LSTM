@@ -15,42 +15,23 @@ namespace nplm
 class model {
 public:
     Input_word_embeddings input_layer;
-	Input_word_embeddings rhs_rule_input_layer,
-						  Td_input_layer;
     Linear_layer first_hidden_linear;
     Activation_function first_hidden_activation;
     Linear_layer second_hidden_linear;
     Activation_function second_hidden_activation;
-	Activation_function D1_hidden_activation,
-						Td1_hidden_activation,
-						d1_hidden_activation; 
-    Output_word_embeddings output_layer,
-			rhs_rule_output_layer,
-			Td_output_layer;
-	Output_word_embeddings d_output_layer;
-			
-	Linear_layer rhs_rule_linear_layer,
-				 Td_linear_layer;
-				 
+    Output_word_embeddings output_layer;
     Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
-		rhs_rule_embedding_matrix,
-		Td_embedding_matrix,
-		d_embedding_matrix,
       input_embedding_matrix,
       input_and_output_embedding_matrix;
+    Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+  	Linear_layer W_h_to_i, W_h_to_f, W_h_to_c, W_h_to_o;
+  	Linear_diagonal_layer W_c_to_i, W_c_to_f, W_c_to_o;
+    Hidden_layer i_t,f_t,o_t,tanh_c_prime_t;
+  	Activation_function tanh_c_t;
     
     activation_function_type activation_function;
-    int ngram_size, 
-		input_vocab_size, 
-		output_vocab_size, 
-		input_embedding_dimension, 
-		num_hidden, 
-		output_embedding_dimension,
-		rhs_rule_vocab_size,
-		Td_vocab_size,
-		d_vocab_size;
+    int ngram_size, input_vocab_size, output_vocab_size, input_embedding_dimension, num_hidden, output_embedding_dimension;
     bool premultiplied;
-
 
     model(int ngram_size,
         int input_vocab_size,
@@ -58,9 +39,7 @@ public:
         int input_embedding_dimension,
         int num_hidden,
         int output_embedding_dimension,
-        bool share_embeddings,
-		int rhs_rule_vocab_size,
-		int Td_vocab_size) 
+        bool share_embeddings) 
     {
         if (share_embeddings){
           input_and_output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
@@ -70,60 +49,37 @@ public:
         else {
           input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
           output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  rhs_rule_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  Td_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  d_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  
           input_layer.set_W(&input_embedding_matrix);
           output_layer.set_W(&output_embedding_matrix);
-		  rhs_rule_output_layer.set_W(&rhs_rule_embedding_matrix);
-		  Td_output_layer.set_W(&Td_embedding_matrix);
-		  d_output_layer.set_W(&d_embedding_matrix);
-		  rhs_rule_input_layer.set_W(&rhs_rule_embedding_matrix);
-		  Td_input_layer.set_W(&Td_embedding_matrix);
         }
         resize(ngram_size,
             input_vocab_size,
             output_vocab_size,
             input_embedding_dimension,
             num_hidden,
-            output_embedding_dimension,
-			rhs_rule_vocab_size,
-			Td_vocab_size);
+            output_embedding_dimension);
     }
     model() : ngram_size(1), 
             premultiplied(false),
             activation_function(Rectifier),
             output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			d_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			Td_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			rhs_rule_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
         {
           output_layer.set_W(&output_embedding_matrix);
           input_layer.set_W(&input_embedding_matrix);
-		  d_output_layer.set_W(&d_embedding_matrix);
-		  Td_output_layer.set_W(&Td_embedding_matrix);
-		  Td_input_layer.set_W(&Td_embedding_matrix);
-		  rhs_rule_output_layer.set_W(&rhs_rule_embedding_matrix);
-		  rhs_rule_input_layer.set_W(&rhs_rule_embedding_matrix);
         }
 
     void resize(int ngram_size,
         int input_vocab_size,
-        int d_vocab_size,
+        int output_vocab_size,
         int input_embedding_dimension,
         int num_hidden,
-        int output_embedding_dimension,
-		int rhs_rule_vocab_size,
-		int Td_vocab_size);
+        int output_embedding_dimension);
 
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
         double init_range,
-        double init_d_bias,
-		double init_Td_bias,
-		double init_rhs_rule_bias,
+        double init_bias,
         string &parameter_udpate,
         double adagrad_epsilon);
 
@@ -132,9 +88,6 @@ public:
         activation_function = f;
         first_hidden_activation.set_activation_function(f);
         second_hidden_activation.set_activation_function(f);
-		D1_hidden_activation.set_activation_function(f);
-		Td1_hidden_activation.set_activation_function(f);
-		d1_hidden_activation.set_activation_function(f);
     }
 
     void premultiply();

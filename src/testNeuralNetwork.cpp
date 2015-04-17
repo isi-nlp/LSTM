@@ -98,10 +98,10 @@ int main (int argc, char *argv[])
 					 test_data_size - minibatch_start_index);
 	Matrix<int,Dynamic,Dynamic> minibatch = test_data.middleCols(minibatch_start_index, current_minibatch_size);
 	
-	prop.fProp(minibatch.topRows(myParam.ngram_size-1),15,16);
+	prop.fProp(minibatch.topRows(myParam.ngram_size-1));
 
 	// Do full forward prop through output word embedding layer
-	prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
+	//	prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 
 	// And softmax and loss
 	double minibatch_log_likelihood;
