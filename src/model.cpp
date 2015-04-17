@@ -19,11 +19,11 @@ void model::resize(int ngram_size,
     int num_hidden,
     int output_embedding_dimension)
 {
-    input_layer.resize(input_vocab_size, input_embedding_dimension, ngram_size-1);
-    first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-1));
-    first_hidden_activation.resize(num_hidden);
-    second_hidden_linear.resize(output_embedding_dimension, num_hidden);
-    second_hidden_activation.resize(output_embedding_dimension);
+    input_layer.resize(input_vocab_size, input_embedding_dimension, 1); // the input is always dimension 1 now.
+    //first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-1));
+    //first_hidden_activation.resize(num_hidden);
+    //second_hidden_linear.resize(output_embedding_dimension, num_hidden);
+    //second_hidden_activation.resize(output_embedding_dimension);
     output_layer.resize(output_vocab_size, output_embedding_dimension);
     this->ngram_size = ngram_size;
     this->input_vocab_size = input_vocab_size;
@@ -32,6 +32,28 @@ void model::resize(int ngram_size,
     this->num_hidden = num_hidden;
     this->output_embedding_dimension = output_embedding_dimension;
     premultiplied = false;
+	
+	//Resizing weight matrices
+	W_h_to_c.resize(num_hidden,num_hidden);
+	W_h_to_f.resize(num_hidden,num_hidden);
+	W_h_to_i.resize(num_hidden,num_hidden);
+	W_h_to_o.resize(num_hidden,num_hidden);
+	
+	W_x_to_c.resize(num_hidden,num_hidden);
+	W_x_to_o.resize(num_hidden,num_hidden);
+	W_x_to_f.resize(num_hidden,num_hidden);
+	W_x_to_i.resize(num_hidden,num_hidden);
+	
+	W_c_to_f.resize(num_hidden);
+	W_c_to_i.resize(num_hidden);
+	W_c_to_o.resize(num_hidden);
+	
+	//Resizing weight matrices and activation functions
+	o_t.resize(num_hidden);
+	f_t.resize(num_hidden);
+	i_t.resize(num_hidden);
+	tanh_c_prime_t.resize(num_hidden);
+	tanh_c_t.resize(num_hidden);
 }
   
 void model::initialize(mt19937 &init_engine,
@@ -62,6 +84,97 @@ void model::initialize(mt19937 &init_engine,
         init_range,
         parameter_update,
         adagrad_epsilon);
+	
+	W_h_to_c.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	W_h_to_i.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);	
+	W_h_to_o.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	W_h_to_f.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+
+	W_x_to_c.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	W_x_to_i.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);	
+	W_x_to_o.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	W_x_to_f.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);		
+
+	W_c_to_i.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);	
+	W_c_to_o.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	W_c_to_f.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);		
+		
+	//Initializing the biases of the hidden layers and setting their activation functions
+	o_t.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	o_t.set_activation_function(Sigmoid);
+	
+	f_t.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	f_t.set_activation_function(Sigmoid);	
+	
+	i_t.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	i_t.set_activation_function(Sigmoid);		
+	
+	tanh_c_prime_t.initialize(init_engine,
+        init_normal,
+        init_range,
+        parameter_update,
+        adagrad_epsilon);
+	tanh_c_prime_t.set_activation_function(Tanh);
+	
+	tanh_c_t.set_activation_function(Tanh);
+	
+	
 }
 
 void model::premultiply()

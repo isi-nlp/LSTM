@@ -363,8 +363,8 @@ class Linear_diagonal_layer
       //U_running_gradient.setZero(rows, cols);
       //U_running_parameter_updates.setZero(rows, cols);
       //U_velocity.setZero(rows, cols);
-      b.resize(rows);
-      b_gradient.setZero(rows);
+       //b.resize(rows);
+       //b_gradient.setZero(rows);
       //b_running_gradient.resize(rows);
       //b_velocity.resize(rows);
 	}
@@ -383,13 +383,13 @@ class Linear_diagonal_layer
       double adagrad_epsilon)
 	{
       if (parameter_update == "ADA") {
-        U_running_gradient = Matrix<double,Dynamic,Dynamic>::Ones(U.rows(),U.cols())*adagrad_epsilon;
+        U_running_gradient = Matrix<double,Dynamic,1>::Ones(U.size())*adagrad_epsilon;
         b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
       }
       if (parameter_update == "ADAD") {
-        U_running_gradient.setZero(U.rows(),U.cols());
+        U_running_gradient.setZero(U.size());
         b_running_gradient.setZero(b.size());
-        U_running_parameter_update.setZero(U.rows(),U.cols());
+        U_running_parameter_update.setZero(U.size());
         b_running_parameter_update.setZero(b.size());
       }
 
@@ -1344,13 +1344,43 @@ class Hidden_layer
 		Activation_function hidden_activation;
 	public:
 	Hidden_layer(): hidden_activation(Activation_function()){}
-	void resize(int size) { hidden_activation.resize(size); }
+	
+	void resize(int size) { 
+		hidden_activation.resize(size);
+		b.resize(size);
+		b_gradient.setZero(size);
+	}
+	
 	void set_activation_function(activation_function_type f) {
 		 hidden_activation.set_activation_function(f);
 	 }
 	int n_outputs(){return b.rows();}
 	int n_inputs(){return b.rows();}
-
+	
+	template <typename Engine>
+	void initialize(Engine &engine,
+      bool init_normal,
+      double init_range,
+      string &parameter_update,
+      double adagrad_epsilon)
+	{
+		/*
+      	if (parameter_update == "ADA") {
+        	//U_running_gradient = Matrix<double,Dynamic,1>::Ones(U.size())*adagrad_epsilon;
+        	b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
+      	}
+      	if (parameter_update == "ADAD") {
+        	//U_running_gradient.setZero(U.size());
+        	b_running_gradient.setZero(b.size());
+        	//U_running_parameter_update.setZero(U.size());
+        	b_running_parameter_update.setZero(b.size());
+      	}
+		*/
+	    //initMatrix(engine, U, init_normal, init_range);
+		b_gradient.setZero();
+      	initBias(engine, b, init_normal, init_range);
+	}	  
+	
    template <typename DerivedIn, typename DerivedOut>
      void fProp(const MatrixBase<DerivedIn> &input,
 	   const MatrixBase<DerivedOut> &output) const
