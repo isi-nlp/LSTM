@@ -1,0 +1,5 @@
+OPTIMIZATIONS
+
+1. Check if updateGradient and bProp in Linear_diagonal_layer can be sped up using broadcasting. Right now it's a loop.
+
+NECESSARY

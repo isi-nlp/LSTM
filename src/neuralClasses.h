@@ -219,7 +219,7 @@ class Linear_layer
       {
 		  
           U += learning_rate * U_gradient;
-          b += learning_rate * b_gradient;
+          //b += learning_rate * b_gradient;
 		  
 		  /*
           U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
@@ -384,17 +384,17 @@ class Linear_diagonal_layer
 	{
       if (parameter_update == "ADA") {
         U_running_gradient = Matrix<double,Dynamic,1>::Ones(U.size())*adagrad_epsilon;
-        b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
+        //b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
       }
       if (parameter_update == "ADAD") {
         U_running_gradient.setZero(U.size());
-        b_running_gradient.setZero(b.size());
+        //b_running_gradient.setZero(b.size());
         U_running_parameter_update.setZero(U.size());
-        b_running_parameter_update.setZero(b.size());
+        //b_running_parameter_update.setZero(b.size());
       }
 
 	    initMatrix(engine, U, init_normal, init_range);
-      initBias(engine, b, init_normal, init_range);
+      //initBias(engine, b, init_normal, init_range);
 	}	  
 
 	int n_inputs () const { return U.rows(); }
@@ -406,6 +406,7 @@ class Linear_diagonal_layer
   {
       UNCONST(DerivedOut, output, my_output);
 	  int num_examples = input.cols();
+	  //Can this be sped up with broadcasting ? 
 	  for (int i=0; i<num_examples; i++){
 	  	my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
 	  }
@@ -428,6 +429,7 @@ class Linear_diagonal_layer
 		
 	    UNCONST(DerivedGIn, output, my_output);
   	    int num_examples = input.cols();
+		//Can this be sped up with broadcasting ? 
   	    for (int i=0; i<num_examples; i++){
   	  	  my_output.col(i).noalias() = U.array()*input.array();
   	    }
