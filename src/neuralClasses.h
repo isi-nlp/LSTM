@@ -1344,10 +1344,13 @@ class Hidden_layer
         Matrix<double,Dynamic,1> b;
 		Matrix<double,Dynamic,1> b_gradient;
 		Activation_function hidden_activation;
+		int size;
 	public:
-	Hidden_layer(): hidden_activation(Activation_function()){}
+	Hidden_layer(): hidden_activation(Activation_function()), size(size){}
 	
-	void resize(int size) { 
+	void resize(int size)
+	{ 
+		this->size = size;
 		hidden_activation.resize(size);
 		b.resize(size);
 		b_gradient.setZero(size);
@@ -1356,8 +1359,8 @@ class Hidden_layer
 	void set_activation_function(activation_function_type f) {
 		 hidden_activation.set_activation_function(f);
 	 }
-	int n_outputs(){return b.rows();}
-	int n_inputs(){return b.rows();}
+	int n_outputs(){return size;}
+	int n_inputs(){return size;}
 	
 	template <typename Engine>
 	void initialize(Engine &engine,

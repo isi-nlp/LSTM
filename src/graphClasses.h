@@ -35,10 +35,10 @@ class Node {
 	    {
 	        fProp_matrix.setZero(param->n_outputs(), minibatch_size);
 	    }
-            if (param->n_inputs() != -1)
-            {
-	        bProp_matrix.setZero(param->n_inputs(), minibatch_size);
-            }
+        if (param->n_inputs() != -1)
+        {
+        	bProp_matrix.setZero(param->n_inputs(), minibatch_size);
+        }
 	}
 
 	void resize() { resize(minibatch_size); }
@@ -139,7 +139,22 @@ public:
 		f_t_node.resize(minibatch_size);
 		o_t_node.resize(minibatch_size);
 		tanh_c_prime_t_node.resize(minibatch_size);
-		input_layer_node.resize(minibatch_size);	
+		input_layer_node.resize(minibatch_size);
+		
+		//Resizing all the local node matrices
+		h_t.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
+		c_t.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		d_Err_t_to_n_d_h_t.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_c_t.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_o_t.resize(o_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_f_t.resize(f_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_i_t.resize(i_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_tanh_c_t.resize(tanh_c_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_tanh_c_prime_t.resize(tanh_c_prime_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_x_t.resize(input_layer_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_h_tMinusOne.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_c_tMinusOne.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
+		
 	} 
 	
 	template<typename Derived, typename DerivedIn>
@@ -164,27 +179,31 @@ public:
 		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
-		i_t_node.param->fProp(W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix,i_t_node.fProp_matrix);
+		i_t_node.param->fProp(W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix,
+							i_t_node.fProp_matrix);
 		
 		//How much to forget
 		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
 		W_h_to_f_node.param->fProp(h_t_minus_one,W_h_to_f_node.fProp_matrix);
 		W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
-		f_t_node.param->fProp(W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix,f_t_node.fProp_matrix);
+		f_t_node.param->fProp(W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix,
+							f_t_node.fProp_matrix);
 		
 		//computing c_prime_t
 		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
-		tanh_c_prime_t_node.param->fProp(W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix,tanh_c_prime_t_node.fProp_matrix);
+		tanh_c_prime_t_node.param->fProp(W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix,
+										tanh_c_prime_t_node.fProp_matrix);
 		
 		//Computing the current cell value
 		c_t = i_t_node.fProp_matrix.array()*c_t_minus_one.array() + f_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
 		
 		//How much to scale the output
-		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
+		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_c_to_o_node.param->fProp(c_t,W_c_to_i_node.fProp_matrix);
-		o_t_node.param->fProp(W_x_to_o_node.fProp_matrix + W_h_to_o_node.fProp_matrix + W_c_to_o_node.fProp_matrix,o_t_node.fProp_matrix);	
+		o_t_node.param->fProp(W_x_to_o_node.fProp_matrix +  W_h_to_o_node.fProp_matrix + W_c_to_o_node.fProp_matrix ,
+							o_t_node.fProp_matrix);	
 		
 		//computing the hidden layer
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
