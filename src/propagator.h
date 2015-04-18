@@ -242,6 +242,58 @@ namespace nplm
 											momentum,
 											L2_reg);		
 	  }
+	  
+  	void resetGradient(){
+		plstm->output_layer.resetGradient();
+		// updating the rest of the parameters
+		
+		//updating params for weights out of hidden layer 
+		plstm->W_h_to_o.resetGradient();
+ 		plstm->W_h_to_f.resetGradient();
+  		plstm->W_h_to_i.resetGradient();
+   		plstm->W_h_to_c.resetGradient();
+
+		//updating params for weights out of cell
+		plstm->W_c_to_f.resetGradient();
+		plstm->W_c_to_i.resetGradient();
+		plstm->W_c_to_o.resetGradient();				
+
+
+		//Error derivatives for the input word embeddings
+		plstm->W_x_to_c.resetGradient();
+		plstm->W_x_to_o.resetGradient();
+		plstm->W_x_to_f.resetGradient();
+		plstm->W_x_to_i.resetGradient();
+
+
+		//Computing gradients of the paramters
+		//Derivative of weights out of h_t
+	    plstm->W_h_to_o.resetGradient();
+	    plstm->W_h_to_f.resetGradient();
+	    plstm->W_h_to_i.resetGradient();		
+   		plstm->W_h_to_c.resetGradient();
+
+		//Derivative of weights out of c_t and c_t_minus_one
+	    plstm->W_c_to_o.resetGradient();
+	    plstm->W_c_to_i.resetGradient();
+	    plstm->W_c_to_f.resetGradient();		
+
+		//Derivatives of weights out of x_t
+		plstm->W_x_to_o.resetGradient();
+		plstm->W_x_to_i.resetGradient();
+		plstm->W_x_to_f.resetGradient();	
+		plstm->W_x_to_c.resetGradient();			
+
+
+		plstm->o_t.resetGradient();
+		plstm->f_t.resetGradient();
+		plstm->i_t.resetGradient();	
+		plstm->tanh_c_prime_t.resetGradient();	
+								
+		//The gradients of the input layer are being reset in update params sinc the gradient is sparse
+		//Derivatives of the input embeddings							
+	    //plstm->input_layer.resetGradient();		
+  	}	
  };		
 } // namespace nplm
 
