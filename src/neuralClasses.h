@@ -643,7 +643,7 @@ template <typename DerivedIn, typename DerivedGOut>
     // bProp_input is vocab_size x minibatch_size
 	
     W_gradient += bProp_input * predicted_embeddings.transpose();
-    b_gradient += bProp_input.rowwise().sum();
+    //b_gradient += bProp_input.rowwise().sum();
 	
     /*
     //GRADIENT CLIPPING
@@ -661,14 +661,14 @@ template <typename DerivedIn, typename DerivedGOut>
   
   void updateParams(double learning_rate,
   		double momentum,
-		double L2_reg37){
+		double L2_reg){
 	  W->noalias() += learning_rate*W_gradient;
-	  b += learning_rate*b_gradient;
+	  //b += learning_rate*b_gradient;
   }
   
   void resetGradient(){
 	  W_gradient.setZero();
-	  b_gradient.setZero();
+	  //b_gradient.setZero();
   }
   
     template <typename DerivedIn, typename DerivedGOut>

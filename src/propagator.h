@@ -83,7 +83,7 @@ namespace nplm
 			Matrix<double,Dynamic,Dynamic> dummy_zero;
 			dummy_zero.setZero(2,current_minibatch_size);
 			
-			int sent_len = data.rows(); 
+			int sent_len = output.rows(); 
 			double log_likelihood = 0.;
 			
 			for (int i=sent_len-1; i>=0; i--) {
@@ -132,6 +132,115 @@ namespace nplm
 		   
 			}
 
+	  }
+	  
+	 void updateParams(double learning_rate,
+				  		double momentum,
+						double L2_reg) {
+		plstm->output_layer.updateParams(learning_rate,
+	  					momentum,
+	  					L2_reg);
+		// updating the rest of the parameters
+		
+		//updating params for weights out of hidden layer 
+		plstm->W_h_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+ 		plstm->W_h_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+  		plstm->W_h_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+   		plstm->W_h_to_c.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+
+		//updating params for weights out of cell
+		plstm->W_c_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_c_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_c_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);				
+
+
+		//Error derivatives for the input word embeddings
+		plstm->W_x_to_c.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_x_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_x_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_x_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+
+
+		//Computing gradients of the paramters
+		//Derivative of weights out of h_t
+	    plstm->W_h_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+	    plstm->W_h_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+	    plstm->W_h_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);		
+   		plstm->W_h_to_c.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+
+		//Derivative of weights out of c_t and c_t_minus_one
+	    plstm->W_c_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+	    plstm->W_c_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+	    plstm->W_c_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);		
+
+		//Derivatives of weights out of x_t
+		plstm->W_x_to_o.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_x_to_i.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->W_x_to_f.updateParams(learning_rate,
+											momentum,
+											L2_reg);	
+		plstm->W_x_to_c.updateParams(learning_rate,
+											momentum,
+											L2_reg);			
+
+
+		plstm->o_t.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->f_t.updateParams(learning_rate,
+											momentum,
+											L2_reg);
+		plstm->i_t.updateParams(learning_rate,
+											momentum,
+											L2_reg);	
+		plstm->tanh_c_prime_t.updateParams(learning_rate,
+											momentum,
+											L2_reg);	
+								
+		//Derivatives of the input embeddings							
+	    plstm->input_layer.updateParams(learning_rate,
+											momentum,
+											L2_reg);		
 	  }
  };		
 } // namespace nplm
