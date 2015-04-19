@@ -19,9 +19,10 @@ namespace nplm
 		Matrix<double,Dynamic,Dynamic> d_Err_t_d_output;
 		Matrix<int,Dynamic,Dynamic> minibatch_samples;
 		Matrix<double,Dynamic,Dynamic> probs;		
+		int num_hidden;
 
 	public:
-	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(20,LSTM_node()) { }
+	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(20,LSTM_node()),num_hidden(0) { }
 
 	    propagator (model &lstm, int minibatch_size)
 	      : plstm(&lstm),
@@ -37,8 +38,8 @@ namespace nplm
 			  lstm_nodes[i].resize(minibatch_size);
 		  }
 		  //I HAVE TO INITIALIZE THE MATRICES
-		  d_Err_tPlusOne_to_n_d_c_t.setZero(2,minibatch_size);
-		  d_Err_tPlusOne_to_n_d_h_t.setZero(2,minibatch_size);
+		  d_Err_tPlusOne_to_n_d_c_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+		  d_Err_tPlusOne_to_n_d_h_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 		  scores.resize(output_layer_node.param->n_outputs(),minibatch_size); 
   		  minibatch_weights.resize(output_layer_node.param->n_outputs(),minibatch_size);
   		  minibatch_samples.resize(output_layer_node.param->n_outputs(),minibatch_size);
@@ -55,8 +56,9 @@ namespace nplm
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = data.rows();
 			Matrix<double,Dynamic,1> c_0,h_0;
-			c_0.setZero(2);
-			h_0.setZero(2);
+			int current_minibatch_size = data.cols();
+			c_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);
+			h_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);
 			
 			for (int i=0; i<sent_len; i++){
 				if (i==0) {
@@ -81,7 +83,7 @@ namespace nplm
 			int current_minibatch_size = output.cols();
 			
 			Matrix<double,Dynamic,Dynamic> dummy_zero;
-			dummy_zero.setZero(2,current_minibatch_size);
+			dummy_zero.setZero(num_hidden,current_minibatch_size);
 			
 			int sent_len = output.rows(); 
 			double log_likelihood = 0.;
@@ -116,7 +118,15 @@ namespace nplm
 		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
 						       output_layer_node.bProp_matrix);
 				// Now calling backprop for the LSTM nodes
-				if (i == sent_len) {
+				if (i == sent_len) {	
+					/*	
+					const MatrixBase<DerivedData> &data,
+								   //const MatrixBase<DerivedIn> c_t,
+								   const MatrixBase<DerivedIn> c_t_minus_one,
+								   const MatrixBase<DerivedIn> d_Err_t_d_h_t,
+								   const MatrixBase<DerivedDIn> d_Err_tPlusOne_to_n_d_c_t,
+								   const MatrixBase<DerivedDIn> d_Err_tPlusOne_to_n_d_h_t
+					*/
 				    lstm_nodes[i].bProp(data.row(i),
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
