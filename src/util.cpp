@@ -147,6 +147,52 @@ void readDataFile(const string &filename, int &ngram_size, vector<int> &data, in
   DATAIN.close();
 }
 
+// Read a data file of unknown size into a flat vector<int>.
+// If this takes too much memory, we should create a vector of minibatches.
+void readSentFile(const string &filename, vector<vector <int> > &data, int minibatch_size)
+{
+  cerr << "Reading input sentences from file " << filename << ": ";
+
+  ifstream DATAIN(filename.c_str());
+  if (!DATAIN)
+  {
+    cerr << "Error: can't read data from file " << filename<< endl;
+    exit(-1);
+  }
+
+  vector<int> data_vector;
+
+  string line;
+  long long int n_lines = 0;
+  while (getline(DATAIN, line))
+  {
+    vector<string> ngram;
+    splitBySpace(line, ngram);
+	
+	/*
+    if (ngram_size == 0)
+        ngram_size = ngram.size();
+
+    if (ngram.size() != ngram_size)
+    {
+        cerr << "Error: expected " << ngram_size << " fields in instance, found " << ngram.size() << endl;
+	exit(-1);
+    }
+	*/
+	vector<int> int_ngram;
+    for (int i=0;i<ngram.size();i++)
+        int_ngram.push_back(boost::lexical_cast<int>(ngram[i]));
+
+	data.push_back(int_ngram);
+	
+    n_lines++;
+    if (minibatch_size && n_lines % (minibatch_size * 10000) == 0)
+      cerr << n_lines/minibatch_size << "...";
+  }
+  cerr << "done." << endl;
+  DATAIN.close();
+}
+
 double logadd(double x, double y)
 {
     if (x > y)

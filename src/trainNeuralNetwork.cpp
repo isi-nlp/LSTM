@@ -116,6 +116,8 @@ int main(int argc, char** argv)
           ADADELTA(ADAD)" , false, "SGD", "string", cmd);
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
+	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> output_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
       ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 
@@ -132,6 +134,9 @@ int main(int argc, char** argv)
       myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
+	  myParam.input_sent_file = input_sent_file.getValue();
+	  myParam.output_sent_file = output_sent_file.getValue();
+	  
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
 
@@ -274,6 +279,9 @@ int main(int argc, char** argv)
     // Read training data
 
     vector<int> training_data_flat;
+	vector< vector<int> > training_input_sent;
+	vector< vector<int> > training_output_sent;
+	
     vec * training_data_flat_mmap;
     data_size_t training_data_size; //num_tokens;
     ip::managed_mapped_file mmap_file;
@@ -282,104 +290,29 @@ int main(int argc, char** argv)
       readDataFile(myParam.train_file, myParam.ngram_size, training_data_flat, myParam.minibatch_size);
       training_data_size = training_data_flat.size()/myParam.ngram_size;
     } else {
-      cerr<<"Using mmaped file"<<endl;
-      mmap_file = ip::managed_mapped_file(ip::open_only,myParam.train_file.c_str());
-      training_data_flat_mmap = mmap_file.find<vec>("vector").first;
-      cerr<<"Size of mmaped vector is "<<training_data_flat_mmap->size()<<endl;
-      training_data_size = training_data_flat_mmap->size()/myParam.ngram_size;
-      //randomly shuffle the data for better learning. The shuffling will 
-      //be different for a standard stl vector
-      // Randomly shuffle training data to improve learning
-      if (randomize == true) {
-        cerr<<"Randomly shuffling data...";
-        data_size_t counter =0;
-        while (counter < training_data_size) {
-          data_size_t upper_limit = counter+5000000;
-          long int vector_size = 5000000;
-          if (counter + 10000000 >= training_data_size) {
-            upper_limit = training_data_size;
-            vector_size = training_data_size - counter;
-          }
-          vector<int> temp(vector_size*myParam.ngram_size,0);
-          for (int i=0;i<vector_size;i++){
-           for (int k=0;k<myParam.ngram_size;k++) {
-             temp[i*myParam.ngram_size+k] = training_data_flat_mmap->at((i+counter)*myParam.ngram_size+k);
-           }
-          }
-          /*
-          for (data_size_t i=upper_limit; i>counter; i--)
-          {
-            if (i %500000 == 0) {
-              cerr<<"Shuffled "<<training_data_size-1<<" instances...";
-            }
-            data_size_t j = uniform_int_distribution<data_size_t>(0, i-1)(rng);
-            for (int k=0;k<myParam.ngram_size;k++) {
-              int temp_val = training_data_flat_mmap->at(i*myParam.ngram_size+k);
-              training_data_flat_mmap->at(i*myParam.ngram_size+k) =
-                training_data_flat_mmap->at(j*myParam.ngram_size+k);
-              training_data_flat_mmap->at(j*myParam.ngram_size+k) = temp_val;
-            }
-          }
-          */
-          for (data_size_t i=vector_size-1; i>0; i--)
-          {
-            if (i %500000 == 0) {
-              cerr<<"Shuffled "<<training_data_size-1<<" instances...";
-            }
-            data_size_t j = uniform_int_distribution<data_size_t>(0, i-1)(rng);
-            for (int k=0;k<myParam.ngram_size;k++) {
-              int temp_val = temp.at(i*myParam.ngram_size+k);
-              temp.at(i*myParam.ngram_size+k) =
-                temp.at(j*myParam.ngram_size+k);
-              temp.at(j*myParam.ngram_size+k) = temp_val;
-            }
-          }
-          //Putting it back
-          for (int i=0;i<vector_size;i++){
-           for (int k=0;k<myParam.ngram_size;k++) {
-             training_data_flat_mmap->at((i+counter)*myParam.ngram_size+k) = temp[i*myParam.ngram_size+k];
-           }
-          }
-          counter = upper_limit;
-        }
-        /*
-        for (data_size_t i=training_data_size-1; i>0; i--)
-        {
-          if (i %500000 == 0) {
-            cerr<<"Shuffled "<<training_data_size-1<<" instances...";
-          }
-          data_size_t j = uniform_int_distribution<data_size_t>(0, i-1)(rng);
-          for (int k=0;k<myParam.ngram_size;k++) {
-            int temp_val = training_data_flat_mmap->at(i*myParam.ngram_size+k);
-            training_data_flat_mmap->at(i*myParam.ngram_size+k) =
-              training_data_flat_mmap->at(j*myParam.ngram_size+k);
-            training_data_flat_mmap->at(j*myParam.ngram_size+k) = temp_val;
-          }
-        }
-        */
-      cerr<<endl;
-      }
+ 
     }
+	
+	//Reading the input and output sent files
+	
+	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size);
+	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size);
+	
     //cerr<<"Num tokens "<<num_tokens<<endl;
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
-    cerr << "Number of training instances: "<< training_data_size << endl;
+	
+    cerr << "Number of training instances "<< training_input_sent.size() << endl;
     
     Matrix<int,Dynamic,Dynamic> training_data;
+	Matrix<int,Dynamic,Dynamic> training_input_sent_data;
+	Matrix<int,Dynamic,Dynamic> training_output_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
-    #ifdef MAP
-    cerr<<"Setting up eigen map"<<endl;
-    if (use_mmap_file == false) {
-      training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
-    } else {
-      training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat_mmap->data().get(), myParam.ngram_size, training_data_size);
-    }
-    cerr<<"Created eigen map"<<endl;
-    #else 
+
     if (use_mmap_file == false) {
       training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
     }
-    #endif 
+
     // If neither --input_vocab_size nor --input_words_file is given, set input_vocab_size to the maximum word index
     if (myParam.input_vocab_size == 0 and myParam.input_words_file == "")
     {
@@ -432,6 +365,7 @@ int main(int argc, char** argv)
 	    myParam.output_vocab_size = output_words.size();
     }
 
+	/*
     ///// Construct unigram model and sampler that will be used for NCE
 
     vector<data_size_t> unigram_counts(myParam.output_vocab_size);
@@ -448,6 +382,7 @@ int main(int argc, char** argv)
 	    unigram_counts[output_word] += 1;
     }
     multinomial<data_size_t> unigram (unigram_counts);
+	*/
 
     ///// Create and initialize the neural network and associated propagators.
     model nn;
@@ -475,10 +410,10 @@ int main(int argc, char** argv)
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     propagator prop(nn, myParam.minibatch_size);
-    propagator prop_validation(nn, myParam.validation_minibatch_size);
-    SoftmaxNCELoss<multinomial<data_size_t> > softmax_loss(unigram);
+    //propagator prop_validation(nn, myParam.validation_minibatch_size);
+    //SoftmaxNCELoss<multinomial<data_size_t> > softmax_loss(unigram);
     // normalization parameters
-    vector_map c_h, c_h_running_gradient;
+    //vector_map c_h, c_h_running_gradient;
     
     ///////////////////////TRAINING THE NEURAL NETWORK////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////
@@ -505,6 +440,7 @@ int main(int argc, char** argv)
     int validation_minibatch_size = myParam.validation_minibatch_size;
     int num_noise_samples = myParam.num_noise_samples;
 
+	/*
     if (myParam.normalization)
     {
       for (data_size_t i=0;i<training_data_size;i++)
@@ -516,7 +452,8 @@ int main(int argc, char** argv)
           }
       }
     }
-
+	*/
+	
     for (int epoch=0; epoch<myParam.num_epochs; epoch++)
     { 
         cerr << "Epoch " << epoch+1 << endl;
@@ -536,13 +473,15 @@ int main(int argc, char** argv)
 	    num_samples = output_vocab_size;
 	else if (loss_function == NCELoss)
 	    num_samples = 1+num_noise_samples;
-
+	
+	/*
 	Matrix<double,Dynamic,Dynamic> minibatch_weights(num_samples, minibatch_size);
 	Matrix<int,Dynamic,Dynamic> minibatch_samples(num_samples, minibatch_size);
 	Matrix<double,Dynamic,Dynamic> scores(num_samples, minibatch_size);
 	Matrix<double,Dynamic,Dynamic> probs(num_samples, minibatch_size);
-
-        for(data_size_t batch=0;batch<num_batches;batch++)
+	*/
+	
+    for(data_size_t batch=0;batch<num_batches;batch++)
         {
             if (batch > 0 && batch % 10000 == 0)
             {
@@ -552,9 +491,7 @@ int main(int argc, char** argv)
             data_size_t minibatch_start_index = minibatch_size * batch;
 
       int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
-      #ifdef MAP
-	    Matrix<int,Dynamic,Dynamic> minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-      #else 
+	  /*
       //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
 	    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
 		//cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
@@ -572,7 +509,9 @@ int main(int argc, char** argv)
             } else {
               minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
             }
-      #endif 
+	  	*/
+	  
+	  
             double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
@@ -589,7 +528,8 @@ int main(int argc, char** argv)
 
             ///// Forward propagation
 
-            prop.fProp(minibatch.topRows(ngram_size-1));
+            //prop.fProp(minibatch.topRows(ngram_size-1));
+		//
 
 	    if (loss_function == NCELoss)
 	    {
