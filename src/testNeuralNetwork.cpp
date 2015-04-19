@@ -61,7 +61,7 @@ int main (int argc, char *argv[])
     model nn;
     nn.read(myParam.model_file);
     myParam.ngram_size = nn.ngram_size;
-    propagator prop(nn, myParam.minibatch_size);
+    propagator prop(nn, myParam.minibatch_size); 
 
     ///// Set param values according to what was read in from model file
 

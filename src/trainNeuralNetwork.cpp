@@ -537,61 +537,29 @@ int main(int argc, char** argv)
 	    }
 	    else if (loss_function == LogLoss)
 	    {
-			/*
-	      ///// Standard log-likelihood
-	    start_timer(4);
-        prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
-        stop_timer(4);
-
-        double minibatch_log_likelihood;
-        start_timer(5);
-        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
-                   minibatch.row(ngram_size-1), 
-                   probs, 
-                   minibatch_log_likelihood);
-        stop_timer(5);
-        log_likelihood += minibatch_log_likelihood;
-
-        ///// Backward propagation
-        
-        start_timer(6);
-        SoftmaxLogLoss().bProp(minibatch.row(ngram_size-1).leftCols(current_minibatch_size), 
-                   probs.leftCols(current_minibatch_size), 
-                   minibatch_weights);
-        stop_timer(6);
-        
-        prop.bProp(minibatch.topRows(ngram_size-1).leftCols(current_minibatch_size),
-             minibatch_weights,
-             adjusted_learning_rate,
-             current_momentum,
-             myParam.L2_reg,
-             myParam.parameter_update,
-             myParam.conditioning_constant,
-             myParam.decay);
-          }
-  	    ///// Standard log-likelihood for rhs rule output layer
-  	    start_timer(4);
-          prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
-          stop_timer(4);
-
-          double minibatch_log_likelihood;
-          start_timer(5);
-          SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
-                     minibatch.row(ngram_size-1), 
-                     probs, 
-                     minibatch_log_likelihood);
-          stop_timer(5);
-          log_likelihood += minibatch_log_likelihood;
-
-          ///// Backward propagation
-        
-          start_timer(6);
-          SoftmaxLogLoss().bProp(minibatch.row(ngram_size-1).leftCols(current_minibatch_size), 
-                     probs.leftCols(current_minibatch_size), 
-                     minibatch_weights);
-          stop_timer(6);		
-		  */  
-      }
+			//Taking the input and output sentence and setting the training data to it.
+			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_input_sent[batch].data(), 
+											training_input_sent[batch].size(),
+											current_minibatch_size);
+											
+			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_output_sent[batch].data(),
+																			training_output_sent[batch].size(),
+																			current_minibatch_size);
+			
+			//Calling fProp																	
+			prop.fProp(training_input_sent_data);	
+			//Calling backprop
+		    prop.bProp(training_input_sent_data,
+				 training_output_sent_data); 	
+				 
+			//Updating the gradients
+			prop.updateParams(adjusted_learning_rate,
+				  		current_momentum,
+						myParam.L2_reg);														
+						
+			//Resetting the gradients
+			prop.resetGradient();
+      	}
 	cerr << "done." << endl;
 
 	if (loss_function == LogLoss)

@@ -210,7 +210,7 @@ public:
 		h_t = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
 	}
 	
-	template<typename DerivedData,typename DerivedIn, typename DerivedDIn, typename DerivedDOut>
+	template<typename DerivedData,typename DerivedIn, typename DerivedDIn>
 	void bProp(const MatrixBase<DerivedData> &data,
 			   //const MatrixBase<DerivedIn> c_t,
 			   const MatrixBase<DerivedIn> c_t_minus_one,

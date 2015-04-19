@@ -431,7 +431,7 @@ class Linear_diagonal_layer
   	    int num_examples = input.cols();
 		//Can this be sped up with broadcasting ? 
   	    for (int i=0; i<num_examples; i++){
-  	  	  my_output.col(i).noalias() = U.array()*input.array();
+  	  	  my_output.col(i).noalias() = (U.array()*input.array()).matrix();
   	    }
 	    //my_output.noalias() = U.array()*input.array();
 	}
@@ -441,7 +441,10 @@ class Linear_diagonal_layer
     void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
        const MatrixBase<DerivedIn> &fProp_input)
     {
-        U_gradient += bProp_input.array()*fProp_input.array();
+		int num_examples = bProp_input.cols();
+		for (int i=0; i<num_examples; i++){
+        	U_gradient += (bProp_input.col(i).array()*fProp_input.col(i).array()).matrix();
+		}
       
         // get the bias gradient for all dimensions in parallel
         //int size = b.size();
