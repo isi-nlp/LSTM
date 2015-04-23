@@ -173,7 +173,7 @@ namespace nplm
 			}
 			cerr<<"log likelihood base e is"<<log_likelihood<<endl;
 			cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-			cerr<<"The cross entopy is "<<log_likelihood/sent_len<<endl;
+			cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 			cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 
 	  }
