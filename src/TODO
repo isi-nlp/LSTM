@@ -5,3 +5,4 @@ OPTIMIZATIONS
 NECESSARY
 1. testNeuralNetwork.h needs to be modified significantly to match with the current code. For example, line 64 has 100 hard coded. 
 2. Need to check gradients, need to add code that prints out the perplexity of the output layer.
+3. Set the dimension of dummy_zero in propagator.h properly. Right now, it's set to the output embedding dimension.

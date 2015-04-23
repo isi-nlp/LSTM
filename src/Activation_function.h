@@ -63,7 +63,7 @@ struct dtanh_functor {
 };
 
 struct sigmoid_functor {
-  double operator() (double x) const { return 1./(1+std::exp(-x)); }
+  double operator() (double x) const { return 1./(1.+std::exp(-x)); }
 };
 
 struct dsigmoid_functor {

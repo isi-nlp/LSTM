@@ -52,6 +52,7 @@ typedef long long int data_size_t; // training data can easily exceed 2G instanc
 
 int main(int argc, char** argv)
 { 
+	setprecision(16);
     ios::sync_with_stdio(false);
     bool use_mmap_file, randomize;
     param myParam;
@@ -95,7 +96,7 @@ int main(int argc, char** argv)
       ValueArg<double> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.01", false, 0.01, "double", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
-      ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: nce.", false, "nce", "string", cmd);
+      ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: nce.", false, "log", "string", cmd);
       ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
@@ -117,9 +118,9 @@ int main(int argc, char** argv)
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  ValueArg<string> output_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
-      ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
+      //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 
@@ -130,7 +131,7 @@ int main(int argc, char** argv)
       use_mmap_file = mmap_file.getValue();
       randomize = arg_randomize.getValue();
       myParam.model_file = model_file.getValue();
-      myParam.train_file = train_file.getValue();
+      //myParam.train_file = train_file.getValue();
       myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
@@ -185,7 +186,7 @@ int main(int argc, char** argv)
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
 
       const string sep(" Value: ");
-      cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
+      //cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
       cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
       cerr << input_words_file.getDescription() << sep << input_words_file.getValue() << endl;
       cerr << output_words_file.getDescription() << sep << output_words_file.getValue() << endl;
@@ -285,6 +286,7 @@ int main(int argc, char** argv)
     vec * training_data_flat_mmap;
     data_size_t training_data_size; //num_tokens;
     ip::managed_mapped_file mmap_file;
+	/*
     if (use_mmap_file == false) {
       cerr<<"Reading data from regular text file "<<endl;
       readDataFile(myParam.train_file, myParam.ngram_size, training_data_flat, myParam.minibatch_size);
@@ -293,10 +295,14 @@ int main(int argc, char** argv)
  
     }
 	
+	*/
+	
 	//Reading the input and output sent files
 	
 	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size);
 	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size);
+	training_data_size = training_input_sent.size();
+	data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
 	
     //cerr<<"Num tokens "<<num_tokens<<endl;
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
@@ -308,7 +314,7 @@ int main(int argc, char** argv)
 	Matrix<int,Dynamic,Dynamic> training_output_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
-
+	
     if (use_mmap_file == false) {
       training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
     }
@@ -324,6 +330,7 @@ int main(int argc, char** argv)
     {
         myParam.output_vocab_size = training_data.row(myParam.ngram_size-1).maxCoeff()+1;
     }
+	/*
     if (use_mmap_file == false && randomize == true) {
       cerr<<"Randomly shuffling data..."<<endl;
       // Randomly shuffle training data to improve learning
@@ -333,7 +340,9 @@ int main(int argc, char** argv)
         training_data.col(i).swap(training_data.col(j));
       }
     }
-
+	*/
+	
+	
     // Read validation data
     vector<int> validation_data_flat;
     int validation_data_size = 0;
@@ -388,6 +397,9 @@ int main(int argc, char** argv)
     model nn;
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
     // LOAD THE NEURAL NETWORK MODEL
+	myParam.input_embedding_dimension = myParam.num_hidden;
+	myParam.output_embedding_dimension = myParam.num_hidden;
+	
     if (myParam.model_file != ""){
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
@@ -418,7 +430,7 @@ int main(int argc, char** argv)
     ///////////////////////TRAINING THE NEURAL NETWORK////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////
 
-    data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
+
     cerr<<"Number of training minibatches: "<<num_batches<<endl;
 
     int num_validation_batches = 0;
@@ -480,7 +492,9 @@ int main(int argc, char** argv)
 	Matrix<double,Dynamic,Dynamic> scores(num_samples, minibatch_size);
 	Matrix<double,Dynamic,Dynamic> probs(num_samples, minibatch_size);
 	*/
-	
+
+    data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
+		
     for(data_size_t batch=0;batch<num_batches;batch++)
         {
             if (batch > 0 && batch % 10000 == 0)
@@ -513,6 +527,7 @@ int main(int argc, char** argv)
 	  
 	  
             double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+			cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
             /*
@@ -578,7 +593,8 @@ int main(int argc, char** argv)
 	  cerr << " " << timer.get(i);
 	cerr << endl;
 	#endif
-
+	
+	/*
 	if (myParam.model_prefix != "")
 	{
 	    cerr << "Writing model" << endl;
@@ -587,6 +603,8 @@ int main(int argc, char** argv)
 	    else
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
 	}
+	*/
+	
 	/*
         if (epoch % 1 == 0 && validation_data_size > 0)
         {

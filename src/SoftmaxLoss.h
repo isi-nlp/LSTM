@@ -40,19 +40,30 @@ inline std::string loss_function_to_string (loss_function_type f)
 struct SoftmaxLogLoss
 {
     template <typename DerivedI, typename DerivedW, typename DerivedO>
-    void fProp(const MatrixBase<DerivedI> &input, const MatrixBase<DerivedW> &output_words, const MatrixBase<DerivedO> &output_const, double &loss)
+    void fProp(const MatrixBase<DerivedI> &input, 
+			const MatrixBase<DerivedW> &output_words, 
+			const MatrixBase<DerivedO> &output_const, 
+			double &loss)
     {
-        UNCONST(DerivedO, output_const, output);
+	std::cerr<<"output words are "<<output_words<<std::endl;
+	//std::cerr<<"output const is "<<output_const<<std::endl;
+    UNCONST(DerivedO, output_const, output);
+	std::cerr<<"input is "<<input<<std::endl;
+
+	//getchar();
 
 	double log_likelihood = 0.0;
-
-        #pragma omp parallel for reduction(+:log_likelihood)
+	
+    #pragma omp parallel for reduction(+:log_likelihood)
 	for (int train_id = 0; train_id < input.cols(); train_id++)
 	{
 	    double normalization = logsum(input.col(train_id));
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
+		std::cerr<<"normalization is"<<normalization<<std::endl;
 	    log_likelihood += output(output_words(train_id), train_id);
 	}
+	//std::cerr<<"output is "<<output<<std::endl;
+	//getchar();
 	loss = log_likelihood;
     }
 

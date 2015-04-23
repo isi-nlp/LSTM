@@ -22,13 +22,15 @@ namespace nplm
 		int num_hidden;
 
 	public:
-	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(20,LSTM_node()),num_hidden(0) { }
+	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(100,LSTM_node()),num_hidden(0) { }
 
 	    propagator (model &lstm, int minibatch_size)
 	      : plstm(&lstm),
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&lstm.output_layer,minibatch_size),
-			lstm_nodes(vector<LSTM_node>(20,LSTM_node(lstm,minibatch_size))) {}
+			lstm_nodes(vector<LSTM_node>(100,LSTM_node(lstm,minibatch_size))) {
+				resize(minibatch_size);
+			}
 		    // This must be called if the underlying model is resized.
 	    void resize(int minibatch_size) {
 	      this->minibatch_size = minibatch_size;
@@ -53,19 +55,25 @@ namespace nplm
 	    template <typename Derived>
 	    void fProp(const MatrixBase<Derived> &data)
 	    {
+			cerr<<"In Fprop"<<endl;
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = data.rows();
 			Matrix<double,Dynamic,1> c_0,h_0;
 			int current_minibatch_size = data.cols();
 			c_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);
 			h_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);
-			
+			//cerr<<"c0 is "<<c_0<<endl;
+			//cerr<<"h0 is "<<h_0<<endl;
+			//getchar();
 			for (int i=0; i<sent_len; i++){
+				cerr<<"i is"<<i<<endl;
 				if (i==0) {
 					lstm_nodes[i].fProp(data.row(0),	
 										c_0,
 										h_0);
 				} else {
+					//cerr<<"Data is "<<data.row(i)<<endl;
+					//cerr<<"index is "<<i<<endl;
 					lstm_nodes[i].fProp(data.row(i),
 										lstm_nodes[i-1].c_t,
 										lstm_nodes[i-1].h_t);
@@ -79,29 +87,37 @@ namespace nplm
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output) 
 	    {	
-
+			
+			cerr<<"In backprop..."<<endl;
 			int current_minibatch_size = output.cols();
 			
 			Matrix<double,Dynamic,Dynamic> dummy_zero;
-			dummy_zero.setZero(num_hidden,current_minibatch_size);
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
 			
 			int sent_len = output.rows(); 
 			double log_likelihood = 0.;
 			
 			for (int i=sent_len-1; i>=0; i--) {
+				cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
 				output_layer_node.param->fProp(lstm_nodes[i].h_t, scores);
-				
 				//then compute the log loss of the objective
+				cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+				cerr<<"Score is"<<endl;
+				cerr<<scores<<endl;
+				
 		        double minibatch_log_likelihood;
 		        start_timer(5);
 		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 		                   output.row(i), 
 		                   probs, 
 		                   minibatch_log_likelihood);
+				cerr<<"probs is "<<probs<<endl;
 		        stop_timer(5);
 		        log_likelihood += minibatch_log_likelihood;
-
+				//getchar();
 		        ///// Backward propagation
         
 		        start_timer(6);
@@ -111,14 +127,25 @@ namespace nplm
    		        SoftmaxLogLoss().bProp(output.row(i), 
    		                   probs.leftCols(current_minibatch_size), 
    		                   d_Err_t_d_output);
+				cerr<<"d_Err_t_d_output is "<<d_Err_t_d_output<<endl;
 		        stop_timer(6);
 				
 				//Now computing the derivative of the output layer
 				
 		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
 						       output_layer_node.bProp_matrix);
+				cerr<<" i is "<<i<<endl;
+				cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
+				//getchar();
 				// Now calling backprop for the LSTM nodes
-				if (i == sent_len) {	
+				if (i==0) {
+				    lstm_nodes[i].bProp(data.row(i),
+							   dummy_zero.leftCols(current_minibatch_size),
+				   			   dummy_zero.leftCols(current_minibatch_size),
+				   			   output_layer_node.bProp_matrix,
+				   			   dummy_zero.leftCols(current_minibatch_size),
+							   dummy_zero.leftCols(current_minibatch_size));							
+				} else if (i == sent_len-1) {	
 					/*	
 					const MatrixBase<DerivedData> &data,
 								   //const MatrixBase<DerivedIn> c_t,
@@ -127,32 +154,41 @@ namespace nplm
 								   const MatrixBase<DerivedDIn> d_Err_tPlusOne_to_n_d_c_t,
 								   const MatrixBase<DerivedDIn> d_Err_tPlusOne_to_n_d_h_t
 					*/
+					cerr<<"previous ct is "<<lstm_nodes[i-1].c_t<<endl;
 				    lstm_nodes[i].bProp(data.row(i),
+							   lstm_nodes[i-1].h_t,
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   dummy_zero.leftCols(current_minibatch_size), //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero.leftCols(current_minibatch_size));						
-				} else {
+				} else if (i > 0) {
 				    lstm_nodes[i].bProp(data.row(i),
+							   lstm_nodes[i-1].h_t,
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);								
-				}		   
+				} 		   
 		   
 			}
+			cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+			cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+			cerr<<"The cross entopy is "<<log_likelihood/sent_len<<endl;
+			cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 
 	  }
 	  
 	 void updateParams(double learning_rate,
 				  		double momentum,
 						double L2_reg) {
+		
 		plstm->output_layer.updateParams(learning_rate,
 	  					momentum,
 	  					L2_reg);
 		// updating the rest of the parameters
 		
 		//updating params for weights out of hidden layer 
+		cerr<<"updating params"<<endl;
 		plstm->W_h_to_o.updateParams(learning_rate,
 											momentum,
 											L2_reg);
@@ -191,47 +227,6 @@ namespace nplm
 		plstm->W_x_to_i.updateParams(learning_rate,
 											momentum,
 											L2_reg);
-
-
-		//Computing gradients of the paramters
-		//Derivative of weights out of h_t
-	    plstm->W_h_to_o.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    plstm->W_h_to_f.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    plstm->W_h_to_i.updateParams(learning_rate,
-											momentum,
-											L2_reg);		
-   		plstm->W_h_to_c.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-
-		//Derivative of weights out of c_t and c_t_minus_one
-	    plstm->W_c_to_o.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    plstm->W_c_to_i.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    plstm->W_c_to_f.updateParams(learning_rate,
-											momentum,
-											L2_reg);		
-
-		//Derivatives of weights out of x_t
-		plstm->W_x_to_o.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		plstm->W_x_to_i.updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		plstm->W_x_to_f.updateParams(learning_rate,
-											momentum,
-											L2_reg);	
-		plstm->W_x_to_c.updateParams(learning_rate,
-											momentum,
-											L2_reg);			
 
 
 		plstm->o_t.updateParams(learning_rate,
@@ -277,23 +272,6 @@ namespace nplm
 
 
 		//Computing gradients of the paramters
-		//Derivative of weights out of h_t
-	    plstm->W_h_to_o.resetGradient();
-	    plstm->W_h_to_f.resetGradient();
-	    plstm->W_h_to_i.resetGradient();		
-   		plstm->W_h_to_c.resetGradient();
-
-		//Derivative of weights out of c_t and c_t_minus_one
-	    plstm->W_c_to_o.resetGradient();
-	    plstm->W_c_to_i.resetGradient();
-	    plstm->W_c_to_f.resetGradient();		
-
-		//Derivatives of weights out of x_t
-		plstm->W_x_to_o.resetGradient();
-		plstm->W_x_to_i.resetGradient();
-		plstm->W_x_to_f.resetGradient();	
-		plstm->W_x_to_c.resetGradient();			
-
 
 		plstm->o_t.resetGradient();
 		plstm->f_t.resetGradient();

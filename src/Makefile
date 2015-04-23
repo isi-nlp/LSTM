@@ -6,8 +6,8 @@ CXX=/opt/local/bin/g++-mp-4.7
 #CXX=icpc
 
 # Compiler options. Note that -DEIGEN_NO_DEBUG is essential for good performance!
-#CFLAGS=-g
-CFLAGS=-O3 -DEIGEN_NO_DEBUG -DNDEBUG 
+CFLAGS=-g
+#CFLAGS=-O3 -DEIGEN_NO_DEBUG -DNDEBUG 
 
 # Architecture. Set to x86_64 or i686 to override.
 ARCH:=$(shell uname -m)
@@ -33,7 +33,7 @@ EIGEN=../3rdparty
 ### Optional libraries.
 
 # To disable multithreading, comment out the line below:
-OMP=1
+#OMP=1
 
 # To use the MKL library, uncomment the line below and set it to the MKL root:
 #MKL=/usr/usc/intel/12.1.1/mkl
@@ -141,11 +141,10 @@ RANLIB=ranlib
 
 # Rules
 
-BINS=trainNeuralNetwork testNeuralNetwork prepareNeuralLM testNeuralLM prepareNeuralTM
-LIBS=libnplm.a libnplm.so
+BINS=trainNeuralNetwork 
 OBJS=util.o model.o
 
-all: $(BINS) $(LIBS)
+all: $(BINS) 
 
 clean:
 	rm -f *.o shared/*.o python/*.o $(BINS) $(LIBS) python/nplm.{cpp,so} python/nptm.{cpp,so}
@@ -165,37 +164,9 @@ shared/%.o: %.cpp
 trainNeuralNetwork: trainNeuralNetwork.o $(OBJS)
 	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 
-testNeuralNetwork: testNeuralNetwork.o $(OBJS)
-	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 
-prepareNeuralLM: prepareNeuralLM.o $(OBJS)
-	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
-
-testNeuralLM: testNeuralLM.o $(OBJS)
-	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
-
-prepareNeuralTM: prepareNeuralTM.o $(OBJS)
-	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
-
-libnplm.a: neuralLM.o $(OBJS)
-	rm -f $@
-	$(AR) rv $@ $^
-	$(RANLIB) $@
-
-libnplm.so: $(addprefix shared/,neuralLM.o $(OBJS))
-	$(CXX) -shared $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 
 %.cpp: %.pyx
 	$(CYTHON) --cplus $^ -o $@
 
-python/nplm.o: python/nplm.cpp
-	$(CXX) -c -fPIC -I. $(ALL_CFLAGS) $(PYTHON_CFLAGS) $< -o $@
 
-python/nplm.so: python/nplm.o $(addprefix shared/,neuralLM.o $(OBJS))
-	$(CXX) -shared $(ALL_LDFLAGS) $(PYTHON_LDFLAGS) $^ $(ALL_LDLIBS) $(PYTHON_LDLIBS) -o $@ 
-
-python/nptm.o: python/nptm.cpp
-	$(CXX) -c -fPIC -I. $(ALL_CFLAGS) $(PYTHON_CFLAGS) $< -o $@
-
-python/nptm.so: python/nptm.o $(addprefix shared/,neuralTM.o $(OBJS))
-	$(CXX) -shared $(ALL_LDFLAGS) $(PYTHON_LDFLAGS) $^ $(ALL_LDLIBS) $(PYTHON_LDLIBS) -o $@ 

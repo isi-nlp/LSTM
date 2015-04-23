@@ -17,6 +17,7 @@
 // classes for various kinds of layers
 #include "SoftmaxLoss.h"
 #include "Activation_function.h"
+#define quote(x) #x
 
 //#define EIGEN_DONT_PARALLELIZE
 //#define EIGEN_DEFAULT_TO_ROW_MAJOR
@@ -100,6 +101,7 @@ class Linear_layer
       }
 
 	    initMatrix(engine, U, init_normal, init_range);
+		std::cerr<<U<<std::endl;
       initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -110,13 +112,26 @@ class Linear_layer
 	void fProp(const MatrixBase<DerivedIn> &input,
       const MatrixBase<DerivedOut> &output) const
   {
+	  /*
+	  cerr<<"input"<<endl;
+	  cerr<<input<<endl;
+	  getchar();
+	  cerr<<"output"<<endl;
+	  cerr<<output<<endl;
+	  getchar();
+	  cerr<<"U"<<endl;
+	  cerr<<U<<endl;
+	  getchar();
+	  */
       UNCONST(DerivedOut, output, my_output);
       my_output.leftCols(input.cols()).noalias() = U*input;
+	  /*
       int num_examples = input.cols();
       for (int example = 0;example < num_examples;example++) 
       {
           my_output.leftCols(input.cols()).col(example) += b;
       }
+	  */
   }
 
 	// Sparse input
@@ -164,8 +179,8 @@ class Linear_layer
       {
           U_velocity = momentum*U_velocity + U_gradient;
           U += learning_rate * U_velocity;
-          b_velocity = momentum*b_velocity + b_gradient;
-          b += learning_rate * b_velocity;
+          //b_velocity = momentum*b_velocity + b_gradient;
+          //b += learning_rate * b_velocity;
       }
       else
       {
@@ -188,7 +203,11 @@ class Linear_layer
     void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
        const MatrixBase<DerivedIn> &fProp_input)
     {
+		//std::cout<<typeid(*this).name()<<"\t"<< quote(*this) <<"\n";
+		cerr<<"bProp input is "<<bProp_input<<endl;
+		cerr<<"fProp_input is "<<fProp_input<<endl;
         U_gradient += bProp_input*fProp_input.transpose();
+		cerr<<"current U gradient is "<<U_gradient<<endl;
       
         // get the bias gradient for all dimensions in parallel
         //int size = b.size();
@@ -217,8 +236,13 @@ class Linear_layer
       }
       else
       {
-		  
+		  cerr<<"learning rate is "<<learning_rate<<endl;
+		  cerr<<"U gradient is "<<U_gradient<<endl;
+		  cerr<<"U before is "<<endl;
+		  cerr<<U<<endl;
           U += learning_rate * U_gradient;
+		  cerr<<"U after update is"<<endl;
+		  cerr<<U<<endl;
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -394,6 +418,7 @@ class Linear_diagonal_layer
       }
 
 	    initMatrix(engine, U, init_normal, init_range);
+		std::cerr<<U<<std::endl;
       //initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -406,10 +431,13 @@ class Linear_diagonal_layer
   {
       UNCONST(DerivedOut, output, my_output);
 	  int num_examples = input.cols();
-	  //Can this be sped up with broadcasting ? 
+	  //Can this be sped up with broadcasting ?
+	  //cerr<<"input to linear diagonal layer is "<<input<<endl; 
+	  //cerr<<"U is "<<this->U<<endl;
 	  for (int i=0; i<num_examples; i++){
 	  	my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
 	  }
+	  //cerr<<"output to linear diagonal layer is "<<my_output<<endl;
       //my_output.leftCols(input.cols()).noalias() = U.array()*input.array();
 	  /*
       int num_examples = input.cols();
@@ -552,6 +580,7 @@ class Output_word_embeddings
         }
 
         initMatrix(engine, *W, init_normal, init_range);
+		std::cerr<<*W<<std::endl;
         b.fill(init_bias);
     }
 
@@ -563,7 +592,8 @@ class Output_word_embeddings
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-        my_output = ((*W) * input).colwise() + b;
+        //my_output = ((*W) * input).colwise() ;//+ b; //No bias for output words
+		my_output = (*W) * input ;//+ b; //No bias for output words
 	  }
 
 	// Sparse output version
@@ -592,7 +622,7 @@ class Output_word_embeddings
            int word,
            int instance) const 
     {
-        return W->row(word).dot(input.col(instance)) + b(word);
+        return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
     }
 
     // Dense versions (for log-likelihood loss)
@@ -1006,6 +1036,7 @@ class Input_word_embeddings
             *W,
             init_normal,
             init_range);
+		std::cerr<<*W<<std::endl;
       }
 
 	int n_inputs() const { return -1; }
@@ -1195,15 +1226,18 @@ class Input_word_embeddings
         for (int item_id=0; item_id<num_items; item_id++)
         {
             int update_item = update_items[item_id];
+			cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
             W->row(update_item) += (learning_rate*
-                W_gradient.row(update_item).array().unaryExpr(Clipper())).matrix();
+                W_gradient.row(update_item).array()).matrix();
             //GRADIENT CLIPPING
             //W->row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
             //SETTING THE GRADIENT TO ZERO
             W_gradient.row(update_item).setZero();
         }
+		//we have to clear the update map
+		this->update_map.clear();
   }
     template <typename DerivedGOut, typename DerivedIn>
     void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input,
@@ -1387,18 +1421,21 @@ class Hidden_layer
 	    //initMatrix(engine, U, init_normal, init_range);
 		b_gradient.setZero();
       	initBias(engine, b, init_normal, init_range);
+		std::cerr<<b<<std::endl;
 	}	  
 	
    template <typename DerivedIn, typename DerivedOut>
      void fProp(const MatrixBase<DerivedIn> &input,
 	   const MatrixBase<DerivedOut> &output) const
      {
-		 hidden_activation.fProp(input,output);
-		 UNCONST(DerivedOut, output, my_output);
+		 UNCONST(DerivedIn, input, my_input);
+		 //UNCONST(DerivedOut, output, my_output);
 		 int num_examples = input.cols();
 		 for (int i=0;i<num_examples; i++){
-			 my_output.col(i) += b;
+			 my_input.col(i) += b;
 		 }
+		 //cerr<<"B is "<<b<<endl;
+		 hidden_activation.fProp(input,output);
 	 }	
      template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
      void bProp(const MatrixBase<DerivedGOut> &input, 

@@ -63,11 +63,13 @@ void model::initialize(mt19937 &init_engine,
     string &parameter_update,
     double adagrad_epsilon)
 {
+	cerr<<"Input word embeddings init"<<endl;
     input_layer.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+	cerr<<"output word embeddings init"<<endl;
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
@@ -85,58 +87,76 @@ void model::initialize(mt19937 &init_engine,
         parameter_update,
         adagrad_epsilon);
 	
+	cerr<<"W_h_to_c init"<<endl;
 	W_h_to_c.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+		
+	cerr<<"W_h_to_i init"<<endl;	
 	W_h_to_i.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);	
+		
+	cerr<<"W_h_to_o init"<<endl;
 	W_h_to_o.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+	
+	cerr<<"W_h_to_f init"<<endl;
 	W_h_to_f.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
 
+	cerr<<"W_x_to_c init"<<endl;
 	W_x_to_c.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+	
+	cerr<<"W_x_to_i init"<<endl;
 	W_x_to_i.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);	
+		
+	cerr<<"W_x_to_o init"<<endl;
 	W_x_to_o.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+		
+	cerr<<"W_x_to_f init"<<endl;	
 	W_x_to_f.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);		
 
+	cerr<<"W_c_to_i init"<<endl;
 	W_c_to_i.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);	
+	cerr<<"W_c_to_o init"<<endl;	
 	W_c_to_o.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+		
+	cerr<<"W_c_to_f init"<<endl;
 	W_c_to_f.initialize(init_engine,
         init_normal,
         init_range,
@@ -144,6 +164,7 @@ void model::initialize(mt19937 &init_engine,
         adagrad_epsilon);		
 		
 	//Initializing the biases of the hidden layers and setting their activation functions
+	cerr<<"o_t init"<<endl;
 	o_t.initialize(init_engine,
         init_normal,
         init_range,
@@ -151,6 +172,7 @@ void model::initialize(mt19937 &init_engine,
         adagrad_epsilon);
 	o_t.set_activation_function(Sigmoid);
 	
+	cerr<<"f_t init"<<endl;
 	f_t.initialize(init_engine,
         init_normal,
         init_range,
@@ -158,6 +180,7 @@ void model::initialize(mt19937 &init_engine,
         adagrad_epsilon);
 	f_t.set_activation_function(Sigmoid);	
 	
+	cerr<<"i_t init"<<endl;
 	i_t.initialize(init_engine,
         init_normal,
         init_range,
@@ -165,6 +188,7 @@ void model::initialize(mt19937 &init_engine,
         adagrad_epsilon);
 	i_t.set_activation_function(Sigmoid);		
 	
+	cerr<<"tanh_c_prime_t init"<<endl;
 	tanh_c_prime_t.initialize(init_engine,
         init_normal,
         init_range,
