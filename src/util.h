@@ -116,6 +116,23 @@ void initMatrix(boost::random::mt19937 &engine,
     }
 }
 
+//Change a random position in the parameter by an offset. this is used for gradient checking
+template<typename Derived>
+void changeRandomParamInMatrix(const Eigen::MatrixBase<Derived> &const_param, 
+		double offset,
+		int &rand_row,
+		int &rand_col) {
+	UNCONST(Derived, const_param, param);
+	if (rand_row == -1 && rand_col == -1) {
+		int num_rows = param.rows();
+		int num_cols = param.cols();
+		rand_row = rand() % num_rows;
+		rand_col = rand() % num_cols;
+	}
+	param(rand_row,rand_col) += offset;
+	
+}
+
 template <typename Derived>
 void initBias(boost::random::mt19937 &engine,
 		const Eigen::MatrixBase<Derived> &p_const,

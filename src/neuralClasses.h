@@ -18,6 +18,7 @@
 #include "SoftmaxLoss.h"
 #include "Activation_function.h"
 #define quote(x) #x
+//#include <stdlib.h> 
 
 //#define EIGEN_DONT_PARALLELIZE
 //#define EIGEN_DEFAULT_TO_ROW_MAJOR
@@ -101,7 +102,7 @@ class Linear_layer
       }
 
 	    initMatrix(engine, U, init_normal, init_range);
-		std::cerr<<U<<std::endl;
+		//std::cerr<<U<<std::endl;
       initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -151,6 +152,19 @@ class Linear_layer
       }
   }
 
+  
+  void changeRandomParam(double offset, 
+						int &rand_row,
+						int &rand_col){
+  	changeRandomParamInMatrix(U, offset, rand_row, rand_col);
+  }  
+
+  double getGradient(int row,
+  			 int col) { 
+	 		//cerr<<"U gradient is "<<U_gradient<<endl;
+			//cerr<<"row is "<<row<<" and col is "<<col<<endl;
+ 			return U_gradient(row,col);}
+				   
   template <typename DerivedGOut, typename DerivedGIn>
 	void bProp(const MatrixBase<DerivedGOut> &input,
       MatrixBase<DerivedGIn> &output) const
@@ -204,10 +218,10 @@ class Linear_layer
        const MatrixBase<DerivedIn> &fProp_input)
     {
 		//std::cout<<typeid(*this).name()<<"\t"<< quote(*this) <<"\n";
-		cerr<<"bProp input is "<<bProp_input<<endl;
-		cerr<<"fProp_input is "<<fProp_input<<endl;
+		//cerr<<"bProp input is "<<bProp_input<<endl;
+		//cerr<<"fProp_input is "<<fProp_input<<endl;
         U_gradient += bProp_input*fProp_input.transpose();
-		cerr<<"current U gradient is "<<U_gradient<<endl;
+		//cerr<<"current U gradient is "<<U_gradient<<endl;
       
         // get the bias gradient for all dimensions in parallel
         //int size = b.size();
@@ -236,13 +250,13 @@ class Linear_layer
       }
       else
       {
-		  cerr<<"learning rate is "<<learning_rate<<endl;
-		  cerr<<"U gradient is "<<U_gradient<<endl;
-		  cerr<<"U before is "<<endl;
-		  cerr<<U<<endl;
+		  //cerr<<"learning rate is "<<learning_rate<<endl;
+		  //cerr<<"U gradient is "<<U_gradient<<endl;
+		  //cerr<<"U before is "<<endl;
+		  //cerr<<U<<endl;
           U += learning_rate * U_gradient;
-		  cerr<<"U after update is"<<endl;
-		  cerr<<U<<endl;
+		  //cerr<<"U after update is"<<endl;
+		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -418,7 +432,7 @@ class Linear_diagonal_layer
       }
 
 	    initMatrix(engine, U, init_normal, init_range);
-		std::cerr<<U<<std::endl;
+		//std::cerr<<U<<std::endl;
       //initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -479,7 +493,17 @@ class Linear_diagonal_layer
         //b_gradient += bProp_input.rowwise().sum();
 
   	}
-		
+	
+	//
+    void changeRandomParam(double offset, 
+							int &rand_row,
+							int &rand_col){
+    	changeRandomParamInMatrix(U, offset, rand_row, rand_col);
+    }		
+
+  	double getGradient(int row,
+  			 int col) { return U_gradient(row,col);}
+				 	
     void updateParams(double learning_rate,
                       double momentum,
 					  double L2_reg){
@@ -580,7 +604,7 @@ class Output_word_embeddings
         }
 
         initMatrix(engine, *W, init_normal, init_range);
-		std::cerr<<*W<<std::endl;
+		//std::cerr<<*W<<std::endl;
         b.fill(init_bias);
     }
 
@@ -595,6 +619,7 @@ class Output_word_embeddings
         //my_output = ((*W) * input).colwise() ;//+ b; //No bias for output words
 		my_output = (*W) * input ;//+ b; //No bias for output words
 	  }
+
 
 	// Sparse output version
     template <typename DerivedIn, typename DerivedOutI, typename DerivedOutV>
@@ -665,7 +690,12 @@ class Output_word_embeddings
         b += (learning_rate * (bProp_input.rowwise().sum())).array().unaryExpr(Clipper()).matrix();
         
 	  }
-
+	  
+	  double getGradient(int row,
+	  			 int col) {
+					 //cerr<<"W_gradient"<<endl;
+					 return W_gradient(row,col);}
+				 
 template <typename DerivedIn, typename DerivedGOut>
       void updateGradient(const MatrixBase<DerivedIn> &predicted_embeddings,
          const MatrixBase<DerivedGOut> &bProp_input) 
@@ -703,6 +733,12 @@ template <typename DerivedIn, typename DerivedGOut>
 	  W_gradient.setZero();
 	  //b_gradient.setZero();
   }
+  
+  void changeRandomParam(double offset, 
+						int &rand_row,
+						int &rand_col){
+  	changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+  } 
   
     template <typename DerivedIn, typename DerivedGOut>
           void computeGradientAdagrad(
@@ -1036,7 +1072,7 @@ class Input_word_embeddings
             *W,
             init_normal,
             init_range);
-		std::cerr<<*W<<std::endl;
+		//std::cerr<<*W<<std::endl;
       }
 
 	int n_inputs() const { return -1; }
@@ -1198,13 +1234,13 @@ class Input_word_embeddings
           W_gradient);
 	    }
       //int_map update_map; //stores all the parameters that have been updated
-	    for (int ngram=0; ngram<context_size; ngram++)
-	    {
+	    //for (int ngram=0; ngram<context_size; ngram++)
+	    //{
         for (int train_id=0; train_id<input_words.cols(); train_id++)
         {
-          this->update_map[input_words(ngram,train_id)] = 1;
+          this->update_map[input_words(train_id)] = 1;
         }
-      }
+      //}
 
 
 		
@@ -1292,6 +1328,14 @@ class Input_word_embeddings
         }
     }
 
+    void changeRandomParam(double offset, 
+							int &rand_row,
+							int &rand_col){
+    	changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+    }
+
+  	double getGradient(int row,
+  			 int col) { return W_gradient(row,col);}	
     template <typename DerivedGOut, typename DerivedIn>
     void computeGradientAdadelta(const MatrixBase<DerivedGOut> &bProp_input,
 				    const MatrixBase<DerivedIn> &input_words,
@@ -1421,7 +1465,7 @@ class Hidden_layer
 	    //initMatrix(engine, U, init_normal, init_range);
 		b_gradient.setZero();
       	initBias(engine, b, init_normal, init_range);
-		std::cerr<<b<<std::endl;
+		//<<b<<std::endl;
 	}	  
 	
    template <typename DerivedIn, typename DerivedOut>
@@ -1448,7 +1492,7 @@ class Hidden_layer
 								finput,
 								foutput);		 
 	 }
-     template <typename DerivedGOut, typename DerivedIn>
+     template <typename DerivedGOut>
      void updateGradient(const MatrixBase<DerivedGOut> &bProp_input)
      {
          b_gradient += bProp_input.rowwise().sum();
@@ -1463,6 +1507,14 @@ class Hidden_layer
 	void resetGradient(){
 		b_gradient.setZero();
 	}
+	
+    void changeRandomParam(double offset, 
+							int &rand_row,
+							int &rand_col){
+    	changeRandomParamInMatrix(b, offset, rand_row, rand_col);
+    }
+  	double getGradient(int row,
+  			 int col) { return b_gradient(row,col);}
 };
 
 } // namespace nplm

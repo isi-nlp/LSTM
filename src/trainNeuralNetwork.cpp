@@ -5,6 +5,8 @@
 #include <fstream>
 #include <vector>
 #include <algorithm>
+#include <stdlib.h>
+
 
 #include <boost/unordered_map.hpp> 
 #include <boost/functional.hpp>
@@ -28,6 +30,7 @@
 #include "graphClasses.h"
 #include "util.h"
 #include "multinomial.h"
+
 //#include "gradientCheck.h"
 
 //#define EIGEN_DONT_PARALLELIZE
@@ -52,6 +55,7 @@ typedef long long int data_size_t; // training data can easily exceed 2G instanc
 
 int main(int argc, char** argv)
 { 
+	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
     bool use_mmap_file, randomize;
@@ -466,6 +470,8 @@ int main(int argc, char** argv)
     }
 	*/
 	
+	//Resetting the gradient in the beginning
+	prop.resetGradient();
     for (int epoch=0; epoch<myParam.num_epochs; epoch++)
     { 
         cerr << "Epoch " << epoch+1 << endl;
@@ -494,7 +500,7 @@ int main(int argc, char** argv)
 	*/
 
     data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
-		
+	double data_log_likelihood=0;	
     for(data_size_t batch=0;batch<num_batches;batch++)
         {
             if (batch > 0 && batch % 10000 == 0)
@@ -562,17 +568,26 @@ int main(int argc, char** argv)
 																			current_minibatch_size);
 			
 			//Calling fProp																	
-			prop.fProp(training_input_sent_data);	
+			prop.fProp(training_input_sent_data,0,training_input_sent[batch].size()-1);	
 			//Calling backprop
 		    prop.bProp(training_input_sent_data,
-				 training_output_sent_data); 	
-				 
+				 training_output_sent_data,
+				 data_log_likelihood); 	
+
+ 			//Checking the compute probs function
+ 			//prop.computeProbs(training_output_sent_data,
+ 			//					data_log_likelihood);	
+			//cerr<<"training_input_sent_data len"					 
+			//prop.gradientCheck(training_input_sent_data,
+			//	 		 training_output_sent_data);
+			//getchar();											 
 			//Updating the gradients
 			prop.updateParams(adjusted_learning_rate,
 				  		current_momentum,
 						myParam.L2_reg);														
-						
+	
 			//Resetting the gradients
+
 			prop.resetGradient();
       	}
 	cerr << "done." << endl;

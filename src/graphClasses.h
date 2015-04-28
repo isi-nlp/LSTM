@@ -168,18 +168,18 @@ public:
 		
 	} 
 	
-	template<typename Derived, typename DerivedIn>
+	template<typename Derived, typename DerivedCIn, typename DerivedHIn>
     void fProp(const MatrixBase<Derived> &data,	
-		const MatrixBase<DerivedIn> &c_t_minus_one,
+		const MatrixBase<DerivedCIn> &c_t_minus_one,
 		// MatrixBase<DerivedOut> const_c_t,
-		const MatrixBase<DerivedIn> &h_t_minus_one) {
+		const MatrixBase<DerivedHIn> &h_t_minus_one) {
 		//const MatrixBase<DerivedOut> const_h_t){
 		
 		//UNCONST(DerivedOut,const_c_t,c_t);
 		//UNCONST(DerivedOut,const_h_t,h_t);
 		
-		cerr<<"c t -1 is "<<c_t_minus_one<<endl;
-		cerr<<"h t -1 is "<<h_t_minus_one<<endl;
+		//cerr<<"c t -1 is "<<c_t_minus_one<<endl;
+		//cerr<<"h t -1 is "<<h_t_minus_one<<endl;
 		//getchar();
         //start_timer(0);
     	input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
@@ -224,7 +224,7 @@ public:
 		
 		//Computing the current cell value
 		c_t = f_t_node.fProp_matrix.array()*c_t_minus_one.array() + i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
-		cerr<<"c_t"<<c_t<<endl;
+		//cerr<<"c_t "<<c_t<<endl;
 		//How much to scale the output
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
@@ -237,23 +237,27 @@ public:
 		//std::cerr<<"o_t "<<o_t_node.fProp_matrix<<std::endl;
 		//computing the hidden layer
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
-		cerr<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
+		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		h_t = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
-		//std::cerr<<"h_t"<<h_t;
+		//std::cerr<<"h_t "<<h_t<<endl;
 		//getchar();
 	}
 	
-	template<typename DerivedData, typename DerivedCIn, typename DerivedIn, typename DerivedDIn>
+	template<typename DerivedData, typename DerivedHIn, typename DerivedCIn, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
 	void bProp(const MatrixBase<DerivedData> &data,
 			   //const MatrixBase<DerivedIn> c_t,
-			   const MatrixBase<DerivedCIn> &h_t_minus_one,
+			   const MatrixBase<DerivedHIn> &h_t_minus_one,
 			   const MatrixBase<DerivedCIn> &c_t_minus_one,
 			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
-			   const MatrixBase<DerivedDIn> &d_Err_tPlusOne_to_n_d_c_t,
-			   const MatrixBase<DerivedDIn> &d_Err_tPlusOne_to_n_d_h_t) {
+			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
+			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t) {
 				   
 		Matrix<double,Dynamic,Dynamic> dummy_matrix;
-		cerr<<"c t -1 is "<<c_t_minus_one<<endl;
+		//cerr<<"h_t_minus_one "<<h_t_minus_one<<endl;
+		//cerr<<"c_t_minus_one "<<c_t_minus_one<<endl;
+		//cerr<<"d_Err_tPlusOne_to_n_d_c_t "<<d_Err_tPlusOne_to_n_d_c_t<<endl;
+		//cerr<<"d_Err_tPlusOne_to_n_d_h_t "<<d_Err_tPlusOne_to_n_d_h_t<<endl;
+		//cerr<<"c t -1 is "<<c_t_minus_one<<endl;
 	    //UNCONST(DerivedDOut,const_d_Err_t_to_n_d_c_tMinusOne,d_Err_t_to_n_d_c_tMinusOne);
 	    //UNCONST(DerivedDOut,const_d_Err_t_to_n_d_h_tMinusOne,d_Err_t_to_n_d_h_tMinusOne);
 		
@@ -264,12 +268,12 @@ public:
 		
 		//Error derivatives for h_t
 		d_Err_t_to_n_d_h_t = d_Err_t_d_h_t + d_Err_tPlusOne_to_n_d_h_t;
-		cerr<<"d_Err_t_to_n_d_h_t is "<<d_Err_t_to_n_d_h_t<<endl;
-		cerr<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
+		//cerr<<"d_Err_t_to_n_d_h_t is "<<d_Err_t_to_n_d_h_t<<endl;
+		//cerr<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		//Error derivativs for o_t
-		d_Err_t_to_n_d_o_t = d_Err_t_to_n_d_h_t.array()*tanh_c_t_node.fProp_matrix.array();
-		cerr<<"d_Err_t_to_n_d_o_t is "<<d_Err_t_to_n_d_o_t<<endl;
-		cerr<<"O t node fProp matrix is "<<o_t_node.fProp_matrix<<endl;
+		d_Err_t_to_n_d_o_t.array() = d_Err_t_to_n_d_h_t.array()*tanh_c_t_node.fProp_matrix.array();
+		//cerr<<"d_Err_t_to_n_d_o_t "<<d_Err_t_to_n_d_o_t<<endl;
+		//cerr<<"O t node fProp matrix is "<<o_t_node.fProp_matrix<<endl;
 		o_t_node.param->bProp(d_Err_t_to_n_d_o_t,
 						      o_t_node.bProp_matrix,
 							  dummy_matrix,
@@ -280,42 +284,51 @@ public:
 						  						  first_hidden_linear_node.fProp_matrix,
 						  						  first_hidden_activation_node.fProp_matrix);
 		*/
-		cerr<<"o t node backprop matrix is "<<o_t_node.bProp_matrix<<endl;
+		//cerr<<"o t node backprop matrix is "<<o_t_node.bProp_matrix<<endl;
 		//Error derivatives for tanh_c_t					   
 		d_Err_t_to_n_d_tanh_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();
+		//cerr<<"d_Err_t_to_n_d_tanh_c_t "<<d_Err_t_to_n_d_tanh_c_t<<endl;
 		tanh_c_t_node.param->bProp(d_Err_t_to_n_d_tanh_c_t,
 							tanh_c_t_node.bProp_matrix,
 							dummy_matrix,
 							tanh_c_t_node.fProp_matrix);
-		
+		//cerr<<"tanh_c_t_node.bProp_matrix "<<tanh_c_t_node.bProp_matrix<<endl;
 		//Error derivatives for c_t
 		W_c_to_o_node.param->bProp(o_t_node.bProp_matrix,
 								W_c_to_o_node.bProp_matrix);
+		//cerr<<"W_c_to_o_node.bProp_matrix "<<W_c_to_o_node.bProp_matrix<<endl;
 		d_Err_t_to_n_d_c_t =  tanh_c_t_node.bProp_matrix + W_c_to_o_node.bProp_matrix + d_Err_tPlusOne_to_n_d_c_t;
+		//cerr<<"d_Err_t_to_n_d_c_t "<<d_Err_t_to_n_d_c_t<<endl;
 		
 		//Error derivatives for f_t
 		d_Err_t_to_n_d_f_t.array() = d_Err_t_to_n_d_c_t.array()*c_t_minus_one.array();
+		//cerr<<"d_Err_t_to_n_d_f_t "<<d_Err_t_to_n_d_f_t<<endl;
 		f_t_node.param->bProp(d_Err_t_to_n_d_f_t,
 						      f_t_node.bProp_matrix,
 							  dummy_matrix,
 							  f_t_node.fProp_matrix);
+		//cerr<<"f_t_node.bProp_matrix "<<f_t_node.bProp_matrix<<endl;
 		
 		//Error derivatives for i_t
 		d_Err_t_to_n_d_i_t.array() = d_Err_t_to_n_d_c_t.array()*tanh_c_prime_t_node.fProp_matrix.array();
+		//cerr<<"d_Err_t_to_n_d_i_t "<<d_Err_t_to_n_d_i_t<<endl;
 		i_t_node.param->bProp(d_Err_t_to_n_d_i_t,
 						      i_t_node.bProp_matrix,
 							  dummy_matrix,
 							  i_t_node.fProp_matrix);	
+		//cerr<<" i_t_node.bProp_matrix "<<i_t_node.bProp_matrix<<endl;
 							  	
 		//Error derivatives for c_prime_t
 		d_Err_t_to_n_d_tanh_c_prime_t.array() = d_Err_t_to_n_d_c_t.array()*i_t_node.fProp_matrix.array();
+		//cerr<<" d_Err_t_to_n_d_tanh_c_prime_t "<<d_Err_t_to_n_d_tanh_c_prime_t<<endl;
 		//tanh_c_prime_t_node.param->bProp(d_Err_t_to_n_d_tanh_c_prime_t,
 		//								tanh_c_prime_t_node.bProp_matrix);
 		
 		tanh_c_prime_t_node.param->bProp(d_Err_t_to_n_d_tanh_c_prime_t,
 						      tanh_c_prime_t_node.bProp_matrix,
 							  dummy_matrix,
-							  tanh_c_prime_t_node.fProp_matrix);											
+							  tanh_c_prime_t_node.fProp_matrix);	
+		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;									
 		
 		//Error derivatives for h_t_minus_one
 		W_h_to_o_node.param->bProp(o_t_node.bProp_matrix,
@@ -324,23 +337,24 @@ public:
  						 W_h_to_f_node.bProp_matrix);
   		W_h_to_i_node.param->bProp(i_t_node.bProp_matrix,
   						 W_h_to_i_node.bProp_matrix);
-		cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;
+		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;
    		W_h_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
    						 W_h_to_c_node.bProp_matrix);
 		d_Err_t_to_n_d_h_tMinusOne = W_h_to_o_node.bProp_matrix + 
 									W_h_to_f_node.bProp_matrix +
 									W_h_to_i_node.bProp_matrix +
 									W_h_to_c_node.bProp_matrix;		
-		
+		//cerr<<"d_Err_t_to_n_d_h_tMinusOne "<<d_Err_t_to_n_d_h_tMinusOne<<endl;
 		//Error derivatives for c_t_minus_one
 		W_c_to_f_node.param->bProp(f_t_node.bProp_matrix,
 							W_c_to_f_node.bProp_matrix);
 		W_c_to_i_node.param->bProp(i_t_node.bProp_matrix,
-							W_c_to_i_node.bProp_matrix);			
+							W_c_to_i_node.bProp_matrix);	
+									
 		d_Err_t_to_n_d_c_tMinusOne = (d_Err_t_to_n_d_c_t.array()*f_t_node.fProp_matrix.array()).matrix()+
 									W_c_to_f_node.bProp_matrix +
 									W_c_to_i_node.bProp_matrix;
-		
+		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
 		//Error derivatives for the input word embeddings
 		W_x_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
 								W_x_to_c_node.bProp_matrix);
@@ -355,19 +369,19 @@ public:
 							W_x_to_f_node.bProp_matrix +
 							W_x_to_i_node.bProp_matrix;
 		
-		
+		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
 		//Computing gradients of the paramters
 		//Derivative of weights out of h_t
-		cerr<<"W_h_to_o_node"<<endl;
+		//cerr<<"W_h_to_o_node"<<endl;
 	    W_h_to_o_node.param->updateGradient(o_t_node.bProp_matrix,
 											h_t_minus_one);
-	    cerr<<"W_h_to_f_node"<<endl;										
+	    //cerr<<"W_h_to_f_node"<<endl;										
 	    W_h_to_f_node.param->updateGradient(f_t_node.bProp_matrix,
 											h_t_minus_one);
-		cerr<<"W_h_to_i_node"<<endl;									
+		//cerr<<"W_h_to_i_node"<<endl;									
 	    W_h_to_i_node.param->updateGradient(i_t_node.bProp_matrix,
 											h_t_minus_one);		
-		cerr<<"W_h_to_c_node"<<endl;									
+		//cerr<<"W_h_to_c_node"<<endl;									
    		W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix,
    						 					h_t_minus_one);
 											
@@ -380,17 +394,17 @@ public:
 											c_t_minus_one);		
  
 		//Derivatives of weights out of x_t
-		cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
-		cerr<<"W_x_to_o_node"<<endl;
+		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
+		//cerr<<"W_x_to_o_node"<<endl;
 		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix,
 											input_layer_node.fProp_matrix);
-		cerr<<"W_x_to_i_node"<<endl;									
+		//cerr<<"W_x_to_i_node"<<endl;									
 		W_x_to_i_node.param->updateGradient(i_t_node.bProp_matrix,
 											input_layer_node.fProp_matrix);
-		cerr<<"W_x_to_f_node"<<endl;									
+		//cerr<<"W_x_to_f_node"<<endl;									
 		W_x_to_f_node.param->updateGradient(f_t_node.bProp_matrix,
 											input_layer_node.fProp_matrix);	
-		cerr<<"W_x_to_c_node"<<endl;									
+		//cerr<<"W_x_to_c_node"<<endl;									
 		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix,
 											input_layer_node.fProp_matrix);			
 		
@@ -402,12 +416,19 @@ public:
 												tanh_c_prime_t_node.bProp_matrix,
 									            data);
 		*/
+		// Updating the gradient of the hidden layer biases									
+		o_t_node.param->updateGradient(o_t_node.bProp_matrix);
+		f_t_node.param->updateGradient(f_t_node.bProp_matrix);
+		i_t_node.param->updateGradient(i_t_node.bProp_matrix);
+		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix);
+		
 		//updating gradient of input word embeddings input embeddings
 		input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t,
 												data);											
 	
 	}
-		  
+	
+
 	/*
 	void updateParams(double learning_rate,
 	 					double momentum,

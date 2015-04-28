@@ -59,7 +59,7 @@ struct tanh_functor {
 };
 
 struct dtanh_functor {
-  double operator() (double x) const { return 1-x*x; }
+  double operator() (double x) const { return 1.-x*x; }
 };
 
 struct sigmoid_functor {

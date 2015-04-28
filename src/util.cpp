@@ -147,6 +147,7 @@ void readDataFile(const string &filename, int &ngram_size, vector<int> &data, in
   DATAIN.close();
 }
 
+
 // Read a data file of unknown size into a flat vector<int>.
 // If this takes too much memory, we should create a vector of minibatches.
 void readSentFile(const string &filename, vector<vector <int> > &data, int minibatch_size)

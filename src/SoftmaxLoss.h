@@ -45,10 +45,10 @@ struct SoftmaxLogLoss
 			const MatrixBase<DerivedO> &output_const, 
 			double &loss)
     {
-	std::cerr<<"output words are "<<output_words<<std::endl;
+	//std::cerr<<"output words are "<<output_words<<std::endl;
 	//std::cerr<<"output const is "<<output_const<<std::endl;
     UNCONST(DerivedO, output_const, output);
-	std::cerr<<"input is "<<input<<std::endl;
+	//std::cerr<<"input is "<<input<<std::endl;
 
 	//getchar();
 
@@ -59,7 +59,7 @@ struct SoftmaxLogLoss
 	{
 	    double normalization = logsum(input.col(train_id));
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
-		std::cerr<<"normalization is"<<normalization<<std::endl;
+		//std::cerr<<"normalization is"<<normalization<<std::endl;
 	    log_likelihood += output(output_words(train_id), train_id);
 	}
 	//std::cerr<<"output is "<<output<<std::endl;
