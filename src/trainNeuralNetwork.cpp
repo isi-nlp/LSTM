@@ -508,7 +508,7 @@ int main(int argc, char** argv)
 	double data_log_likelihood=0;	
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
-            if (batch > 0 && batch % 10000 == 0)
+            if (batch > 0 && batch % 100 == 0)
             {
 	        cerr << batch <<"...";
             } 
