@@ -182,7 +182,9 @@ public:
 		//cerr<<"h t -1 is "<<h_t_minus_one<<endl;
 		//getchar();
         //start_timer(0);
+		//cerr<<"data is "<<data<<endl;
     	input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		//current_minibatch_size = data.cols();
     	//stop_timer(0);
     	//std::cerr<<"input layer fprop matrix is "<<input_layer_node.fProp_matrix<<endl;
 		
@@ -223,13 +225,18 @@ public:
 		//std::cerr<<"tanh_c_prime_t_node "<<tanh_c_prime_t_node.fProp_matrix<<std::endl;
 		
 		//Computing the current cell value
-		c_t = f_t_node.fProp_matrix.array()*c_t_minus_one.array() + i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
+		//cerr<<"c_t_minus_one"<<c_t_minus_one<<endl;
+		//cerr<<c_t_minus_one.rows()<<" "<<c_t_minus_one.cols()<<endl;
+		c_t.array() = f_t_node.fProp_matrix.array()*c_t_minus_one.array() + 
+				i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
 		//cerr<<"c_t "<<c_t<<endl;
 		//How much to scale the output
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
-		o_t_input_matrix = W_x_to_o_node.fProp_matrix +  W_h_to_o_node.fProp_matrix + W_c_to_o_node.fProp_matrix;
+		o_t_input_matrix = W_x_to_o_node.fProp_matrix +  
+						   W_h_to_o_node.fProp_matrix + 
+						   W_c_to_o_node.fProp_matrix;
 		//std::cerr<<"o t input matrix is "<<o_t_input_matrix<<std::endl;
 		o_t_node.param->fProp(o_t_input_matrix,
 							o_t_node.fProp_matrix);	
@@ -238,7 +245,7 @@ public:
 		//computing the hidden layer
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
-		h_t = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
+		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
 		//std::cerr<<"h_t "<<h_t<<endl;
 		//getchar();
 	}
@@ -253,6 +260,7 @@ public:
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t) {
 				   
 		Matrix<double,Dynamic,Dynamic> dummy_matrix;
+		int current_minibatch_size = data.cols();
 		//cerr<<"h_t_minus_one "<<h_t_minus_one<<endl;
 		//cerr<<"c_t_minus_one "<<c_t_minus_one<<endl;
 		//cerr<<"d_Err_tPlusOne_to_n_d_c_t "<<d_Err_tPlusOne_to_n_d_c_t<<endl;
@@ -267,6 +275,8 @@ public:
 		//error function, which is the cross entropy.
 		
 		//Error derivatives for h_t
+		//cerr<<"d_Err_t_d_h_t "<<d_Err_t_d_h_t<<endl;
+		//cerr<<"d_Err_tPlusOne_to_n_d_h_t "<<d_Err_tPlusOne_to_n_d_h_t<<endl;
 		d_Err_t_to_n_d_h_t = d_Err_t_d_h_t + d_Err_tPlusOne_to_n_d_h_t;
 		//cerr<<"d_Err_t_to_n_d_h_t is "<<d_Err_t_to_n_d_h_t<<endl;
 		//cerr<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
@@ -294,6 +304,7 @@ public:
 							tanh_c_t_node.fProp_matrix);
 		//cerr<<"tanh_c_t_node.bProp_matrix "<<tanh_c_t_node.bProp_matrix<<endl;
 		//Error derivatives for c_t
+		//cerr<<"o_t_node.bProp_matrix"<<o_t_node.bProp_matrix<<endl;
 		W_c_to_o_node.param->bProp(o_t_node.bProp_matrix,
 								W_c_to_o_node.bProp_matrix);
 		//cerr<<"W_c_to_o_node.bProp_matrix "<<W_c_to_o_node.bProp_matrix<<endl;
@@ -373,40 +384,40 @@ public:
 		//Computing gradients of the paramters
 		//Derivative of weights out of h_t
 		//cerr<<"W_h_to_o_node"<<endl;
-	    W_h_to_o_node.param->updateGradient(o_t_node.bProp_matrix,
-											h_t_minus_one);
+	    W_h_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											h_t_minus_one.leftCols(current_minibatch_size));
 	    //cerr<<"W_h_to_f_node"<<endl;										
-	    W_h_to_f_node.param->updateGradient(f_t_node.bProp_matrix,
-											h_t_minus_one);
+	    W_h_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											h_t_minus_one.leftCols(current_minibatch_size));
 		//cerr<<"W_h_to_i_node"<<endl;									
-	    W_h_to_i_node.param->updateGradient(i_t_node.bProp_matrix,
-											h_t_minus_one);		
+	    W_h_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											h_t_minus_one.leftCols(current_minibatch_size));		
 		//cerr<<"W_h_to_c_node"<<endl;									
-   		W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix,
-   						 					h_t_minus_one);
+   		W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   						 					h_t_minus_one.leftCols(current_minibatch_size));
 											
 		//Derivative of weights out of c_t and c_t_minus_one
-	    W_c_to_o_node.param->updateGradient(o_t_node.bProp_matrix,
-											this->c_t);
-	    W_c_to_i_node.param->updateGradient(i_t_node.bProp_matrix,
-											c_t_minus_one);
-	    W_c_to_f_node.param->updateGradient(f_t_node.bProp_matrix,
-											c_t_minus_one);		
+	    W_c_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											this->c_t.leftCols(current_minibatch_size));
+	    W_c_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											c_t_minus_one.leftCols(current_minibatch_size));
+	    W_c_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											c_t_minus_one.leftCols(current_minibatch_size));		
  
 		//Derivatives of weights out of x_t
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
-		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix,
-											input_layer_node.fProp_matrix);
+		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
 		//cerr<<"W_x_to_i_node"<<endl;									
-		W_x_to_i_node.param->updateGradient(i_t_node.bProp_matrix,
-											input_layer_node.fProp_matrix);
+		W_x_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
 		//cerr<<"W_x_to_f_node"<<endl;									
-		W_x_to_f_node.param->updateGradient(f_t_node.bProp_matrix,
-											input_layer_node.fProp_matrix);	
+		W_x_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));	
 		//cerr<<"W_x_to_c_node"<<endl;									
-		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix,
-											input_layer_node.fProp_matrix);			
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));			
 		
 		/*
 		//Derivatives of the input embeddings. I THINK THIS IS WRONG!							
@@ -417,13 +428,13 @@ public:
 									            data);
 		*/
 		// Updating the gradient of the hidden layer biases									
-		o_t_node.param->updateGradient(o_t_node.bProp_matrix);
-		f_t_node.param->updateGradient(f_t_node.bProp_matrix);
-		i_t_node.param->updateGradient(i_t_node.bProp_matrix);
-		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix);
+		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
+		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
+		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
+		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		
 		//updating gradient of input word embeddings input embeddings
-		input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t,
+		input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
 												data);											
 	
 	}

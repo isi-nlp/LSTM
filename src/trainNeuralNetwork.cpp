@@ -23,6 +23,7 @@
 #include "maybe_omp.h"
 #include <tclap/CmdLine.h>
 
+#include "fastonebigheader.h"
 #include "model.h"
 #include "propagator.h"
 #include "param.h"
@@ -51,7 +52,7 @@ typedef ip::vector<int, intAllocator> vec;
 typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocator;
 
 
-typedef long long int data_size_t; // training data can easily exceed 2G instances
+//typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 int main(int argc, char** argv)
 { 
@@ -302,13 +303,16 @@ int main(int argc, char** argv)
 	*/
 	
 	//Reading the input and output sent files
-	
-	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size);
-	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size);
+	data_size_t total_output_tokens = 0;
+	data_size_t total_input_tokens = 0;
+	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
+	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
 	training_data_size = training_input_sent.size();
 	data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
 	
-    //cerr<<"Num tokens "<<num_tokens<<endl;
+    cerr<<"Number of input tokens "<<total_input_tokens<<endl;
+	cerr<<"Number of output tokens "<<total_output_tokens<<endl;
+	cerr<<"Number of minibatches "<<num_batches<<endl;
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
 	
     cerr << "Number of training instances "<< training_input_sent.size() << endl;
@@ -498,19 +502,25 @@ int main(int argc, char** argv)
 	Matrix<double,Dynamic,Dynamic> scores(num_samples, minibatch_size);
 	Matrix<double,Dynamic,Dynamic> probs(num_samples, minibatch_size);
 	*/
-
+	
+	//cerr<<"Training data size is"<<training_data_size<<endl;
     data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
 	double data_log_likelihood=0;	
     for(data_size_t batch=0;batch<num_batches;batch++)
-        {
+    {
             if (batch > 0 && batch % 10000 == 0)
             {
 	        cerr << batch <<"...";
             } 
 
             data_size_t minibatch_start_index = minibatch_size * batch;
+			data_size_t minibatch_end_index = min(training_data_size-1, static_cast<data_size_t> (minibatch_start_index+minibatch_size-1));
+			//cerr<<"Minibatch start index is "<<minibatch_start_index<<endl;
+			//cerr<<"Minibatch end index is "<<minibatch_end_index<<endl;
 
-      int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
+      	  int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
+	  	  //cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+	  
 	  /*
       //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
 	    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
@@ -533,32 +543,30 @@ int main(int argc, char** argv)
 	  
 	  
             double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
-			cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
+			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
-
-            /*
-            if (batch == rand() % num_batches)
-            {
-                cerr<<"we are checking the gradient in batch "<<batch<<endl;
-                /////////////////////////CHECKING GRADIENTS////////////////////////////////////////
-                gradientChecking(myParam,minibatch_start_index,current_minibatch_size,word_nodes,context_nodes,hidden_layer_node,hidden_layer_to_output_node,
-                              shuffled_training_data,c_h,unif_real_vector,eng_real_vector,unif_int_vector,eng_int_vector,unigram_probs_vector,
-                              q_vector,J_vector,D_prime);
-            }
-            */
 
             ///// Forward propagation
 
             //prop.fProp(minibatch.topRows(ngram_size-1));
 		//
-
-	    if (loss_function == NCELoss)
-	    {
-
-	    }
-	    else if (loss_function == LogLoss)
-	    {
 			//Taking the input and output sentence and setting the training data to it.
+			//Getting a minibatch of sentences
+			vector<int> minibatch_input_sentences, minibatch_output_sentences;
+			unsigned int max_sent_len;
+			miniBatchify(training_input_sent, 
+							minibatch_input_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_sent_len,
+							1);
+			miniBatchify(training_output_sent, 
+							minibatch_output_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_sent_len,
+							0);							
+			/*
 			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_input_sent[batch].data(), 
 											training_input_sent[batch].size(),
 											current_minibatch_size);
@@ -566,40 +574,67 @@ int main(int argc, char** argv)
 			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_output_sent[batch].data(),
 																			training_output_sent[batch].size(),
 																			current_minibatch_size);
+			*/
+			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+											max_sent_len,
+											current_minibatch_size);
+							
+			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
+																			max_sent_len,
+																			current_minibatch_size);
+			//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
+			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
+			//exit(0);
+			//Calling fProp. Note that it should not matter for fProp if we're doing log 
+			//or NCE loss															
+			prop.fProp(training_input_sent_data,0,max_sent_len-1);	
 			
-			//Calling fProp																	
-			prop.fProp(training_input_sent_data,0,training_input_sent[batch].size()-1);	
-			//Calling backprop
-		    prop.bProp(training_input_sent_data,
-				 training_output_sent_data,
-				 data_log_likelihood); 	
+		    if (loss_function == NCELoss)
+		    {
 
- 			//Checking the compute probs function
- 			//prop.computeProbs(training_output_sent_data,
- 			//					data_log_likelihood);	
-			//cerr<<"training_input_sent_data len"					 
-			//prop.gradientCheck(training_input_sent_data,
-			//	 		 training_output_sent_data);
-			//getchar();											 
-			//Updating the gradients
-			prop.updateParams(adjusted_learning_rate,
-				  		current_momentum,
-						myParam.L2_reg);														
+		    }
+		    else if (loss_function == LogLoss)
+		    {
+
+				//Calling backprop
+			    prop.bProp(training_input_sent_data,
+					 training_output_sent_data,
+					 data_log_likelihood); 	
+
+	 			//Checking the compute probs function
+	 			//prop.computeProbs(training_output_sent_data,
+	 			//					data_log_likelihood);	
+				//cerr<<"training_input_sent_data len"					 
+				//prop.gradientCheck(training_input_sent_data,
+				//	 		 training_output_sent_data);
+				//getchar();											 
+				//Updating the gradients
+				prop.updateParams(adjusted_learning_rate,
+					  		current_momentum,
+							myParam.L2_reg);														
 	
-			//Resetting the gradients
+				//Resetting the gradients
 
-			prop.resetGradient();
-      	}
-	cerr << "done." << endl;
-
+				prop.resetGradient();
+	      }
+		  cerr << "done." << endl;
+	 }
 	if (loss_function == LogLoss)
 	{
-	    cerr << "Training log-likelihood: " << log_likelihood << endl;
-            cerr << "         perplexity:     "<< exp(-log_likelihood/training_data_size) << endl;
+		//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+		//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+		//log_likelihood /= sent_len;		
+	    cerr << "Training log-likelihood base e: " << data_log_likelihood << endl;
+		cerr << "Training log-likelihood base 10: " << data_log_likelihood/log(10.) << endl;
+		cerr<<"The cross entopy in base 10 is "<<data_log_likelihood/(log(10.)*total_output_tokens)<< endl;
+		cerr << "         perplexity:     "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss)
 	    cerr << "Training NCE log-likelihood: " << log_likelihood << endl;
-
+	
+	if (myParam.use_momentum)
         current_momentum += momentum_delta;
 
 	#ifdef USE_CHRONO
@@ -666,9 +701,9 @@ int main(int argc, char** argv)
                 current_learning_rate /= 2;
             }
             current_validation_ll = log_likelihood;
-	 */
+	 
 	}
-	
+	*/
     }
     return 0;
 }

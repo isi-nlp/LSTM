@@ -39,6 +39,7 @@ namespace nplm
 		  for (int i=0; i<lstm_nodes.size(); i++){
 			  lstm_nodes[i].resize(minibatch_size);
 		  }
+		  //cerr<<"minibatch size is propagator is "<<minibatch_size<<endl;
 		  //I HAVE TO INITIALIZE THE MATRICES
 		  d_Err_tPlusOne_to_n_d_c_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 		  d_Err_tPlusOne_to_n_d_h_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
@@ -57,17 +58,21 @@ namespace nplm
 				const int start_pos,
 				const int end_pos)
 	    {
+			/*
+			cerr<<"Data is "<<data<<endl;
 			cerr<<"Start pos "<<start_pos<<endl;
 			cerr<<"End pos "<<end_pos<<endl;
 			cerr<<"In Fprop"<<endl;
+			*/
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = data.rows();
-			Matrix<double,Dynamic,1> c_0,h_0,c_1,h_1;
+			Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = data.cols();
-			c_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);
-			h_0.setZero(output_layer_node.param->n_inputs(), current_minibatch_size);			
-			c_1.setOnes(output_layer_node.param->n_inputs(), current_minibatch_size);
-			h_1.setOnes(output_layer_node.param->n_inputs(), current_minibatch_size);
+			//cerr<<"current minibatch_size is "<<current_minibatch_size<<endl;
+			c_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);
+			h_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);			
+			c_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
+			h_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
 			//cerr<<"c0 is "<<c_0<<endl;
 			//cerr<<"h0 is "<<h_0<<endl;
 			//getchar();
@@ -101,14 +106,14 @@ namespace nplm
 			 double &log_likelihood) 
 	    {	
 			
-			cerr<<"In backprop..."<<endl;
+			//cerr<<"In backprop..."<<endl;
 			int current_minibatch_size = output.cols();
-			
+			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 			Matrix<double,Dynamic,Dynamic> dummy_zero,dummy_ones;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 			//same dimension in and LSTM. this might not be a good idea
-			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
-			dummy_ones.setOnes(output_layer_node.param->n_inputs(),current_minibatch_size);
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
 			int sent_len = output.rows(); 
 			//double log_likelihood = 0.;
@@ -116,7 +121,10 @@ namespace nplm
 			for (int i=sent_len-1; i>=0; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
-				output_layer_node.param->fProp(lstm_nodes[i].h_t, scores);
+				
+				//The number of columns in scores will be the current minibatch size
+				output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
@@ -124,7 +132,7 @@ namespace nplm
 				
 		        double minibatch_log_likelihood;
 		        start_timer(5);
-		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+		        SoftmaxLogLoss().fProp(scores, 
 		                   output.row(i), 
 		                   probs, 
 		                   minibatch_log_likelihood);
@@ -148,12 +156,15 @@ namespace nplm
 
 				//Oh wow, i have not even been updating the gradient of the output embeddings
 				//Now computing the derivative of the output layer
-	
+				//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
    		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
    						       output_layer_node.bProp_matrix);	
+				//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
+				//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
+				//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
 				//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
-   		        output_layer_node.param->updateGradient(lstm_nodes[i].h_t,
-   						       d_Err_t_d_output);									   	 		   
+   		        output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
 				//cerr<<" i is "<<i<<endl;
 				//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
 				//getchar();
@@ -161,8 +172,8 @@ namespace nplm
 				if (i==0) {
 					
 				    lstm_nodes[i].bProp(data.row(i),
-							   dummy_zero.leftCols(current_minibatch_size),
-				   			   dummy_zero.leftCols(current_minibatch_size),
+							   dummy_zero,
+				   			   dummy_zero,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);	
@@ -190,8 +201,8 @@ namespace nplm
 							   lstm_nodes[i-1].h_t,
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
-				   			   dummy_zero.leftCols(current_minibatch_size), //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   dummy_zero.leftCols(current_minibatch_size));
+				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+				   			   dummy_zero);
 					/*   
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -219,24 +230,24 @@ namespace nplm
 				} 		   
 		   
 			}
-			cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-			cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-			cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-			cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 
 	  }
 	  
 	 void updateParams(double learning_rate,
 				  		double momentum,
 						double L2_reg) {
-		
+		//cerr<<"updating params "<<endl;
 		plstm->output_layer.updateParams(learning_rate,
 	  					momentum,
 	  					L2_reg);
 		// updating the rest of the parameters
 		
 		//updating params for weights out of hidden layer 
-		cerr<<"updating params"<<endl;
+		//cerr<<"updating params"<<endl;
 		plstm->W_h_to_o.updateParams(learning_rate,
 											momentum,
 											L2_reg);
@@ -301,7 +312,7 @@ namespace nplm
 	  					double &log_likelihood) 
 	  {	
 			
-			cerr<<"In computeProbs..."<<endl;
+			//cerr<<"In computeProbs..."<<endl;
 			int current_minibatch_size = output.cols();
 
 			Matrix<double,Dynamic,Dynamic> dummy_zero;
@@ -331,10 +342,10 @@ namespace nplm
 		        stop_timer(5);
 		        log_likelihood += minibatch_log_likelihood;		
 			}
-			cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-			cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-			cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-			cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+			//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 			//log_likelihood /= sent_len;
 	  }	  
 	  

@@ -473,7 +473,8 @@ class Linear_diagonal_layer
   	    int num_examples = input.cols();
 		//Can this be sped up with broadcasting ? 
   	    for (int i=0; i<num_examples; i++){
-  	  	  my_output.col(i).noalias() = (U.array()*input.array()).matrix();
+		  //cerr<<" i "<<i<<endl;	
+  	  	  my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
   	    }
 	    //my_output.noalias() = U.array()*input.array();
 	}
@@ -1262,7 +1263,7 @@ class Input_word_embeddings
         for (int item_id=0; item_id<num_items; item_id++)
         {
             int update_item = update_items[item_id];
-			cerr<<"the update item is "<<update_item<<endl;
+			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
             W->row(update_item) += (learning_rate*
                 W_gradient.row(update_item).array()).matrix();

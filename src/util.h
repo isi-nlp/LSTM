@@ -21,6 +21,8 @@
 
 // Make matrices hashable
 
+typedef long long int data_size_t; // training data can easily exceed 2G instances
+
 namespace Eigen {
     template <typename Derived>
     size_t hash_value(const DenseBase<Derived> &m)
@@ -44,7 +46,13 @@ void writeWordsFile(const std::vector<std::string> &words, const std::string &fi
 void readDataFile(const std::string &filename, int &ngram_size, std::vector<int> &data, int minibatch_size=0);
 void readUnigramProbs(const std::string &unigram_probs_file, std::vector<double> &unigram_probs);
 void readWeightsFile(std::ifstream &TRAININ, std::vector<float> &weights);
-void readSentFile(const std::string &filename, std::vector<std::vector <int> > &data, int minibatch_size);
+void readSentFile(const std::string &filename, std::vector<std::vector <int> > &data, int minibatch_size, data_size_t &num_tokens);
+void miniBatchify(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				bool is_input);
 //template <typename T> readSentFile(const std::string &file, T &sentences);
 
 
@@ -161,6 +169,8 @@ void initBias(boost::random::mt19937 &engine,
 }
 
 
+
+	
 template <typename Derived>
 void readMatrix(std::ifstream &TRAININ, Eigen::MatrixBase<Derived> &param_const)
 {

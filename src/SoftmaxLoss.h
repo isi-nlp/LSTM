@@ -57,6 +57,10 @@ struct SoftmaxLogLoss
     #pragma omp parallel for reduction(+:log_likelihood)
 	for (int train_id = 0; train_id < input.cols(); train_id++)
 	{
+		//If the output word is negative, that means there was no sample
+		if (output_words(train_id) == -1){
+			continue;
+		}
 	    double normalization = logsum(input.col(train_id));
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
 		//std::cerr<<"normalization is"<<normalization<<std::endl;
@@ -73,11 +77,17 @@ struct SoftmaxLogLoss
         UNCONST(DerivedI, grad_input_const, grad_input);
         grad_input.setZero();
         #pragma omp parallel for
-	for (int train_id = 0; train_id < output.cols(); train_id++)
-	{
-	    grad_input(output_words(train_id), train_id) += 1.;
-	    grad_input.col(train_id) -= output.col(train_id).array().exp().matrix();
-	}
+		for (int train_id = 0; train_id < output.cols(); train_id++)
+		{
+			//If the output word is -1, there is no gradient
+			if (output_words(train_id) == -1) {
+				continue;
+			}
+		    grad_input(output_words(train_id), train_id) += 1.;
+		    //grad_input.col(train_id) -= output.col(train_id).array().exp().matrix();
+			grad_input.col(train_id) -= output.col(train_id).array().exp().matrix();
+			
+		}
     }
 };
 
@@ -134,11 +144,11 @@ public:
     {
         UNCONST(DerivedI, output_const, output);
         #pragma omp parallel for schedule(static)
-	for (int train_id = 0; train_id < probs.cols(); train_id++)
-	{
-	    output.col(train_id) = -probs.col(train_id);
-	    output(0, train_id) += 1.0;
-	}
+		for (int train_id = 0; train_id < probs.cols(); train_id++)
+		{
+		    output.col(train_id) = -probs.col(train_id);
+		    output(0, train_id) += 1.0;
+		}
     }
 };
 

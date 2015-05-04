@@ -150,7 +150,10 @@ void readDataFile(const string &filename, int &ngram_size, vector<int> &data, in
 
 // Read a data file of unknown size into a flat vector<int>.
 // If this takes too much memory, we should create a vector of minibatches.
-void readSentFile(const string &filename, vector<vector <int> > &data, int minibatch_size)
+void readSentFile(const string &filename, 
+				vector<vector <int> > &data, 
+				int minibatch_size,
+				data_size_t &num_tokens)
 {
   cerr << "Reading input sentences from file " << filename << ": ";
 
@@ -185,6 +188,7 @@ void readSentFile(const string &filename, vector<vector <int> > &data, int minib
         int_ngram.push_back(boost::lexical_cast<int>(ngram[i]));
 
 	data.push_back(int_ngram);
+	num_tokens += int_ngram.size();
 	
     n_lines++;
     if (minibatch_size && n_lines % (minibatch_size * 10000) == 0)
@@ -192,6 +196,45 @@ void readSentFile(const string &filename, vector<vector <int> > &data, int minib
   }
   cerr << "done." << endl;
   DATAIN.close();
+}
+
+void miniBatchify(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				bool is_input){
+	//cerr<<"minibatch start index is "<<minibatch_start_index<<endl;
+	//cerr<<"minibatch end index is "<<minibatch_end_index<<endl;
+	//First go over all the sentences and get the longest sentence
+	max_sent_len = 0;
+	//cerr<<"max sent len boefore is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//cerr<<"sent len "<<sentences[index].size()<<endl;
+		//cerr<<"max sent len in loop is "<<max_sent_len<<endl;
+		//cerr<<max_sent_len < sentences[index].size()<<endl;
+		if (max_sent_len < sentences[index].size()) {
+			//cerr<<"Ths is true"<<endl;
+			max_sent_len = sentences[index].size();
+			//cerr<<"max_sent_len is now"<<max_sent_len<<endl;
+		}
+	}
+	//Now createing the vector of vectors which is the minibatch size
+	//Note that I could do this already with the training data. 
+	//for ()
+	//cerr<<"max sent len is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//vector<int> extended_sent(max_sent_len,-1);
+		int sent_index=0;
+		for (;sent_index<sentences[index].size(); sent_index++){
+			minibatch_sentences.push_back(sentences[index][sent_index]);
+		}
+		//Now padding the rest with -1
+		for (;sent_index<max_sent_len; sent_index++){
+			//If its the output sentence, then set the output label to -1
+			minibatch_sentences.push_back((is_input)? 0:-1);
+		}
+	}
 }
 
 double logadd(double x, double y)

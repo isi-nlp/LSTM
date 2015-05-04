@@ -105,7 +105,7 @@ class Activation_function
 	    case Identity: my_output = input; break;
 	    case Rectifier: my_output = input.unaryExpr(rectifier_functor()); break;
 	    case Tanh: my_output = input.unaryExpr(tanh_functor()); break;
-		case Sigmoid: my_output = input.unaryExpr(sigmoid_functor()); break;
+		case Sigmoid: my_output = 1./(1.+(-1*input.array()).exp()); break;//input.unaryExpr(sigmoid_functor()); break;
 	    case HardTanh: my_output = input.unaryExpr(hardtanh_functor()); break;
 	    }
         }
