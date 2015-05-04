@@ -618,8 +618,9 @@ int main(int argc, char** argv)
 
 				prop.resetGradient();
 	      }
-		  //cerr << "done." << endl;
+		  
 	 }
+	 cerr << "done." << endl;
 	if (loss_function == LogLoss)
 	{
 		//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
