@@ -381,7 +381,8 @@ int main(int argc, char** argv)
 	if (myParam.output_vocab_size == 0)
 	    myParam.output_vocab_size = output_words.size();
     }
-
+	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
+	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
 	/*
     ///// Construct unigram model and sampler that will be used for NCE
 
