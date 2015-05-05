@@ -254,7 +254,7 @@ class Linear_layer
 		  //cerr<<"U gradient is "<<U_gradient<<endl;
 		  //cerr<<"U before is "<<endl;
 		  //cerr<<U<<endl;
-          U += learning_rate * U_gradient;
+          U.array() += learning_rate * U_gradient.array().unaryExpr(Clipper());
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
@@ -527,7 +527,7 @@ class Linear_diagonal_layer
       else
       {
 		  
-          U += learning_rate * U_gradient;
+          U.array() += learning_rate * U_gradient.array().unaryExpr(Clipper());
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -726,7 +726,7 @@ template <typename DerivedIn, typename DerivedGOut>
   void updateParams(double learning_rate,
   		double momentum,
 		double L2_reg){
-	  W->noalias() += learning_rate*W_gradient;
+	  (*W).array() += learning_rate*W_gradient.array().unaryExpr(Clipper());
 	  //b += learning_rate*b_gradient;
   }
   
@@ -1265,8 +1265,8 @@ class Input_word_embeddings
             int update_item = update_items[item_id];
 			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
-            W->row(update_item) += (learning_rate*
-                W_gradient.row(update_item).array()).matrix();
+            W->row(update_item).array() += learning_rate*
+                W_gradient.row(update_item).array().unaryExpr(Clipper());
             //GRADIENT CLIPPING
             //W->row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
@@ -1503,7 +1503,7 @@ class Hidden_layer
 	 					double momentum,
 						double L2_reg){
 		//as of now, only SGD
-		b += learning_rate*b_gradient;					
+		b.array() += learning_rate*b_gradient.array().unaryExpr(Clipper());					
 	}
 	void resetGradient(){
 		b_gradient.setZero();
