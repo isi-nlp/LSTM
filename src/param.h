@@ -20,6 +20,8 @@ struct param
     std::string model_prefix;
 	std::string input_sent_file;
 	std::string output_sent_file;
+	std::string input_validation_sent_file;
+	std::string output_validation_sent_file;
 
     int ngram_size;
     int vocab_size;

@@ -124,6 +124,8 @@ int main(int argc, char** argv)
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
 	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , false, "", "string", cmd);	  
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 
@@ -142,6 +144,8 @@ int main(int argc, char** argv)
       myParam.output_words_file = output_words_file.getValue();
 	  myParam.input_sent_file = input_sent_file.getValue();
 	  myParam.output_sent_file = output_sent_file.getValue();
+	  myParam.input_validation_sent_file = input_validation_sent_file.getValue();
+	  myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
 	  
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
@@ -285,11 +289,11 @@ int main(int argc, char** argv)
     // Read training data
 
     vector<int> training_data_flat;
-	vector< vector<int> > training_input_sent;
-	vector< vector<int> > training_output_sent;
+	vector< vector<int> > training_input_sent, validation_input_sent;
+	vector< vector<int> > training_output_sent, validation_output_sent;
 	
     vec * training_data_flat_mmap;
-    data_size_t training_data_size; //num_tokens;
+    data_size_t training_data_size, validation_data_size; //num_tokens;
     ip::managed_mapped_file mmap_file;
 	/*
     if (use_mmap_file == false) {
@@ -303,23 +307,29 @@ int main(int argc, char** argv)
 	*/
 	
 	//Reading the input and output sent files
-	data_size_t total_output_tokens = 0;
-	data_size_t total_input_tokens = 0;
+	data_size_t total_output_tokens,total_input_tokens,total_validation_input_tokens, total_validation_output_tokens;
+	total_output_tokens = total_input_tokens = total_validation_input_tokens = total_validation_output_tokens = 0;
+	//data_size_t total_input_tokens = 0;
+	//data_size
 	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
 	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
-	training_data_size = training_input_sent.size();
-	data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
+
 	
+	training_data_size = training_input_sent.size();
+
+	data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
+
     cerr<<"Number of input tokens "<<total_input_tokens<<endl;
 	cerr<<"Number of output tokens "<<total_output_tokens<<endl;
 	cerr<<"Number of minibatches "<<num_batches<<endl;
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
 	
     cerr << "Number of training instances "<< training_input_sent.size() << endl;
-    
+    cerr << "Number of validation instances "<< validation_input_sent.size() << endl;
+	
     Matrix<int,Dynamic,Dynamic> training_data;
-	Matrix<int,Dynamic,Dynamic> training_input_sent_data;
-	Matrix<int,Dynamic,Dynamic> training_output_sent_data;
+	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
+	Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
 	
@@ -352,17 +362,28 @@ int main(int argc, char** argv)
 	
 	
     // Read validation data
-    vector<int> validation_data_flat;
-    int validation_data_size = 0;
+    //vector<int> validation_data_flat;
+    validation_data_size = 0;
     
+	/*
     if (myParam.validation_file != "")
     {
       readDataFile(myParam.validation_file, myParam.ngram_size, validation_data_flat);
       validation_data_size = validation_data_flat.size() / myParam.ngram_size;
       cerr << "Number of validation instances: " << validation_data_size << endl;
     }
-
-    Map< Matrix<int,Dynamic,Dynamic> > validation_data(validation_data_flat.data(), myParam.ngram_size, validation_data_size);
+	*/
+	
+	if (myParam.input_validation_sent_file != ""){
+		readSentFile(myParam.input_validation_sent_file, validation_input_sent,myParam.validation_minibatch_size, total_validation_input_tokens);
+		readSentFile(myParam.output_validation_sent_file, validation_output_sent,myParam.validation_minibatch_size, total_validation_output_tokens);	
+	}
+	
+	cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;
+	cerr<<"Validation output tokens "<<total_validation_output_tokens<<endl;
+	validation_data_size = validation_input_sent.size();
+	//data_size_t num_validation_batches = (validation_data_size-1)/myParam.validation_minibatch_size + 1;
+    //Map< Matrix<int,Dynamic,Dynamic> > validation_data(validation_data_flat.data(), myParam.ngram_size, validation_data_size);
 
     ///// Read in vocabulary file. We don't actually use it; it just gets reproduced in the output file
 
@@ -431,7 +452,7 @@ int main(int argc, char** argv)
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     propagator prop(nn, myParam.minibatch_size);
-    //propagator prop_validation(nn, myParam.validation_minibatch_size);
+    propagator prop_validation(nn, myParam.validation_minibatch_size);
     //SoftmaxNCELoss<multinomial<data_size_t> > softmax_loss(unigram);
     // normalization parameters
     //vector_map c_h, c_h_running_gradient;
@@ -441,14 +462,15 @@ int main(int argc, char** argv)
 
 
     cerr<<"Number of training minibatches: "<<num_batches<<endl;
-
+	
+	
     int num_validation_batches = 0;
     if (validation_data_size > 0)
     {
         num_validation_batches = (validation_data_size-1)/myParam.validation_minibatch_size+1;
-	cerr<<"Number of validation minibatches: "<<num_validation_batches<<endl;
+		cerr<<"Number of validation minibatches: "<<num_validation_batches<<endl;
     } 
-
+	
     double current_momentum = myParam.initial_momentum;
     double momentum_delta = (myParam.final_momentum - myParam.initial_momentum)/(myParam.num_epochs-1);
     double current_learning_rate = myParam.learning_rate;
@@ -522,25 +544,25 @@ int main(int argc, char** argv)
       	  int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
 	  	  //cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 	  
-	  /*
-      //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
-	    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-		//cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
-		//cerr<<"Minibatch size "<<current_minibatch_size<<endl;
-            if (use_mmap_file == true) {
-            minibatch.setZero(ngram_size,current_minibatch_size);
-            //now reading the ngrams from the mmaped file
-              for (int k=0; k<ngram_size; k++){
-                for (data_size_t index = 0 ; index<current_minibatch_size; index++) {
-				  data_size_t current_index = index + minibatch_start_index;
-				  //cerr<<"the value in the mmap file "<<index<<" "<<k<<" is "<<training_data_flat_mmap->at(current_index*ngram_size+k)<<endl;
-                  minibatch(k,index) = training_data_flat_mmap->at(current_index*ngram_size+k);
-                }
-              }
-            } else {
-              minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-            }
-	  	*/
+		  /*
+	      //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
+		    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
+			//cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
+			//cerr<<"Minibatch size "<<current_minibatch_size<<endl;
+	            if (use_mmap_file == true) {
+	            minibatch.setZero(ngram_size,current_minibatch_size);
+	            //now reading the ngrams from the mmaped file
+	              for (int k=0; k<ngram_size; k++){
+	                for (data_size_t index = 0 ; index<current_minibatch_size; index++) {
+					  data_size_t current_index = index + minibatch_start_index;
+					  //cerr<<"the value in the mmap file "<<index<<" "<<k<<" is "<<training_data_flat_mmap->at(current_index*ngram_size+k)<<endl;
+	                  minibatch(k,index) = training_data_flat_mmap->at(current_index*ngram_size+k);
+	                }
+	              }
+	            } else {
+	              minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
+	            }
+		  	*/
 	  
 	  
             double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
@@ -628,10 +650,10 @@ int main(int argc, char** argv)
 		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
-	    cerr << "Training log-likelihood base e: " << data_log_likelihood << endl;
-		cerr << "Training log-likelihood base 10: " << data_log_likelihood/log(10.) << endl;
-		cerr<<"The cross entopy in base 10 is "<<data_log_likelihood/(log(10.)*total_output_tokens)<< endl;
-		cerr << "         perplexity:     "<< exp(-data_log_likelihood/total_output_tokens) << endl;
+	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
+		cerr << "Training log-likelihood base 10:     " << data_log_likelihood/log(10.) << endl;
+		cerr << "Training cross entropy in base 10 is "<<data_log_likelihood/(log(10.)*total_output_tokens)<< endl;
+		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss)
 	    cerr << "Training NCE log-likelihood: " << log_likelihood << endl;
@@ -657,55 +679,89 @@ int main(int argc, char** argv)
 	}
 	*/
 	
-	/*
+	
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
             //////COMPUTING VALIDATION SET PERPLEXITY///////////////////////
             ////////////////////////////////////////////////////////////////
 
             double log_likelihood = 0.0;
-
-	    Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
-	    Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
-	    Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
+			
+		    //Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
+		    //Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
+		    //Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
 
             for (int validation_batch =0;validation_batch < num_validation_batches;validation_batch++)
             {
-                int validation_minibatch_start_index = validation_minibatch_size * validation_batch;
-		int current_minibatch_size = min(validation_minibatch_size,
-						 validation_data_size - validation_minibatch_start_index);
-		minibatch.leftCols(current_minibatch_size) = validation_data.middleCols(validation_minibatch_start_index, 
-											current_minibatch_size);
-		prop_validation.fProp(minibatch.topRows(ngram_size-1));
 
-		// Do full forward prop through output word embedding layer
-		start_timer(4);
-		prop_validation.output_layer_node.param->fProp(prop_validation.second_hidden_activation_node.fProp_matrix, scores);
-		stop_timer(4);
+				double minibatch_log_likelihood = 0.;
+	            data_size_t minibatch_start_index = validation_minibatch_size * validation_batch;
+				data_size_t minibatch_end_index = min(validation_data_size-1, static_cast<data_size_t> (minibatch_start_index+validation_minibatch_size-1));
+				//cerr<<"Minibatch start index is "<<minibatch_start_index<<endl;
+				//cerr<<"Minibatch end index is "<<minibatch_end_index<<endl;
 
-		// And softmax and loss. Be careful of short minibatch
-		double minibatch_log_likelihood;
-		start_timer(5);
-		SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
-				       minibatch.row(ngram_size-1),
-				       output_probs,
-				       minibatch_log_likelihood);
-		stop_timer(5);
-		log_likelihood += minibatch_log_likelihood;
-	    }
+	      	  	int current_minibatch_size = min(static_cast<data_size_t>(validation_minibatch_size), validation_data_size - minibatch_start_index);
+		  	  	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+ 
+  
+				//Taking the input and output sentence and setting the validation data to it.
+				//Getting a minibatch of sentences
+				vector<int> minibatch_input_sentences, minibatch_output_sentences;
+				unsigned int max_sent_len;
+				miniBatchify(validation_input_sent, 
+								minibatch_input_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_sent_len,
+								1);
+				miniBatchify(validation_output_sent, 
+								minibatch_output_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_sent_len,
+								0);							
+
+				validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+												max_sent_len,
+												current_minibatch_size);
+						
+				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
+																				max_sent_len,
+																				current_minibatch_size);
+				//cerr<<"Validation input sent data "<<validation_input_sent_data<<endl;
+				//cerr<<"Validation output sent data "<<validation_output_sent_data<<endl;
+																			
+				//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
+				//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
+				//exit(0);
+				//Calling fProp. Note that it should not matter for fProp if we're doing log 
+				//or NCE loss															
+				prop_validation.fProp(validation_input_sent_data,0,max_sent_len-1);	
 		
-            cerr << "Validation log-likelihood: "<< log_likelihood << endl;
-            cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-
-	    // If the validation perplexity decreases, halve the learning rate.
-            if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
-            { 
-                current_learning_rate /= 2;
-            }
-            current_validation_ll = log_likelihood;
+	
+						 
+		 		prop_validation.computeProbs(validation_output_sent_data,
+		 		 			  	minibatch_log_likelihood);
+				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
+				log_likelihood += minibatch_log_likelihood;
+			}
+				
+	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
+	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
+		    cerr << "		Validation log-likelihood base e:      " << data_log_likelihood << endl;
+			cerr << "		Validation log-likelihood base 10:     " << data_log_likelihood/log(10.) << endl;
+			cerr<<  "		Validation cross entropy in base 10 is "<<data_log_likelihood/(log(10.)*total_validation_output_tokens)<< endl;
+			cerr << "         		perplexity:                    "<< exp(-data_log_likelihood/total_validation_output_tokens) << endl;
+			
+		    // If the validation perplexity decreases, halve the learning rate.
+	        if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+	        { 
+	            current_learning_rate /= 2;
+	        }
+	        current_validation_ll = log_likelihood;
 	 
-	}
-	*/
+		}
+	
     }
     return 0;
 }
