@@ -230,6 +230,7 @@ class Linear_layer
   	}
 		
     void updateParams(double learning_rate,
+					  int current_minibatch_size,
                       double momentum,
 					  double L2_reg){
 						  
@@ -254,7 +255,7 @@ class Linear_layer
 		  //cerr<<"U gradient is "<<U_gradient<<endl;
 		  //cerr<<"U before is "<<endl;
 		  //cerr<<U<<endl;
-          U.array() += learning_rate * U_gradient.array().unaryExpr(Clipper());
+          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
@@ -507,6 +508,7 @@ class Linear_diagonal_layer
 				 	
     void updateParams(double learning_rate,
                       double momentum,
+					  int current_minibatch_size,
 					  double L2_reg){
 						  
       // get the bias gradient for all dimensions in parallel
@@ -527,7 +529,7 @@ class Linear_diagonal_layer
       else
       {
 		  
-          U.array() += learning_rate * U_gradient.array().unaryExpr(Clipper());
+          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -725,8 +727,9 @@ template <typename DerivedIn, typename DerivedGOut>
   
   void updateParams(double learning_rate,
   		double momentum,
+		int current_minibatch_size,
 		double L2_reg){
-	  (*W).array() += learning_rate*W_gradient.array().unaryExpr(Clipper());
+	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //b += learning_rate*b_gradient;
   }
   
@@ -1249,6 +1252,7 @@ class Input_word_embeddings
    
   void updateParams(double learning_rate,
   					double momentum,
+					int current_minibatch_size,
 					double L2_reg){
 						
 	    // Convert to std::vector for parallelization
@@ -1266,7 +1270,7 @@ class Input_word_embeddings
 			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
             W->row(update_item).array() += learning_rate*
-                W_gradient.row(update_item).array().unaryExpr(Clipper());
+                (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
             //GRADIENT CLIPPING
             //W->row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
@@ -1448,6 +1452,7 @@ class Hidden_layer
 	void initialize(Engine &engine,
       bool init_normal,
       double init_range,
+	  double init_bias,
       string &parameter_update,
       double adagrad_epsilon)
 	{
@@ -1464,8 +1469,13 @@ class Hidden_layer
       	}
 		*/
 	    //initMatrix(engine, U, init_normal, init_range);
+
 		b_gradient.setZero();
-      	initBias(engine, b, init_normal, init_range);
+		if (init_bias == 0.) {
+      		initBias(engine, b, init_normal, init_range);
+		} else {
+			b.fill(init_bias);
+		}
 		//<<b<<std::endl;
 	}	  
 	
@@ -1501,9 +1511,10 @@ class Hidden_layer
 	 //The accumulated gradient is now added to the parameters
 	 void updateParams(double learning_rate,
 	 					double momentum,
+						int current_minibatch_size,
 						double L2_reg){
 		//as of now, only SGD
-		b.array() += learning_rate*b_gradient.array().unaryExpr(Clipper());					
+		b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());					
 	}
 	void resetGradient(){
 		b_gradient.setZero();

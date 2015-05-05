@@ -444,7 +444,7 @@ int main(int argc, char** argv)
       nn.initialize(rng,
           myParam.init_normal,
           myParam.init_range,
-          -log(myParam.output_vocab_size),
+          20.,
           myParam.parameter_update,
           myParam.adagrad_epsilon);
       nn.set_activation_function(string_to_activation_function(myParam.activation_function));
@@ -565,7 +565,8 @@ int main(int argc, char** argv)
 		  	*/
 	  
 	  
-            double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+            //double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+			double adjusted_learning_rate = current_minibatch_size;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
@@ -633,6 +634,7 @@ int main(int argc, char** argv)
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
+							current_minibatch_size,
 					  		current_momentum,
 							myParam.L2_reg);														
 	

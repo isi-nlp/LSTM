@@ -238,10 +238,12 @@ namespace nplm
 	  }
 	  
 	 void updateParams(double learning_rate,
+	 					int current_minibatch_size,
 				  		double momentum,
 						double L2_reg) {
 		//cerr<<"updating params "<<endl;
 		plstm->output_layer.updateParams(learning_rate,
+						current_minibatch_size,
 	  					momentum,
 	  					L2_reg);
 		// updating the rest of the parameters
@@ -249,60 +251,76 @@ namespace nplm
 		//updating params for weights out of hidden layer 
 		//cerr<<"updating params"<<endl;
 		plstm->W_h_to_o.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
  		plstm->W_h_to_f.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
   		plstm->W_h_to_i.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
    		plstm->W_h_to_c.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 
 		//updating params for weights out of cell
 		plstm->W_c_to_f.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->W_c_to_i.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->W_c_to_o.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);				
 
 
 		//Error derivatives for the input word embeddings
 		plstm->W_x_to_c.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->W_x_to_o.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->W_x_to_f.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->W_x_to_i.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 
 
 		plstm->o_t.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->f_t.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);
 		plstm->i_t.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);	
 		plstm->tanh_c_prime_t.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);	
 								
 		//Derivatives of the input embeddings							
 	    plstm->input_layer.updateParams(learning_rate,
+											current_minibatch_size,
 											momentum,
 											L2_reg);		
 	  }

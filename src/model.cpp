@@ -59,7 +59,7 @@ void model::resize(int ngram_size,
 void model::initialize(mt19937 &init_engine,
     bool init_normal,
     double init_range,
-    double init_bias,
+    double init_forget_bias,
     string &parameter_update,
     double adagrad_epsilon)
 {
@@ -73,7 +73,7 @@ void model::initialize(mt19937 &init_engine,
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
-        init_bias,
+        0.,
         parameter_update,
         adagrad_epsilon);
     first_hidden_linear.initialize(init_engine,
@@ -168,6 +168,7 @@ void model::initialize(mt19937 &init_engine,
 	o_t.initialize(init_engine,
         init_normal,
         init_range,
+		0.,
         parameter_update,
         adagrad_epsilon);
 	o_t.set_activation_function(Sigmoid);
@@ -176,6 +177,7 @@ void model::initialize(mt19937 &init_engine,
 	f_t.initialize(init_engine,
         init_normal,
         init_range,
+		init_forget_bias,
         parameter_update,
         adagrad_epsilon);
 	f_t.set_activation_function(Sigmoid);	
@@ -184,6 +186,7 @@ void model::initialize(mt19937 &init_engine,
 	i_t.initialize(init_engine,
         init_normal,
         init_range,
+		0.,
         parameter_update,
         adagrad_epsilon);
 	i_t.set_activation_function(Sigmoid);		
@@ -192,6 +195,7 @@ void model::initialize(mt19937 &init_engine,
 	tanh_c_prime_t.initialize(init_engine,
         init_normal,
         init_range,
+		0.,
         parameter_update,
         adagrad_epsilon);
 	tanh_c_prime_t.set_activation_function(Tanh);
