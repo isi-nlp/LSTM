@@ -679,9 +679,10 @@ int main(int argc, char** argv)
 	}
 	*/
 	
-	
+		
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
+			cerr<<"Computing validation perplexity..."<<endl;
             //////COMPUTING VALIDATION SET PERPLEXITY///////////////////////
             ////////////////////////////////////////////////////////////////
 
@@ -748,10 +749,10 @@ int main(int argc, char** argv)
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-		    cerr << "		Validation log-likelihood base e:      " << data_log_likelihood << endl;
-			cerr << "		Validation log-likelihood base 10:     " << data_log_likelihood/log(10.) << endl;
-			cerr<<  "		Validation cross entropy in base 10 is "<<data_log_likelihood/(log(10.)*total_validation_output_tokens)<< endl;
-			cerr << "         		perplexity:                    "<< exp(-data_log_likelihood/total_validation_output_tokens) << endl;
+		    cerr << "		Validation log-likelihood base e:      " << log_likelihood << endl;
+			cerr << "		Validation log-likelihood base 10:     " << log_likelihood/log(10.) << endl;
+			cerr<<  "		Validation cross entropy in base 10 is "<< log_likelihood/(log(10.)*total_validation_output_tokens)<< endl;
+			cerr << "         		perplexity:                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.
 	        if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
