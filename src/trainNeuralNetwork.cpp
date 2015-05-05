@@ -99,6 +99,7 @@ int main(int argc, char** argv)
       ValueArg<int> num_epochs("", "num_epochs", "Number of epochs. Default: 10.", false, 10, "int", cmd);
 
       ValueArg<double> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.01", false, 0.01, "double", cmd);
+	  ValueArg<double> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "double", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: nce.", false, "log", "string", cmd);
@@ -188,6 +189,7 @@ int main(int argc, char** argv)
       myParam.L2_reg = L2_reg.getValue();
       myParam.init_normal= init_normal.getValue();
       myParam.init_range = init_range.getValue();
+	  myParam.init_forget = init_forget.getValue();
       myParam.normalization_init = normalization_init.getValue();
       myParam.parameter_update = parameter_update.getValue();
 
@@ -444,7 +446,7 @@ int main(int argc, char** argv)
       nn.initialize(rng,
           myParam.init_normal,
           myParam.init_range,
-          20.,
+          myParam.init_forget,
           myParam.parameter_update,
           myParam.adagrad_epsilon);
       nn.set_activation_function(string_to_activation_function(myParam.activation_function));

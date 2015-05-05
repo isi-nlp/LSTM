@@ -44,6 +44,7 @@ struct param
     double adagrad_epsilon;
     bool init_normal;
     double init_range;
+	double init_forget;
 
     int num_noise_samples;
 
