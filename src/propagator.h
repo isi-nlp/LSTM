@@ -241,7 +241,7 @@ namespace nplm
 	 					int current_minibatch_size,
 				  		double momentum,
 						double L2_reg) {
-		cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
 		plstm->output_layer.updateParams(learning_rate,
 						current_minibatch_size,
