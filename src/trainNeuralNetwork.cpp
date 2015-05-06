@@ -636,7 +636,7 @@ int main(int argc, char** argv)
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
-							current_minibatch_size,
+							current_minibatch_size*max_sent_len,
 					  		current_momentum,
 							myParam.L2_reg);														
 	
