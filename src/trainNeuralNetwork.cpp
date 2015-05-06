@@ -567,8 +567,8 @@ int main(int argc, char** argv)
 		  	*/
 	  
 	  
-            //double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
-			double adjusted_learning_rate = current_minibatch_size;
+		  	//double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+		  	double adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
@@ -636,7 +636,7 @@ int main(int argc, char** argv)
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
-							current_minibatch_size*max_sent_len,
+							,
 					  		current_momentum,
 							myParam.L2_reg);														
 	

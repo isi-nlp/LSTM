@@ -507,8 +507,8 @@ class Linear_diagonal_layer
   			 int col) { return U_gradient(row,col);}
 				 	
     void updateParams(double learning_rate,
-                      double momentum,
 					  int current_minibatch_size,
+                      double momentum,
 					  double L2_reg){
 						  
       // get the bias gradient for all dimensions in parallel
@@ -726,8 +726,8 @@ template <typename DerivedIn, typename DerivedGOut>
   }
   
   void updateParams(double learning_rate,
+  		int current_minibatch_size,
   		double momentum,
-		int current_minibatch_size,
 		double L2_reg){
 	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //b += learning_rate*b_gradient;
@@ -1251,8 +1251,8 @@ class Input_word_embeddings
   }
    
   void updateParams(double learning_rate,
+  					int current_minibatch_size,
   					double momentum,
-					int current_minibatch_size,
 					double L2_reg){
 						
 	    // Convert to std::vector for parallelization
@@ -1510,11 +1510,12 @@ class Hidden_layer
 	 } 
 	 //The accumulated gradient is now added to the parameters
 	 void updateParams(double learning_rate,
+	 					int current_minibatch_size,
 	 					double momentum,
-						int current_minibatch_size,
 						double L2_reg){
 		//as of now, only SGD
-		b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());					
+		b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+		//cerr<<"b is "<<b<<endl;				
 	}
 	void resetGradient(){
 		b_gradient.setZero();
