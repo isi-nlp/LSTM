@@ -580,18 +580,22 @@ int main(int argc, char** argv)
 			//Getting a minibatch of sentences
 			vector<int> minibatch_input_sentences, minibatch_output_sentences;
 			unsigned int max_sent_len;
+			unsigned int minibatch_output_tokens,minibatch_input_tokens;
+			minibatch_output_tokens = minibatch_input_tokens =0;
 			miniBatchify(training_input_sent, 
 							minibatch_input_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
 							max_sent_len,
-							1);
+							1,
+							minibatch_input_tokens);
 			miniBatchify(training_output_sent, 
 							minibatch_output_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
 							max_sent_len,
-							0);							
+							0,
+							minibatch_output_tokens);							
 			/*
 			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_input_sent[batch].data(), 
 											training_input_sent[batch].size(),
@@ -655,8 +659,8 @@ int main(int argc, char** argv)
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
-		cerr << "Training log-likelihood base 10:     " << data_log_likelihood/log(10.) << endl;
-		cerr << "Training cross entropy in base 10 is "<<data_log_likelihood/(log(10.)*total_output_tokens)<< endl;
+		cerr << "Training log-likelihood base 10:     " << data_log_likelihood/log(2.) << endl;
+		cerr << "Training cross entropy in base 10 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
 		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss)
@@ -713,18 +717,22 @@ int main(int argc, char** argv)
 				//Getting a minibatch of sentences
 				vector<int> minibatch_input_sentences, minibatch_output_sentences;
 				unsigned int max_sent_len;
+				unsigned int minibatch_output_tokens,minibatch_input_tokens;
+				minibatch_output_tokens = minibatch_input_tokens =0;				
 				miniBatchify(validation_input_sent, 
 								minibatch_input_sentences,
 								minibatch_start_index,
 								minibatch_end_index,
 								max_sent_len,
-								1);
+								1,
+								minibatch_input_tokens);
 				miniBatchify(validation_output_sent, 
 								minibatch_output_sentences,
 								minibatch_start_index,
 								minibatch_end_index,
 								max_sent_len,
-								0);							
+								0,
+								minibatch_output_tokens);							
 
 				validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
 												max_sent_len,
@@ -754,8 +762,8 @@ int main(int argc, char** argv)
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
 		    cerr << "		Validation log-likelihood base e:      " << log_likelihood << endl;
-			cerr << "		Validation log-likelihood base 10:     " << log_likelihood/log(10.) << endl;
-			cerr<<  "		Validation cross entropy in base 10 is "<< log_likelihood/(log(10.)*total_validation_output_tokens)<< endl;
+			cerr << "		Validation log-likelihood base 2:     " << log_likelihood/log(2.) << endl;
+			cerr<<  "		Validation cross entropy in base 2 is "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
 			cerr << "         		perplexity:                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.

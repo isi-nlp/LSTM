@@ -203,7 +203,8 @@ void miniBatchify(const std::vector<std::vector <int> > &sentences,
 				const int minibatch_start_index,
 				const int minibatch_end_index,
 				unsigned int &max_sent_len,
-				bool is_input){
+				bool is_input,
+				unsigned int &minibatch_tokens){
 	//cerr<<"minibatch start index is "<<minibatch_start_index<<endl;
 	//cerr<<"minibatch end index is "<<minibatch_end_index<<endl;
 	//First go over all the sentences and get the longest sentence
@@ -228,6 +229,7 @@ void miniBatchify(const std::vector<std::vector <int> > &sentences,
 		int sent_index=0;
 		for (;sent_index<sentences[index].size(); sent_index++){
 			minibatch_sentences.push_back(sentences[index][sent_index]);
+			minibatch_tokens++;
 		}
 		//Now padding the rest with -1
 		for (;sent_index<max_sent_len; sent_index++){

@@ -52,7 +52,8 @@ void miniBatchify(const std::vector<std::vector <int> > &sentences,
 				const int minibatch_start_index,
 				const int minibatch_end_index,
 				unsigned int &max_sent_len,
-				bool is_input);
+				bool is_input,
+				unsigned int &minibatch_tokens);
 //template <typename T> readSentFile(const std::string &file, T &sentences);
 
 
