@@ -635,12 +635,12 @@ int main(int argc, char** argv)
 	 			//prop.computeProbs(training_output_sent_data,
 	 			//					data_log_likelihood);	
 				//cerr<<"training_input_sent_data len"					 
-				//prop.gradientCheck(training_input_sent_data,
-				//	 		 training_output_sent_data);
+				prop.gradientCheck(training_input_sent_data,
+					 		 training_output_sent_data);
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
-							current_minibatch_size*max_sent_len,
+							current_minibatch_size,
 					  		current_momentum,
 							myParam.L2_reg);														
 	
@@ -659,8 +659,8 @@ int main(int argc, char** argv)
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
-		cerr << "Training log-likelihood base 10:     " << data_log_likelihood/log(2.) << endl;
-		cerr << "Training cross entropy in base 10 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
+		cerr << "Training log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
+		cerr << "Training cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
 		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss)

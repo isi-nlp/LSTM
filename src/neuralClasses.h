@@ -37,7 +37,7 @@ typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(5., std::max(x,-5.));
+    return std::min(100000., std::max(x,-1000000.));
     //return(x);
   }
 };
