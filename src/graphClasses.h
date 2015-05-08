@@ -195,9 +195,9 @@ public:
 		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
-		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
+		//W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
 		//std::cerr<<"c to i fprop"<<W_c_to_i_node.fProp_matrix<<std::endl;
-		i_t_input_matrix = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
+		i_t_input_matrix = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix ; //+ W_c_to_i_node.fProp_matrix;
 		//cerr<<"i t input matrix"<<i_t_input_matrix<<endl;
 		i_t_node.param->fProp(i_t_input_matrix,
 							i_t_node.fProp_matrix);
@@ -208,9 +208,9 @@ public:
 		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
 		W_h_to_f_node.param->fProp(h_t_minus_one,W_h_to_f_node.fProp_matrix);
 		//std::cerr<<"W_h_to_f_node fprop is "<<W_h_to_f_node.fProp_matrix<<std::endl;
-		W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
+		//W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
 		//std::cerr<<"W_c_to_f_node fprop is "<<W_c_to_f_node.fProp_matrix<<std::endl;
-		f_t_input_matrix = W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix;
+		f_t_input_matrix = W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix ; //+ W_c_to_f_node.fProp_matrix;
 		//std::cerr<<" f t node input matrix is "<<f_t_input_matrix<<std::endl;
 		f_t_node.param->fProp(f_t_input_matrix,
 							f_t_node.fProp_matrix);
@@ -233,19 +233,19 @@ public:
 		//How much to scale the output
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
-		W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
-		o_t_input_matrix = W_x_to_o_node.fProp_matrix +  
-						   W_h_to_o_node.fProp_matrix + 
-						   W_c_to_o_node.fProp_matrix;
+		//W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
+		o_t_input_matrix = W_x_to_o_node.fProp_matrix + W_h_to_o_node.fProp_matrix ;//+W_c_to_o_node.fProp_matrix;
 		//std::cerr<<"o t input matrix is "<<o_t_input_matrix<<std::endl;
 		o_t_node.param->fProp(o_t_input_matrix,
 							o_t_node.fProp_matrix);	
 
 		//std::cerr<<"o_t "<<o_t_node.fProp_matrix<<std::endl;
 		//computing the hidden layer
-		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
+		//tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
-		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
+		//h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();	
+							
+		h_t.array() = o_t_node.fProp_matrix.array()*c_t.array();		
 		//std::cerr<<"h_t "<<h_t<<endl;
 		//getchar();
 	}
@@ -281,7 +281,9 @@ public:
 		//cerr<<"d_Err_t_to_n_d_h_t is "<<d_Err_t_to_n_d_h_t<<endl;
 		//cerr<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		//Error derivativs for o_t
-		d_Err_t_to_n_d_o_t.array() = d_Err_t_to_n_d_h_t.array()*tanh_c_t_node.fProp_matrix.array();
+		//d_Err_t_to_n_d_o_t.array() = d_Err_t_to_n_d_h_t.array()*tanh_c_t_node.fProp_matrix.array();
+		
+		d_Err_t_to_n_d_o_t.array() = d_Err_t_to_n_d_h_t.array()*c_t.array();
 		//cerr<<"d_Err_t_to_n_d_o_t "<<d_Err_t_to_n_d_o_t<<endl;
 		//cerr<<"O t node fProp matrix is "<<o_t_node.fProp_matrix<<endl;
 		o_t_node.param->bProp(d_Err_t_to_n_d_o_t,
@@ -295,7 +297,10 @@ public:
 						  						  first_hidden_activation_node.fProp_matrix);
 		*/
 		//cerr<<"o t node backprop matrix is "<<o_t_node.bProp_matrix<<endl;
-		//Error derivatives for tanh_c_t					   
+	
+		
+		//Error derivatives for tanh_c_t				
+		/*					  	   
 		d_Err_t_to_n_d_tanh_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();
 		//cerr<<"d_Err_t_to_n_d_tanh_c_t "<<d_Err_t_to_n_d_tanh_c_t<<endl;
 		tanh_c_t_node.param->bProp(d_Err_t_to_n_d_tanh_c_t,
@@ -308,7 +313,10 @@ public:
 		W_c_to_o_node.param->bProp(o_t_node.bProp_matrix,
 								W_c_to_o_node.bProp_matrix);
 		//cerr<<"W_c_to_o_node.bProp_matrix "<<W_c_to_o_node.bProp_matrix<<endl;
-		d_Err_t_to_n_d_c_t =  tanh_c_t_node.bProp_matrix + W_c_to_o_node.bProp_matrix + d_Err_tPlusOne_to_n_d_c_t;
+		*/
+							  
+		d_Err_t_to_n_d_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();
+		//d_Err_t_to_n_d_c_t =  tanh_c_t_node.bProp_matrix + W_c_to_o_node.bProp_matrix + d_Err_tPlusOne_to_n_d_c_t;
 		//cerr<<"d_Err_t_to_n_d_c_t "<<d_Err_t_to_n_d_c_t<<endl;
 		
 		//Error derivatives for f_t
@@ -349,22 +357,24 @@ public:
   		W_h_to_i_node.param->bProp(i_t_node.bProp_matrix,
   						 W_h_to_i_node.bProp_matrix);
 		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;
-   		W_h_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
+		W_h_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
    						 W_h_to_c_node.bProp_matrix);
 		d_Err_t_to_n_d_h_tMinusOne = W_h_to_o_node.bProp_matrix + 
 									W_h_to_f_node.bProp_matrix +
 									W_h_to_i_node.bProp_matrix +
 									W_h_to_c_node.bProp_matrix;		
+		
 		//cerr<<"d_Err_t_to_n_d_h_tMinusOne "<<d_Err_t_to_n_d_h_tMinusOne<<endl;
 		//Error derivatives for c_t_minus_one
+		/*
 		W_c_to_f_node.param->bProp(f_t_node.bProp_matrix,
 							W_c_to_f_node.bProp_matrix);
 		W_c_to_i_node.param->bProp(i_t_node.bProp_matrix,
 							W_c_to_i_node.bProp_matrix);	
-									
-		d_Err_t_to_n_d_c_tMinusOne = (d_Err_t_to_n_d_c_t.array()*f_t_node.fProp_matrix.array()).matrix()+
-									W_c_to_f_node.bProp_matrix +
-									W_c_to_i_node.bProp_matrix;
+		*/
+		
+		d_Err_t_to_n_d_c_tMinusOne.array() = d_Err_t_to_n_d_c_t.array()*f_t_node.fProp_matrix.array();// + W_c_to_f_node.bProp_matrix +
+		// W_c_to_i_node.bProp_matrix;
 		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
 		//Error derivatives for the input word embeddings
 		W_x_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
@@ -375,10 +385,10 @@ public:
 								W_x_to_f_node.bProp_matrix);
 		W_x_to_i_node.param->bProp(i_t_node.bProp_matrix,
 								W_x_to_i_node.bProp_matrix);
-		d_Err_t_to_n_d_x_t = W_x_to_c_node.bProp_matrix + 
-							W_x_to_o_node.bProp_matrix +
+		d_Err_t_to_n_d_x_t = W_x_to_o_node.bProp_matrix +
 							W_x_to_f_node.bProp_matrix +
-							W_x_to_i_node.bProp_matrix;
+							W_x_to_i_node.bProp_matrix + 
+							W_x_to_c_node.bProp_matrix;
 		
 		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
 		//Computing gradients of the paramters
@@ -393,9 +403,10 @@ public:
 	    W_h_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
 											h_t_minus_one.leftCols(current_minibatch_size));		
 		//cerr<<"W_h_to_c_node"<<endl;									
-   		W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
+		W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
    						 					h_t_minus_one.leftCols(current_minibatch_size));
-											
+										
+		/*
 		//Derivative of weights out of c_t and c_t_minus_one
 	    W_c_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
 											this->c_t.leftCols(current_minibatch_size));
@@ -403,7 +414,8 @@ public:
 											c_t_minus_one.leftCols(current_minibatch_size));
 	    W_c_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
 											c_t_minus_one.leftCols(current_minibatch_size));		
- 
+ 		*/
+											
 		//Derivatives of weights out of x_t
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
@@ -439,114 +451,6 @@ public:
 	
 	}
 	
-
-	/*
-	void updateParams(double learning_rate,
-	 					double momentum,
-						double L2_reg){
-
-		//updating params for weights out of hidden layer 
-		W_h_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
- 		W_h_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-  		W_h_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-   		W_h_to_c_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-
-		//updating params for weights out of cell
-		W_c_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_c_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_c_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);				
-
-
-		//Error derivatives for the input word embeddings
-		W_x_to_c_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_x_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_x_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_x_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-
-
-		//Computing gradients of the paramters
-		//Derivative of weights out of h_t
-	    W_h_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    W_h_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    W_h_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);		
-   		W_h_to_c_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		
-		//Derivative of weights out of c_t and c_t_minus_one
-	    W_c_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    W_c_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-	    W_c_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);		
-
-		//Derivatives of weights out of x_t
-		W_x_to_o_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_x_to_i_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		W_x_to_f_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);	
-		W_x_to_c_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);			
-
-
-		o_t_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		f_t_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-		i_t_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);	
-		tanh_c_prime_t_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);	
-												
-		//Derivatives of the input embeddings							
-	    input_layer_node.param->updateParams(learning_rate,
-											momentum,
-											L2_reg);
-										
-	}
-	*/
 	
 	void resetGradient(){
 		
