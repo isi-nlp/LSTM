@@ -37,7 +37,7 @@ typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(100000., std::max(x,-1000000.));
+    return std::min(50000000., std::max(x,-5000000.));
     //return(x);
   }
 };
@@ -255,7 +255,16 @@ class Linear_layer
 		  //cerr<<"U gradient is "<<U_gradient<<endl;
 		  //cerr<<"U before is "<<endl;
 		  //cerr<<U<<endl;
-          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  /*
+		  U_gradient /= current_minibatch_size;
+		  double grad_norm = U_gradient.norm();
+		  if (U_gradient.norm() >= 5.) {
+			  U_gradient *= 5./grad_norm;
+		  }
+		  U += learning_rate*U_gradient;
+		  */
+		  U += learning_rate * U_gradient;
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
@@ -528,8 +537,17 @@ class Linear_diagonal_layer
       }
       else
       {
-		  
-          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  /*
+		  U_gradient /= current_minibatch_size;
+		  double grad_norm = U_gradient.norm();
+		  if (U_gradient.norm() >= 5.) {
+			  U_gradient *= 5./grad_norm;
+		  }
+		  U += learning_rate*U_gradient;	
+		  */
+		  	  
+          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  U += learning_rate * U_gradient;
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -607,7 +625,7 @@ class Output_word_embeddings
         }
 
         initMatrix(engine, *W, init_normal, init_range);
-		//std::cerr<<*W<<std::endl;
+		//std::cerr<<*W<<std::endl;e
         b.fill(init_bias);
     }
 
@@ -729,7 +747,10 @@ template <typename DerivedIn, typename DerivedGOut>
   		int current_minibatch_size,
   		double momentum,
 		double L2_reg){
-	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+	  
+	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
+	  *W += learning_rate*W_gradient;
 	  //b += learning_rate*b_gradient;
   }
   
@@ -1269,8 +1290,10 @@ class Input_word_embeddings
             int update_item = update_items[item_id];
 			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
-            W->row(update_item).array() += learning_rate*
-                (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+            //W->row(update_item).array() += learning_rate*
+            //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+            W->row(update_item) += learning_rate*
+                W_gradient.row(update_item);
             //GRADIENT CLIPPING
             //W->row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
@@ -1486,11 +1509,13 @@ class Hidden_layer
 		 UNCONST(DerivedIn, input, my_input);
 		 //UNCONST(DerivedOut, output, my_output);
 		 int num_examples = input.cols();
+		 
 		 for (int i=0;i<num_examples; i++){
 			 my_input.col(i) += b;
 		 }
+		 
 		 //cerr<<"B is "<<b<<endl;
-		 hidden_activation.fProp(input,output);
+		 hidden_activation.fProp(my_input,output);
 	 }	
      template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
      void bProp(const MatrixBase<DerivedGOut> &input, 
@@ -1514,7 +1539,8 @@ class Hidden_layer
 	 					double momentum,
 						double L2_reg){
 		//as of now, only SGD
-		b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+		//b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+		b += learning_rate*b_gradient/current_minibatch_size;
 		//cerr<<"b is "<<b<<endl;				
 	}
 	void resetGradient(){

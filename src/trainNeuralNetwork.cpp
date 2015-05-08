@@ -567,8 +567,8 @@ int main(int argc, char** argv)
 		  	*/
 	  
 	  
-		  	//double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
-		  	double adjusted_learning_rate = current_learning_rate;
+		  	double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+		  	//double adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
