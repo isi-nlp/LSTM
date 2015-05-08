@@ -380,7 +380,7 @@ namespace nplm
 		plstm->W_h_to_o.resetGradient();
  		plstm->W_h_to_f.resetGradient();
   		plstm->W_h_to_i.resetGradient();
-   		//plstm->W_h_to_c.resetGradient();
+   		plstm->W_h_to_c.resetGradient();
 
 		/*
 		//updating params for weights out of cell
@@ -390,7 +390,7 @@ namespace nplm
 		*/
 
 		//Error derivatives for the input word embeddings
-		//plstm->W_x_to_c.resetGradient();
+		plstm->W_x_to_c.resetGradient();
 		plstm->W_x_to_o.resetGradient();
 		plstm->W_x_to_f.resetGradient();
 		plstm->W_x_to_i.resetGradient();
@@ -441,14 +441,14 @@ namespace nplm
 		*/
 		
 		getFiniteDiff(input,output,plstm->output_layer,"output_layer");	
-		getFiniteDiff(input,output,plstm->output_layer,"output_layer");	
+		//getFiniteDiff(input,output,plstm->output_layer,"output_layer");	
 		
-		//getFiniteDiff(input,output,plstm->W_h_to_c,"W_h_to_c");		
+		getFiniteDiff(input,output,plstm->W_h_to_c,"W_h_to_c");		
 		getFiniteDiff(input,output,plstm->W_h_to_f,"W_h_to_f");											
 		getFiniteDiff(input,output,plstm->W_h_to_o,"W_h_to_o");
 		getFiniteDiff(input,output,plstm->W_h_to_i ,"W_h_to_i");	
 		
-		//getFiniteDiff(input,output,plstm->W_x_to_c,"W_x_to_c");
+		getFiniteDiff(input,output,plstm->W_x_to_c,"W_x_to_c");
 		getFiniteDiff(input,output,plstm->W_x_to_f,"W_x_to_f");
 		getFiniteDiff(input,output,plstm->W_x_to_o,"W_x_to_o");
 		getFiniteDiff(input,output,plstm->W_x_to_i,"W_x_to_i");

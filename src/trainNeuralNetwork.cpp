@@ -635,8 +635,8 @@ int main(int argc, char** argv)
 	 			//prop.computeProbs(training_output_sent_data,
 	 			//					data_log_likelihood);	
 				//cerr<<"training_input_sent_data len"					 
-				//prop.gradientCheck(training_input_sent_data,
-				//	 		 training_output_sent_data);
+				prop.gradientCheck(training_input_sent_data,
+					 		 training_output_sent_data);
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,

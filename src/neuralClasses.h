@@ -37,7 +37,7 @@ typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(5., std::max(x,-5.));
+    return std::min(50000000., std::max(x,-5000000.));
     //return(x);
   }
 };
@@ -1486,11 +1486,13 @@ class Hidden_layer
 		 UNCONST(DerivedIn, input, my_input);
 		 //UNCONST(DerivedOut, output, my_output);
 		 int num_examples = input.cols();
+		 
 		 for (int i=0;i<num_examples; i++){
 			 my_input.col(i) += b;
 		 }
+		 
 		 //cerr<<"B is "<<b<<endl;
-		 hidden_activation.fProp(input,output);
+		 hidden_activation.fProp(my_input,output);
 	 }	
      template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
      void bProp(const MatrixBase<DerivedGOut> &input, 

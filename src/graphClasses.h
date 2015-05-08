@@ -227,8 +227,8 @@ public:
 		//Computing the current cell value
 		//cerr<<"c_t_minus_one"<<c_t_minus_one<<endl;
 		//cerr<<c_t_minus_one.rows()<<" "<<c_t_minus_one.cols()<<endl;
-		c_t.array() = f_t_node.fProp_matrix.array()*c_t_minus_one.array() + 
-				i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
+		c_t.array() = f_t_node.fProp_matrix.array()*c_t_minus_one.array() +
+					  i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
 		//cerr<<"c_t "<<c_t<<endl;
 		//How much to scale the output
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
@@ -314,8 +314,12 @@ public:
 								W_c_to_o_node.bProp_matrix);
 		//cerr<<"W_c_to_o_node.bProp_matrix "<<W_c_to_o_node.bProp_matrix<<endl;
 		*/
+							  	     //d_Err_t_to_n_d_h_t
+		//d_Err_t_to_n_d_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array(); //THIS WAS BUGGY!!!!YES!!!FINITE DIFFERENCES TO THE 
+							  																  //RESCUE!! it should have been d_Err_t_to_n_d_h_t instead of 
+							  																  //d_Err_t_d_h_t
 							  
-		d_Err_t_to_n_d_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();
+		d_Err_t_to_n_d_c_t.array() = d_Err_t_to_n_d_h_t.array() * o_t_node.fProp_matrix.array() + d_Err_tPlusOne_to_n_d_c_t.array();							 
 		//d_Err_t_to_n_d_c_t =  tanh_c_t_node.bProp_matrix + W_c_to_o_node.bProp_matrix + d_Err_tPlusOne_to_n_d_c_t;
 		//cerr<<"d_Err_t_to_n_d_c_t "<<d_Err_t_to_n_d_c_t<<endl;
 		
@@ -360,9 +364,9 @@ public:
 		W_h_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
    						 W_h_to_c_node.bProp_matrix);
 		d_Err_t_to_n_d_h_tMinusOne = W_h_to_o_node.bProp_matrix + 
-									W_h_to_f_node.bProp_matrix +
-									W_h_to_i_node.bProp_matrix +
-									W_h_to_c_node.bProp_matrix;		
+									 W_h_to_f_node.bProp_matrix +
+									 W_h_to_i_node.bProp_matrix +
+									 W_h_to_c_node.bProp_matrix;		
 		
 		//cerr<<"d_Err_t_to_n_d_h_tMinusOne "<<d_Err_t_to_n_d_h_tMinusOne<<endl;
 		//Error derivatives for c_t_minus_one
@@ -386,9 +390,9 @@ public:
 		W_x_to_i_node.param->bProp(i_t_node.bProp_matrix,
 								W_x_to_i_node.bProp_matrix);
 		d_Err_t_to_n_d_x_t = W_x_to_o_node.bProp_matrix +
-							W_x_to_f_node.bProp_matrix +
-							W_x_to_i_node.bProp_matrix + 
-							W_x_to_c_node.bProp_matrix;
+							 W_x_to_f_node.bProp_matrix +
+							 W_x_to_i_node.bProp_matrix + 
+							 W_x_to_c_node.bProp_matrix;
 		
 		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
 		//Computing gradients of the paramters
