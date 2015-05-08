@@ -255,7 +255,16 @@ class Linear_layer
 		  //cerr<<"U gradient is "<<U_gradient<<endl;
 		  //cerr<<"U before is "<<endl;
 		  //cerr<<U<<endl;
-          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  /*
+		  U_gradient /= current_minibatch_size;
+		  double grad_norm = U_gradient.norm();
+		  if (U_gradient.norm() >= 5.) {
+			  U_gradient *= 5./grad_norm;
+		  }
+		  U += learning_rate*U_gradient;
+		  */
+		  U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
@@ -528,7 +537,15 @@ class Linear_diagonal_layer
       }
       else
       {
-		  
+		  /*
+		  U_gradient /= current_minibatch_size;
+		  double grad_norm = U_gradient.norm();
+		  if (U_gradient.norm() >= 5.) {
+			  U_gradient *= 5./grad_norm;
+		  }
+		  U += learning_rate*U_gradient;	
+		  */
+		  	  
           U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
           //b += learning_rate * b_gradient;
 		  
@@ -729,7 +746,9 @@ template <typename DerivedIn, typename DerivedGOut>
   		int current_minibatch_size,
   		double momentum,
 		double L2_reg){
-	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+	  
+	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
 	  //b += learning_rate*b_gradient;
   }
   

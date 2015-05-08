@@ -122,8 +122,8 @@ class Activation_function
 	    {
 	    case Identity: my_output = input; break;
 	    case Rectifier: my_output = finput.array().unaryExpr(drectifier_functor()) * input.array(); break;
-	    case Tanh: my_output = foutput.array().unaryExpr(dtanh_functor()) * input.array(); break;
-		case Sigmoid: my_output = foutput.array().unaryExpr(dsigmoid_functor()) * input.array(); break;
+	    case Tanh: my_output = (1.-foutput.array().square()) * input.array(); break; //foutput.array().unaryExpr(dtanh_functor()) * input.array(); break;
+		case Sigmoid: my_output = foutput.array()*(1.-foutput.array()) * input.array(); break; //foutput.array().unaryExpr(dsigmoid_functor()) * input.array(); break;
 	    case HardTanh: my_output = finput.array().unaryExpr(dhardtanh_functor()) * input.array(); break;
 	    }
         }
