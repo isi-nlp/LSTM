@@ -296,7 +296,8 @@ public:
 		*/
 		//cerr<<"o t node backprop matrix is "<<o_t_node.bProp_matrix<<endl;
 		//Error derivatives for tanh_c_t					   
-		d_Err_t_to_n_d_tanh_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();
+		//d_Err_t_to_n_d_tanh_c_t.array() = d_Err_t_d_h_t.array() * o_t_node.fProp_matrix.array();// THIS WAS THE WRONG GRADIENT!!
+		d_Err_t_to_n_d_tanh_c_t.array() = d_Err_t_to_n_d_h_t.array() * o_t_node.fProp_matrix.array();
 		//cerr<<"d_Err_t_to_n_d_tanh_c_t "<<d_Err_t_to_n_d_tanh_c_t<<endl;
 		tanh_c_t_node.param->bProp(d_Err_t_to_n_d_tanh_c_t,
 							tanh_c_t_node.bProp_matrix,
