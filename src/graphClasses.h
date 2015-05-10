@@ -380,7 +380,18 @@ public:
 							W_x_to_o_node.bProp_matrix +
 							W_x_to_f_node.bProp_matrix +
 							W_x_to_i_node.bProp_matrix;
-		
+		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
+		//nonlinearities 
+		//if (!gradient_check){
+			o_t_node.bProp_matrix.leftCols(current_minibatch_size).array() = 
+										o_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
+			f_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+										f_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
+			i_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+										i_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());		
+			tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+										tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());	
+			//}
 		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
 		//Computing gradients of the paramters
 		//Derivative of weights out of h_t
@@ -406,6 +417,7 @@ public:
 											c_t_minus_one.leftCols(current_minibatch_size));		
  
 		//Derivatives of weights out of x_t
+
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
 		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
@@ -440,6 +452,9 @@ public:
 	
 	}
 	
+	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
+	//nonlinearities 
+	void clipGradient(){}
 	
 	void resetGradient(){
 		

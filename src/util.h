@@ -23,6 +23,14 @@
 
 typedef long long int data_size_t; // training data can easily exceed 2G instances
 
+
+struct gradClipper{
+  double operator() (double x) const { 
+    return std::min(1., std::max(x,-1.));
+    //return(x);
+  }
+};
+
 namespace Eigen {
     template <typename Derived>
     size_t hash_value(const DenseBase<Derived> &m)
