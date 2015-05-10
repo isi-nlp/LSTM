@@ -391,6 +391,8 @@ public:
 										i_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());		
 			tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
 										tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());	
+			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
+			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
 			//}
 		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
 		//Computing gradients of the paramters
