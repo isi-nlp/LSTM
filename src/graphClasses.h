@@ -383,6 +383,7 @@ public:
 		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 		//nonlinearities 
 		//if (!gradient_check){
+		/*
 			o_t_node.bProp_matrix.leftCols(current_minibatch_size).array() = 
 										o_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
 			f_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
@@ -391,6 +392,7 @@ public:
 										i_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());		
 			tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
 										tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());	
+		*/
 			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
 			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
 			//}
