@@ -103,7 +103,8 @@ namespace nplm
 	    template <typename DerivedIn, typename DerivedOut>
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output,
-			 double &log_likelihood) 
+			 double &log_likelihood,
+			 bool gradient_check) 
 	    {	
 			
 			//cerr<<"In backprop..."<<endl;
@@ -176,7 +177,8 @@ namespace nplm
 				   			   dummy_zero,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);	
+							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+							   gradient_check);	
 					
 					/*
    				    lstm_nodes[i].bProp(data.row(i),
@@ -202,7 +204,8 @@ namespace nplm
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   dummy_zero);
+				   			   dummy_zero,
+							   gradient_check);
 					/*   
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -218,7 +221,8 @@ namespace nplm
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);		
+							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+							   gradient_check);		
 					/*
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
