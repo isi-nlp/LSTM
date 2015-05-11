@@ -104,7 +104,8 @@ namespace nplm
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output,
 			 double &log_likelihood,
-			 bool gradient_check) 
+			 bool gradient_check,
+			 bool norm_clipping) 
 	    {	
 			
 			//cerr<<"In backprop..."<<endl;
@@ -178,7 +179,8 @@ namespace nplm
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check);	
+							   gradient_check,
+							   norm_clipping);	
 					
 					/*
    				    lstm_nodes[i].bProp(data.row(i),
@@ -205,7 +207,8 @@ namespace nplm
 				   			   output_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero,
-							   gradient_check);
+							   gradient_check,
+							   norm_clipping);
 					/*   
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -222,7 +225,8 @@ namespace nplm
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check);		
+							   gradient_check,
+							   norm_clipping);		
 					/*
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -244,13 +248,17 @@ namespace nplm
 	 void updateParams(double learning_rate,
 	 					int current_minibatch_size,
 				  		double momentum,
-						double L2_reg) {
+						double L2_reg,
+						bool norm_clipping,
+						double norm_threshold) {
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
 		plstm->output_layer.updateParams(learning_rate,
 						current_minibatch_size,
 	  					momentum,
-	  					L2_reg);
+	  					L2_reg,
+						norm_clipping,
+						norm_threshold);
 		// updating the rest of the parameters
 		
 		//updating params for weights out of hidden layer 
@@ -258,76 +266,108 @@ namespace nplm
 		plstm->W_h_to_o.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
  		plstm->W_h_to_f.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
   		plstm->W_h_to_i.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
    		plstm->W_h_to_c.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 
 		//updating params for weights out of cell
 		plstm->W_c_to_f.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->W_c_to_i.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->W_c_to_o.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);				
+											L2_reg,
+											norm_clipping,
+											norm_threshold);				
 
 
 		//Error derivatives for the input word embeddings
 		plstm->W_x_to_c.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->W_x_to_o.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->W_x_to_f.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->W_x_to_i.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 
 
 		plstm->o_t.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->f_t.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
 		plstm->i_t.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);	
+											L2_reg,
+											norm_clipping,
+											norm_threshold);	
 		plstm->tanh_c_prime_t.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);	
+											L2_reg,
+											norm_clipping,
+											norm_threshold);	
 								
 		//Derivatives of the input embeddings							
 	    plstm->input_layer.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
-											L2_reg);		
+											L2_reg,
+											norm_clipping,
+											norm_threshold);		
 	  }
 	  
 	  template <typename DerivedOut>

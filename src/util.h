@@ -24,12 +24,7 @@
 typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 
-struct gradClipper{
-  double operator() (double x) const { 
-    return std::min(1., std::max(x,-1.));
-    //return(x);
-  }
-};
+
 
 namespace Eigen {
     template <typename Derived>
@@ -45,6 +40,13 @@ namespace Eigen {
 
 namespace nplm
 {
+	
+struct gradClipper{
+  double operator() (double x) const { 
+    return std::min(1., std::max(x,-1.));
+    //return(x);
+  }
+};
 
 void splitBySpace(const std::string &line, std::vector<std::string> &items);
 void readWordsFile(std::ifstream &TRAININ, std::vector<std::string> &word_list);
@@ -131,6 +133,18 @@ void initMatrix(boost::random::mt19937 &engine,
             }
         }
     }
+}
+
+template<typename Derived>
+void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
+					 int current_minibatch_size,
+					 double norm_threshold){
+	UNCONST(Derived, const_param, param);
+	param /= current_minibatch_size;
+	double param_norm = param.norm();
+	if (param_norm > norm_threshold){
+		param *= norm_threshold/param_norm;
+	}
 }
 
 //Change a random position in the parameter by an offset. this is used for gradient checking

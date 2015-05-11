@@ -130,9 +130,10 @@ int main(int argc, char** argv)
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
 	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
-
+	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
+		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
-
+	  ValueArg<double> norm_threshold("", "norm_threshold", "If doing norm clipping, then what is the threshold. Default 5", false,5., "double", cmd);
 
       cmd.parse(argc, argv);
 
@@ -194,6 +195,8 @@ int main(int argc, char** argv)
       myParam.normalization_init = normalization_init.getValue();
       myParam.parameter_update = parameter_update.getValue();
 	  myParam.gradient_check = gradient_check.getValue();
+	  myParam.norm_clipping = norm_clipping.getValue();
+	  myParam.norm_threshold = norm_threshold.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -209,6 +212,9 @@ int main(int argc, char** argv)
       cerr << input_vocab_size.getDescription() << sep << input_vocab_size.getValue() << endl;
       cerr << output_vocab_size.getDescription() << sep << output_vocab_size.getValue() << endl;
       cerr << mmap_file.getDescription() << sep << mmap_file.getValue() << endl;
+	  cerr << norm_clipping.getDescription() << sep << norm_clipping.getValue() <<endl;
+	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
+	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 
       if (embedding_dimension.getValue() >= 0)
       {
@@ -632,7 +638,8 @@ int main(int argc, char** argv)
 			    prop.bProp(training_input_sent_data,
 					 training_output_sent_data,
 					 data_log_likelihood,
-					 myParam.gradient_check); 	
+					 myParam.gradient_check,
+					 myParam.norm_clipping); 	
 
 	 			//Checking the compute probs function
 	 			//prop.computeProbs(training_output_sent_data,
@@ -648,7 +655,9 @@ int main(int argc, char** argv)
 				prop.updateParams(adjusted_learning_rate,
 							current_minibatch_size,
 					  		current_momentum,
-							myParam.L2_reg);														
+							myParam.L2_reg,
+							myParam.norm_clipping,
+							myParam.norm_threshold);														
 	
 				//Resetting the gradients
 

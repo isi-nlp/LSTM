@@ -235,7 +235,9 @@ class Linear_layer
     void updateParams(double learning_rate,
 					  int current_minibatch_size,
                       double momentum,
-					  double L2_reg){
+					  double L2_reg,
+					  bool norm_clipping,
+					  double norm_threshold){
 						  
       // get the bias gradient for all dimensions in parallel
       int size = b.size();
@@ -267,6 +269,11 @@ class Linear_layer
 		  }
 		  U += learning_rate*U_gradient;
 		  */
+		  if (norm_clipping){
+			  scaleAndNormClip(U_gradient,
+			  				   current_minibatch_size,
+			  				   norm_threshold);
+		  }
 		  U += learning_rate * U_gradient;
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
@@ -523,7 +530,9 @@ class Linear_diagonal_layer
     void updateParams(double learning_rate,
 					  int current_minibatch_size,
                       double momentum,
-					  double L2_reg){
+					  double L2_reg,
+					  bool norm_clipping,
+					  double norm_threshold){
 						  
       // get the bias gradient for all dimensions in parallel
       int size = b.size();
@@ -550,7 +559,11 @@ class Linear_diagonal_layer
 		  }
 		  U += learning_rate*U_gradient;	
 		  */
-		  	  
+		  if (norm_clipping){
+			  scaleAndNormClip(U_gradient,
+			  				   current_minibatch_size,
+			  				   norm_threshold);
+		  }		  	  
           //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 		  U += learning_rate * U_gradient;
           //b += learning_rate * b_gradient;
@@ -754,12 +767,19 @@ template <typename DerivedIn, typename DerivedGOut>
   void updateParams(double learning_rate,
   		int current_minibatch_size,
   		double momentum,
-		double L2_reg){
+		double L2_reg,
+		bool norm_clipping,
+		double norm_threshold){
 	  if (L2_reg > 0){
 	  	W_gradient -= 2*L2_reg*(*W);
 	  } 
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
+	  if (norm_clipping){
+		  scaleAndNormClip(W_gradient,
+		  				   current_minibatch_size,
+		  				   norm_threshold);
+	  }	  
 	  *W += learning_rate*W_gradient;
 	  //b += learning_rate*b_gradient;
   }
@@ -1287,7 +1307,9 @@ class Input_word_embeddings
   void updateParams(double learning_rate,
   					int current_minibatch_size,
   					double momentum,
-					double L2_reg){
+					double L2_reg,
+					bool norm_clipping,
+					double norm_threshold){
 						
 	    // Convert to std::vector for parallelization
         std::vector<int> update_items;
@@ -1305,6 +1327,11 @@ class Input_word_embeddings
             //UPDATE CLIPPING
             //W->row(update_item).array() += learning_rate*
             //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+	  		if (norm_clipping){
+	  			scaleAndNormClip(W_gradient.row(update_item),
+	  			  				 current_minibatch_size,
+	  			  				 norm_threshold);
+	  		}
             W->row(update_item) += learning_rate*
                 W_gradient.row(update_item);
             //GRADIENT CLIPPING
@@ -1553,9 +1580,16 @@ class Hidden_layer
 	 void updateParams(double learning_rate,
 	 					int current_minibatch_size,
 	 					double momentum,
-						double L2_reg){
+						double L2_reg,
+						bool norm_clipping,
+						double norm_threshold){
 		//as of now, only SGD
 		//b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+  		if (norm_clipping){
+  			scaleAndNormClip(b_gradient,
+  			  				 current_minibatch_size,
+  			  				 norm_threshold);
+  		}
 		b += learning_rate*b_gradient/current_minibatch_size;
 		//cerr<<"b is "<<b<<endl;				
 	}

@@ -45,7 +45,9 @@ struct param
     bool init_normal;
     double init_range;
 	double init_forget;
-
+	bool norm_clipping;
+	bool gradient_check;
+	
     int num_noise_samples;
 
     bool use_momentum;
@@ -53,6 +55,7 @@ struct param
     double final_momentum;
 
     double L2_reg;
+	double norm_threshold;
 
     bool normalization;
     double normalization_init;

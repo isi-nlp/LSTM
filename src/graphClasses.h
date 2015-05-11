@@ -258,7 +258,8 @@ public:
 			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
-			   bool gradient_check) {
+			   bool gradient_check,
+			   bool norm_clipping) {
 				   
 		Matrix<double,Dynamic,Dynamic> dummy_matrix;
 		int current_minibatch_size = data.cols();
@@ -382,8 +383,8 @@ public:
 							W_x_to_f_node.bProp_matrix +
 							W_x_to_i_node.bProp_matrix;
 		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
-		//nonlinearities 
-		if (!gradient_check){
+		//nonlinearities. This is done if there is no norm clipping
+		if (!gradient_check && !norm_clipping){
 		
 			o_t_node.bProp_matrix.leftCols(current_minibatch_size).array() = 
 										o_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
