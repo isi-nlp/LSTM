@@ -55,6 +55,7 @@ struct param
     double L2_reg;
 
     bool normalization;
+	bool gradient_check;
     double normalization_init;
 
     int num_threads;

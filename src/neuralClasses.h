@@ -109,6 +109,9 @@ class Linear_layer
 	int n_inputs () const { return U.cols(); }
 	int n_outputs () const { return U.rows(); }
 
+	int rows() const {return U.rows(); }
+	int cols() const {return U.cols(); }
+	
   template <typename DerivedIn, typename DerivedOut>
 	void fProp(const MatrixBase<DerivedIn> &input,
       const MatrixBase<DerivedOut> &output) const
@@ -264,7 +267,7 @@ class Linear_layer
 		  }
 		  U += learning_rate*U_gradient;
 		  */
-		  U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  U += learning_rate * U_gradient;
 		  //cerr<<"U after update is"<<endl;
 		  //cerr<<U<<endl;
           //b += learning_rate * b_gradient;
@@ -448,7 +451,9 @@ class Linear_diagonal_layer
 
 	int n_inputs () const { return U.rows(); }
 	int n_outputs () const { return U.rows(); }
-
+	
+	int rows() const {return U.rows(); }
+	int cols() const {return U.cols(); }
   template <typename DerivedIn, typename DerivedOut>
 	void fProp(const MatrixBase<DerivedIn> &input,
       const MatrixBase<DerivedOut> &output) const
@@ -546,7 +551,8 @@ class Linear_diagonal_layer
 		  U += learning_rate*U_gradient;	
 		  */
 		  	  
-          U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
+		  U += learning_rate * U_gradient;
           //b += learning_rate * b_gradient;
 		  
 		  /*
@@ -624,13 +630,16 @@ class Output_word_embeddings
         }
 
         initMatrix(engine, *W, init_normal, init_range);
-		//std::cerr<<*W<<std::endl;
+		//std::cerr<<*W<<std::endl;e
         b.fill(init_bias);
     }
 
     int n_inputs () const { return W->cols(); }
     int n_outputs () const { return W->rows(); }
 
+	int rows() const {return W->rows(); }
+	int cols() const {return W->cols(); }
+	
     template <typename DerivedIn, typename DerivedOut>
     void fProp(const MatrixBase<DerivedIn> &input,
     const MatrixBase<DerivedOut> &output) const
@@ -746,9 +755,12 @@ template <typename DerivedIn, typename DerivedGOut>
   		int current_minibatch_size,
   		double momentum,
 		double L2_reg){
-	  
+	  if (L2_reg > 0){
+	  	W_gradient -= 2*L2_reg*(*W);
+	  } 
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
-	  (*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
+	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
+	  *W += learning_rate*W_gradient;
 	  //b += learning_rate*b_gradient;
   }
   
@@ -1101,6 +1113,9 @@ class Input_word_embeddings
 	int n_inputs() const { return -1; }
 	int n_outputs() const { return W->cols() * context_size; }
 
+	int rows() const {return W->rows(); }
+	int cols() const {return W->cols(); }
+	
 	// set output_id's embedding to the weighted average of all embeddings
 	template <typename Dist>
 	void average(const Dist &dist, int output_id)
@@ -1288,8 +1303,10 @@ class Input_word_embeddings
             int update_item = update_items[item_id];
 			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
-            W->row(update_item).array() += learning_rate*
-                (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+            //W->row(update_item).array() += learning_rate*
+            //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+            W->row(update_item) += learning_rate*
+                W_gradient.row(update_item);
             //GRADIENT CLIPPING
             //W->row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
@@ -1467,6 +1484,9 @@ class Hidden_layer
 	int n_outputs(){return size;}
 	int n_inputs(){return size;}
 	
+	int rows() const {return b.rows(); }
+	int cols() const {return b.cols(); }	
+	
 	template <typename Engine>
 	void initialize(Engine &engine,
       bool init_normal,
@@ -1535,7 +1555,8 @@ class Hidden_layer
 	 					double momentum,
 						double L2_reg){
 		//as of now, only SGD
-		b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+		//b.array() += learning_rate*(b_gradient/current_minibatch_size).array().unaryExpr(Clipper());	
+		b += learning_rate*b_gradient/current_minibatch_size;
 		//cerr<<"b is "<<b<<endl;				
 	}
 	void resetGradient(){

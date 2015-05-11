@@ -128,6 +128,7 @@ int main(int argc, char** argv)
 	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , false, "", "string", cmd);
 	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , false, "", "string", cmd);	  
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
+	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
@@ -192,6 +193,7 @@ int main(int argc, char** argv)
 	  myParam.init_forget = init_forget.getValue();
       myParam.normalization_init = normalization_init.getValue();
       myParam.parameter_update = parameter_update.getValue();
+	  myParam.gradient_check = gradient_check.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -567,8 +569,8 @@ int main(int argc, char** argv)
 		  	*/
 	  
 	  
-		  	//double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
-		  	double adjusted_learning_rate = current_learning_rate;
+		  	double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+		  	//double adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
@@ -629,18 +631,22 @@ int main(int argc, char** argv)
 				//Calling backprop
 			    prop.bProp(training_input_sent_data,
 					 training_output_sent_data,
-					 data_log_likelihood); 	
+					 data_log_likelihood,
+					 myParam.gradient_check); 	
 
 	 			//Checking the compute probs function
 	 			//prop.computeProbs(training_output_sent_data,
 	 			//					data_log_likelihood);	
-				//cerr<<"training_input_sent_data len"					 
-				prop.gradientCheck(training_input_sent_data,
-					 		 training_output_sent_data);
+				//cerr<<"training_input_sent_data len"		
+				if (myParam.gradient_check) {		
+					cerr<<"Checking gradient"<<endl;	 
+					prop.gradientCheck(training_input_sent_data,
+						 		 training_output_sent_data);
+				}
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
-							current_minibatch_size*max_sent_len,
+							current_minibatch_size,
 					  		current_momentum,
 							myParam.L2_reg);														
 	
@@ -659,8 +665,8 @@ int main(int argc, char** argv)
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
-		cerr << "Training log-likelihood base 10:     " << data_log_likelihood/log(2.) << endl;
-		cerr << "Training cross entropy in base 10 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
+		cerr << "Training log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
+		cerr << "Training cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
 		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss)

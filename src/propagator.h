@@ -103,7 +103,8 @@ namespace nplm
 	    template <typename DerivedIn, typename DerivedOut>
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output,
-			 double &log_likelihood) 
+			 double &log_likelihood,
+			 bool gradient_check) 
 	    {	
 			
 			//cerr<<"In backprop..."<<endl;
@@ -176,7 +177,8 @@ namespace nplm
 				   			   dummy_zero,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);	
+							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+							   gradient_check);	
 					
 					/*
    				    lstm_nodes[i].bProp(data.row(i),
@@ -202,7 +204,8 @@ namespace nplm
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   dummy_zero);
+				   			   dummy_zero,
+							   gradient_check);
 					/*   
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -218,7 +221,8 @@ namespace nplm
 				   			   lstm_nodes[i-1].c_t,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne);		
+							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+							   gradient_check);		
 					/*
   				    lstm_nodes[i].bProp(data.row(i),
   							   lstm_nodes[i-1].h_t,
@@ -263,13 +267,12 @@ namespace nplm
 											current_minibatch_size,
 											momentum,
 											L2_reg);
-		
    		plstm->W_h_to_c.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
 											L2_reg);
-	
-		/*									
+
+		/*
 		//updating params for weights out of cell
 		plstm->W_c_to_f.updateParams(learning_rate,
 											current_minibatch_size,
@@ -283,11 +286,9 @@ namespace nplm
 											current_minibatch_size,
 											momentum,
 											L2_reg);				
-		
-		*/
-											
-		//Error derivatives for the input word embeddings
 
+		*/
+		//Error derivatives for the input word embeddings
 		plstm->W_x_to_c.updateParams(learning_rate,
 											current_minibatch_size,
 											momentum,
@@ -382,12 +383,11 @@ namespace nplm
   		plstm->W_h_to_i.resetGradient();
    		plstm->W_h_to_c.resetGradient();
 
-		/*
 		//updating params for weights out of cell
-		plstm->W_c_to_f.resetGradient();
-		plstm->W_c_to_i.resetGradient();
-		plstm->W_c_to_o.resetGradient();				
-		*/
+		//plstm->W_c_to_f.resetGradient();
+		//plstm->W_c_to_i.resetGradient();
+		//plstm->W_c_to_o.resetGradient();				
+
 
 		//Error derivatives for the input word embeddings
 		plstm->W_x_to_c.resetGradient();
@@ -439,55 +439,69 @@ namespace nplm
 		cerr<<"the measured gradient is"<<lstm_nodes[0].d_Err_t_to_n_d_h_t<<endl;
 		cerr<<"Gradient diff is "<<	(before_log_likelihood-after_log_likelihood)/2e-5<<endl;
 		*/
+		//Check every dimension of all the parameters to make sure the gradient is fine
 		
-		getFiniteDiff(input,output,plstm->output_layer,"output_layer");	
-		//getFiniteDiff(input,output,plstm->output_layer,"output_layer");	
+
+		paramGradientCheck(input,output,plstm->output_layer,"output_layer");	
 		
-		getFiniteDiff(input,output,plstm->W_h_to_c,"W_h_to_c");		
-		getFiniteDiff(input,output,plstm->W_h_to_f,"W_h_to_f");											
-		getFiniteDiff(input,output,plstm->W_h_to_o,"W_h_to_o");
-		getFiniteDiff(input,output,plstm->W_h_to_i ,"W_h_to_i");	
+		paramGradientCheck(input,output,plstm->W_h_to_c,"W_h_to_c");		
+		paramGradientCheck(input,output,plstm->W_h_to_f,"W_h_to_f");											
+		paramGradientCheck(input,output,plstm->W_h_to_o,"W_h_to_o");
+		paramGradientCheck(input,output,plstm->W_h_to_i ,"W_h_to_i");	
 		
-		getFiniteDiff(input,output,plstm->W_x_to_c,"W_x_to_c");
-		getFiniteDiff(input,output,plstm->W_x_to_f,"W_x_to_f");
-		getFiniteDiff(input,output,plstm->W_x_to_o,"W_x_to_o");
-		getFiniteDiff(input,output,plstm->W_x_to_i,"W_x_to_i");
+		paramGradientCheck(input,output,plstm->W_x_to_c,"W_x_to_c");
+		paramGradientCheck(input,output,plstm->W_x_to_f,"W_x_to_f");
+		paramGradientCheck(input,output,plstm->W_x_to_o,"W_x_to_o");
+		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i");
 		
 		/*
-		getFiniteDiff(input,output,plstm->W_c_to_o,"W_c_to_o");
-		getFiniteDiff(input,output,plstm->W_c_to_f,"W_c_to_f");
-		getFiniteDiff(input,output,plstm->W_c_to_i,"W_c_to_i");
-		*/	
-			
-		getFiniteDiff(input,output,plstm->o_t,"o_t");
-		getFiniteDiff(input,output,plstm->f_t,"f_t");
-		getFiniteDiff(input,output,plstm->i_t,"i_t");
-		getFiniteDiff(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t");		
+		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o");
+		paramGradientCheck(input,output,plstm->W_c_to_f,"W_c_to_f");
+		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i");
+		*/
 		
-		getFiniteDiff(input,output,plstm->input_layer,"input_layer");
+		paramGradientCheck(input,output,plstm->o_t,"o_t");
+		paramGradientCheck(input,output,plstm->f_t,"f_t");
+		paramGradientCheck(input,output,plstm->i_t,"i_t");
+		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t");		
+		
+		paramGradientCheck(input,output,plstm->input_layer,"input_layer");
 		
 		
 	}
-	
+	template <typename DerivedIn, typename DerivedOut, typename testParam>
+	void paramGradientCheck(const MatrixBase<DerivedIn> &input,
+			 const MatrixBase<DerivedOut> &output,
+			 testParam &param,
+			 const string param_name){
+		//Going over all dimensions of the parameter
+		for(int row=0; row<param.rows(); row++){
+			for (int col=0; col<param.cols(); col++){
+				getFiniteDiff(input, output, param, param_name, row, col);
+			}
+		}
+	}
 	
 	template <typename DerivedIn, typename DerivedOut, typename testParam>
     void getFiniteDiff(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 testParam &param,
-			 const string param_name) {
-				 
-		 		int rand_row;
-		 		int rand_col;
+			 const string param_name,
+			 int row,
+			 int col) {
+				//cerr<<"Row is :"<<row<<" col is " <<col<<endl;
+				int rand_row = row;
+		 		int rand_col = col;
 		 		//First checking the gradient of the output word embeddings
-		 		cerr<<"Checking the gradient of "<<param_name<<endl;
-		 		rand_row = 0;
-				rand_col= 0;
+		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
+		 		//rand_row = 0;
+				//rand_col= 0;
 		 	    param.changeRandomParam(1e-5, 
 		 								rand_row,
 		 								rand_col);
 		 		//then do an fprop
 		 		double before_log_likelihood = 0;	
-				cerr<<"input cols is "<<input.cols()<<endl;					
+				//cerr<<"input cols is "<<input.cols()<<endl;					
 		 		fProp(input, 0, input.rows()-1);
 		 		computeProbs(output,
 		 			  		before_log_likelihood);
@@ -500,19 +514,31 @@ namespace nplm
 		 		fProp(input,0, input.rows()-1);	
 		 		computeProbs(output,
 		 			  		after_log_likelihood);		
-		
-		 		cerr<<"Symmetric finite differences gradient is "<<	(before_log_likelihood-after_log_likelihood)/2e-5<<endl;
-				cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;
-				
-				cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
-		 								rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-		 	    cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" is "<<
-						(before_log_likelihood-after_log_likelihood)/2e-5 - param.getGradient(rand_row,
-		 								rand_col)<<endl;	
 		 		//returning the parameter back to its own value
 		 	    param.changeRandomParam(1e-5 , 
 		 								rand_row,
-		 								rand_col);			 	
+		 								rand_col);			
+
+				
+				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
+		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
+				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/2e-5;	
+				double graves_threshold = pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
+		 								rand_col)), fabs(symmetric_finite_diff_grad)))))-6);
+				double gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
+		 								rand_col);
+				if (gradient_diff > graves_threshold) {
+					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
+			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
+					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
+		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
+						<<" and col: "<<rand_col<<" is "<<gradient_diff<<endl;	
+					exit(1);
+				} else {
+		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
+						<<" and col: "<<rand_col<<" is "<<gradient_diff<<endl;
+				}
+		 	
 	}	
 	
 	
