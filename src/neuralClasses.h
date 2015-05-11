@@ -756,7 +756,7 @@ template <typename DerivedIn, typename DerivedGOut>
   		double momentum,
 		double L2_reg){
 	  if (L2_reg > 0){
-	  	W_gradient -= 2*L2_reg*W;
+	  	W_gradient -= 2*L2_reg*(*W);
 	  } 
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
