@@ -353,7 +353,23 @@ public:
 							  dummy_matrix,
 							  tanh_c_prime_t_node.fProp_matrix);	
 		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;									
-		
+
+  		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
+  		//nonlinearities 
+  		if (!gradient_check){
+
+  			o_t_node.bProp_matrix.leftCols(current_minibatch_size).array() = 
+  										o_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
+  			f_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+  										f_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
+  			i_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+  										i_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());		
+  			tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
+  										tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());	
+  			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
+  			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
+  		}
+						
 		//Error derivatives for h_t_minus_one
 		W_h_to_o_node.param->bProp(o_t_node.bProp_matrix,
 						 W_h_to_o_node.bProp_matrix);
@@ -400,22 +416,7 @@ public:
 		//Derivative of weights out of h_t
 		//cerr<<"W_h_to_o_node"<<endl;
 		
-		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
-		//nonlinearities 
-		if (!gradient_check){
-		
-			o_t_node.bProp_matrix.leftCols(current_minibatch_size).array() = 
-										o_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
-			f_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
-										f_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
-			i_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
-										i_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());		
-			tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array() =
-										tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());	
-			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
-			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
-		}
-				
+
 	    W_h_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
 											h_t_minus_one.leftCols(current_minibatch_size));
 	    //cerr<<"W_h_to_f_node"<<endl;										
