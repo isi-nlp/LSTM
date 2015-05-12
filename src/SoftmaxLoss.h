@@ -57,8 +57,10 @@ struct SoftmaxLogLoss
     #pragma omp parallel for reduction(+:log_likelihood)
 	for (int train_id = 0; train_id < input.cols(); train_id++)
 	{
+		//std::cerr<<"output word "<<output_words(train_id)<<std::endl;
 		//If the output word is negative, that means there was no sample
 		if (output_words(train_id) == -1){
+			//std::cerr<<"word is -1"<<std::endl;
 			continue;
 		}
 	    double normalization = logsum(input.col(train_id));
@@ -88,6 +90,7 @@ struct SoftmaxLogLoss
 			grad_input.col(train_id) -= output.col(train_id).array().exp().matrix();
 			
 		}
+		//std::cerr<<"grad input is "<<grad_input<<std::endl;
     }
 };
 
