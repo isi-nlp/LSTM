@@ -61,8 +61,8 @@ class LSTM_node {
 	int minibatch_size;
 public:
 	//Each LSTM node has a bunch of nodes and temporary data structures
-    Node<Input_word_embeddings> input_layer_node;
-    Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+    Node<Input_word_embeddings> input_layer_node,W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+    //Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
 	Node<Linear_layer> W_h_to_i_node, W_h_to_f_node, W_h_to_c_node, W_h_to_o_node;
 	Node<Linear_diagonal_layer> W_c_to_i_node, W_c_to_f_node, W_c_to_o_node;
     Node<Hidden_layer> i_t_node,f_t_node,o_t_node,tanh_c_prime_t_node;
@@ -183,7 +183,11 @@ public:
 		//getchar();
         //start_timer(0);
 		//cerr<<"data is "<<data<<endl;
-    	input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+    	//input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
+		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
+		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
+		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);
 		//current_minibatch_size = data.cols();
     	//stop_timer(0);
     	//std::cerr<<"input layer fprop matrix is "<<input_layer_node.fProp_matrix<<endl;
@@ -192,7 +196,7 @@ public:
 		//				  first_hidden_linear_node.fProp_matrix);
 						  
 		//How much to scale the input
-		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
+		//W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
@@ -205,7 +209,7 @@ public:
 		//std::cerr<<"i_t node fProp value is "<<i_t_node.fProp_matrix<<std::endl;
 		
 		//How much to forget
-		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
+		//W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
 		W_h_to_f_node.param->fProp(h_t_minus_one,W_h_to_f_node.fProp_matrix);
 		//std::cerr<<"W_h_to_f_node fprop is "<<W_h_to_f_node.fProp_matrix<<std::endl;
 		W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
@@ -216,7 +220,7 @@ public:
 							f_t_node.fProp_matrix);
 		//std::cerr<<"f_t node fProp value is "<<f_t_node.fProp_matrix<<std::endl;
 		//computing c_prime_t
-		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
+		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
 		tanh_c_prime_t_input_matrix = W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
@@ -231,7 +235,7 @@ public:
 				i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
 		//cerr<<"c_t "<<c_t<<endl;
 		//How much to scale the output
-		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
+		//W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
 		o_t_input_matrix = W_x_to_o_node.fProp_matrix +  
@@ -370,6 +374,7 @@ public:
 									W_c_to_i_node.bProp_matrix;
 		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
 		//Error derivatives for the input word embeddings
+		/*
 		W_x_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
 								W_x_to_c_node.bProp_matrix);
 		W_x_to_o_node.param->bProp(o_t_node.bProp_matrix,
@@ -382,6 +387,7 @@ public:
 							W_x_to_o_node.bProp_matrix +
 							W_x_to_f_node.bProp_matrix +
 							W_x_to_i_node.bProp_matrix;
+		*/
 		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 		//nonlinearities. This is done if there is no norm clipping
 		if (!gradient_check && !norm_clipping){
@@ -426,16 +432,16 @@ public:
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
 		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
+											data);
 		//cerr<<"W_x_to_i_node"<<endl;									
 		W_x_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
+											data);
 		//cerr<<"W_x_to_f_node"<<endl;									
 		W_x_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));	
+											data);	
 		//cerr<<"W_x_to_c_node"<<endl;									
 		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));			
+											data);			
 		
 		/*
 		//Derivatives of the input embeddings. I THINK THIS IS WRONG!							
@@ -452,8 +458,8 @@ public:
 		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		
 		//updating gradient of input word embeddings input embeddings
-		input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
-												data);											
+		//input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
+		//										data);											
 	
 	}
 	

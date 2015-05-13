@@ -14,7 +14,7 @@ namespace nplm
 
 class model {
 public:
-    Input_word_embeddings input_layer;
+    Input_word_embeddings input_layer, W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
     Linear_layer first_hidden_linear;
     Activation_function first_hidden_activation;
     Linear_layer second_hidden_linear;
@@ -22,8 +22,12 @@ public:
     Output_word_embeddings output_layer;
     Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
       input_embedding_matrix,
-      input_and_output_embedding_matrix;
-    Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+      input_and_output_embedding_matrix,
+	  W_x_to_i_embedding_matrix, 
+	  W_x_to_f_embedding_matrix, 
+	  W_x_to_c_embedding_matrix, 
+	  W_x_to_o_embedding_matrix; 
+    //Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
   	Linear_layer W_h_to_i, W_h_to_f, W_h_to_c, W_h_to_o;
   	Linear_diagonal_layer W_c_to_i, W_c_to_f, W_c_to_o;
     Hidden_layer i_t,f_t,o_t,tanh_c_prime_t;
@@ -51,7 +55,16 @@ public:
           output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
           input_layer.set_W(&input_embedding_matrix);
           output_layer.set_W(&output_embedding_matrix);
+		  W_x_to_i_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_f_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_o_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_c_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
+		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
+		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
+		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);
         }
+		
         resize(ngram_size,
             input_vocab_size,
             output_vocab_size,
@@ -63,10 +76,18 @@ public:
             premultiplied(false),
             activation_function(Rectifier),
             output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
         {
           output_layer.set_W(&output_embedding_matrix);
           input_layer.set_W(&input_embedding_matrix);
+		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
+		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
+		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
+		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);		  
         }
 
     void resize(int ngram_size,

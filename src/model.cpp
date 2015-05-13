@@ -20,6 +20,10 @@ void model::resize(int ngram_size,
     int output_embedding_dimension)
 {
     input_layer.resize(input_vocab_size, input_embedding_dimension, 1); // the input is always dimension 1 now.
+	W_x_to_c.resize(input_vocab_size, input_embedding_dimension, 1);
+	W_x_to_o.resize(input_vocab_size, input_embedding_dimension, 1);
+	W_x_to_f.resize(input_vocab_size, input_embedding_dimension, 1);
+	W_x_to_i.resize(input_vocab_size, input_embedding_dimension, 1);
     //first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-1));
     //first_hidden_activation.resize(num_hidden);
     //second_hidden_linear.resize(output_embedding_dimension, num_hidden);
@@ -39,10 +43,10 @@ void model::resize(int ngram_size,
 	W_h_to_i.resize(num_hidden,num_hidden);
 	W_h_to_o.resize(num_hidden,num_hidden);
 	
-	W_x_to_c.resize(num_hidden,num_hidden);
-	W_x_to_o.resize(num_hidden,num_hidden);
-	W_x_to_f.resize(num_hidden,num_hidden);
-	W_x_to_i.resize(num_hidden,num_hidden);
+	//W_x_to_c.resize(num_hidden,num_hidden);
+	//W_x_to_o.resize(num_hidden,num_hidden);
+	//W_x_to_f.resize(num_hidden,num_hidden);
+	//W_x_to_i.resize(num_hidden,num_hidden);
 	
 	W_c_to_f.resize(num_hidden);
 	W_c_to_i.resize(num_hidden);

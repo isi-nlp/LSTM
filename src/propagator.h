@@ -360,7 +360,7 @@ namespace nplm
 											L2_reg,
 											norm_clipping,
 											norm_threshold);	
-								
+		/*						
 		//Derivatives of the input embeddings							
 	    plstm->input_layer.updateParams(learning_rate,
 											current_minibatch_size,
@@ -368,6 +368,7 @@ namespace nplm
 											L2_reg,
 											norm_clipping,
 											norm_threshold);		
+		*/
 	  }
 	  
 	  template <typename DerivedOut>
@@ -427,13 +428,14 @@ namespace nplm
 		plstm->W_c_to_i.resetGradient();
 		plstm->W_c_to_o.resetGradient();				
 
-
+		
+		/*
 		//Error derivatives for the input word embeddings
 		plstm->W_x_to_c.resetGradient();
 		plstm->W_x_to_o.resetGradient();
 		plstm->W_x_to_f.resetGradient();
 		plstm->W_x_to_i.resetGradient();
-
+		*/
 
 		//Computing gradients of the paramters
 
@@ -502,7 +504,7 @@ namespace nplm
 		paramGradientCheck(input,output,plstm->i_t,"i_t");
 		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t");		
 		
-		paramGradientCheck(input,output,plstm->input_layer,"input_layer");
+		//paramGradientCheck(input,output,plstm->input_layer,"input_layer");
 		
 		
 	}
