@@ -53,11 +53,17 @@ namespace nplm
 	    void resize() { resize(minibatch_size); }
 		
 		//Both the input and the output sentences are columns. Even ifs a minibatch of sentences, each sentence is a column
-	    template <typename Derived>
+	    template <typename Derived, typename DerivedH, typename DerivedC>
 	    void fProp(const MatrixBase<Derived> &data,
 				const int start_pos,
-				const int end_pos)
+				const int end_pos,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h)
 	    {
+			UNCONST(DerivedC, const_current_c, current_c);
+			UNCONST(DerivedH, const_current_h, current_h);
+			//cerr<<"current_c is "<<current_c<<endl;
+			//cerr<<"current_h is "<<current_h<<endl;
 			/*
 			cerr<<"Data is "<<data<<endl;
 			cerr<<"Start pos "<<start_pos<<endl;
@@ -66,22 +72,23 @@ namespace nplm
 			*/
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = data.rows();
-			Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = data.cols();
 			//cerr<<"current minibatch_size is "<<current_minibatch_size<<endl;
-			c_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);
-			h_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);			
-			c_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
-			h_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
+			//c_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);
+			//h_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);			
+			//c_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
+			//h_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
 			//cerr<<"c0 is "<<c_0<<endl;
 			//cerr<<"h0 is "<<h_0<<endl;
 			//getchar();
 			for (int i=0; i<=end_pos; i++){
 				//cerr<<"i is"<<i<<endl;
 				if (i==0) {
+					//cerr<<"Current c is "<<current_c<<endl;
 					lstm_nodes[i].fProp(data.row(i),	
-										c_0,
-										h_0);
+										current_c,
+										current_h);
 				} else {
 					//cerr<<"Data is "<<data.row(i)<<endl;
 					//cerr<<"index is "<<i<<endl;
@@ -97,15 +104,19 @@ namespace nplm
 				}
 				//lstm_nodes.fProp();
 			}
+			current_c = lstm_nodes[end_pos].c_t;
+			current_h = lstm_nodes[end_pos].h_t;
 	    }
 
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut>
+	    template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH>
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output,
 			 double &log_likelihood,
 			 bool gradient_check,
-			 bool norm_clipping) 
+			 bool norm_clipping,
+			 const MatrixBase<DerivedC> &init_c,
+			 const MatrixBase<DerivedH> &init_h) 
 	    {	
 			
 			//cerr<<"In backprop..."<<endl;
@@ -174,8 +185,8 @@ namespace nplm
 				if (i==0) {
 					
 				    lstm_nodes[i].bProp(data.row(i),
-							   dummy_zero,
-				   			   dummy_zero,
+							   init_h,
+				   			   init_c,
 				   			   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
@@ -450,13 +461,18 @@ namespace nplm
   	}	
 	
 	//Use finite differences to do gradient check
-	template <typename DerivedIn, typename DerivedOut>
+	template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH>
     void gradientCheck(const MatrixBase<DerivedIn> &input,
-			 const MatrixBase<DerivedOut> &output)
+			 const MatrixBase<DerivedOut> &output,
+			 const MatrixBase<DerivedC> &const_init_c,
+			 const MatrixBase<DerivedH> &const_init_h)
     {
-		cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
-		cerr<<"In gradient check"<<endl;
-		
+		Matrix<double,Dynamic,Dynamic> init_c = const_init_c;
+		Matrix<double,Dynamic,Dynamic> init_h = const_init_h;
+		//cerr<<"init c is "<<init_c<<endl;
+		//cerr<<"init h is "<<init_h<<endl;
+		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
+		//cerr<<"In gradient check"<<endl;
 		/*
 		//Checking the gradient of h_t
 		lstm_nodes[0].h_t(0,0) += 1e-5;
@@ -483,51 +499,93 @@ namespace nplm
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
 
-		paramGradientCheck(input,output,plstm->output_layer,"output_layer");	
+		paramGradientCheck(input,output,plstm->output_layer,"output_layer", init_c, init_h);	
 		
-		paramGradientCheck(input,output,plstm->W_h_to_c,"W_h_to_c");		
-		paramGradientCheck(input,output,plstm->W_h_to_f,"W_h_to_f");											
-		paramGradientCheck(input,output,plstm->W_h_to_o,"W_h_to_o");
-		paramGradientCheck(input,output,plstm->W_h_to_i ,"W_h_to_i");	
-		
-		paramGradientCheck(input,output,plstm->W_x_to_c,"W_x_to_c");
-		paramGradientCheck(input,output,plstm->W_x_to_f,"W_x_to_f");
-		paramGradientCheck(input,output,plstm->W_x_to_o,"W_x_to_o");
-		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i");
-		
-		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o");
-		paramGradientCheck(input,output,plstm->W_c_to_f,"W_c_to_f");
-		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i");
-		
-		paramGradientCheck(input,output,plstm->o_t,"o_t");
-		paramGradientCheck(input,output,plstm->f_t,"f_t");
-		paramGradientCheck(input,output,plstm->i_t,"i_t");
-		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t");		
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_h_to_c,"W_h_to_c",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;		
+		paramGradientCheck(input,output,plstm->W_h_to_f,"W_h_to_f",init_c, init_h);	
+		init_c = const_init_c;
+		init_h = const_init_h;										
+		paramGradientCheck(input,output,plstm->W_h_to_o,"W_h_to_o",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_h_to_i ,"W_h_to_i",init_c, init_h);	
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_x_to_c,"W_x_to_c",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_x_to_f,"W_x_to_f",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_x_to_o,"W_x_to_o",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;		
+		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_c_to_f,"W_c_to_f",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;		
+		paramGradientCheck(input,output,plstm->o_t,"o_t",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->f_t,"f_t",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->i_t,"i_t",init_c, init_h);
+		init_c = const_init_c;
+		init_h = const_init_h;
+		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t",init_c, init_h);		
 		
 		//paramGradientCheck(input,output,plstm->input_layer,"input_layer");
 		
 		
 	}
-	template <typename DerivedIn, typename DerivedOut, typename testParam>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH>
 	void paramGradientCheck(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 testParam &param,
-			 const string param_name){
+			 const string param_name,
+			 const MatrixBase<DerivedC> &init_c,
+			 const MatrixBase<DerivedH> &init_h){
 		//Going over all dimensions of the parameter
 		for(int row=0; row<param.rows(); row++){
 			for (int col=0; col<param.cols(); col++){
-				getFiniteDiff(input, output, param, param_name, row, col);
+				getFiniteDiff(input, 
+							output, 
+							param, 
+							param_name, 
+							row, 
+							col, 
+							init_c, 
+							init_h);
 			}
 		}
 	}
 	
-	template <typename DerivedIn, typename DerivedOut, typename testParam>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH>
     void getFiniteDiff(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 testParam &param,
 			 const string param_name,
 			 int row,
-			 int col) {
+			 int col,
+			 const MatrixBase<DerivedC> &const_init_c,
+			 const MatrixBase<DerivedH> &const_init_h) {
+				Matrix<double,Dynamic,Dynamic> init_c; 
+				Matrix<double,Dynamic,Dynamic> init_h;
+				init_c = const_init_c;
+				init_h = const_init_h;
 				//cerr<<"Row is :"<<row<<" col is " <<col<<endl;
 				int rand_row = row;
 		 		int rand_col = col;
@@ -541,16 +599,17 @@ namespace nplm
 		 		//then do an fprop
 		 		double before_log_likelihood = 0;	
 				//cerr<<"input cols is "<<input.cols()<<endl;					
-		 		fProp(input, 0, input.rows()-1);
+		 		fProp(input, 0, input.rows()-1, init_c, init_h);
 		 		computeProbs(output,
 		 			  		before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
 		 	    param.changeRandomParam(-2e-5, 
 		 								rand_row,
 		 								rand_col);		
-		
+				init_c = const_init_c;
+				init_h = const_init_h;
 		 		double after_log_likelihood = 0;						
-		 		fProp(input,0, input.rows()-1);	
+		 		fProp(input,0, input.rows()-1, init_c, init_h);	
 		 		computeProbs(output,
 		 			  		after_log_likelihood);		
 		 		//returning the parameter back to its own value

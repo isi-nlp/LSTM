@@ -539,6 +539,14 @@ int main(int argc, char** argv)
 	//cerr<<"Training data size is"<<training_data_size<<endl;
     data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
 	double data_log_likelihood=0;	
+	Matrix<double,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
+	current_c.setZero(myParam.num_hidden, minibatch_size);
+	current_h.setZero(myParam.num_hidden, minibatch_size);
+	//init_c.setZero(myParam.num_hidden,minibatch_size);
+	//init_h.setZero(myParam.num_hidden,minibatch_size);
+	//c_last.setZero(numParam.num_hidden, minibatch_size);
+	//h_last.setZero(numParam.num_hidden, minibatch_size);
+	
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
             if (batch > 0 && batch % 100 == 0)
@@ -624,8 +632,16 @@ int main(int argc, char** argv)
 			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
 			//exit(0);
 			//Calling fProp. Note that it should not matter for fProp if we're doing log 
-			//or NCE loss															
-			prop.fProp(training_input_sent_data,0,max_sent_len-1);	
+			//or NCE loss													
+			if (myParam.gradient_check) {
+				current_c_for_gradCheck = current_c;
+				current_h_for_gradCheck = current_h;
+				cerr<<"current_c_for_gradCheck "<<current_c_for_gradCheck<<endl;
+				cerr<<"current_h_for_gradCheck "<<current_h_for_gradCheck<<endl;
+			}													
+			init_c = current_c;
+			init_h = current_h; 			
+			prop.fProp(training_input_sent_data,0,max_sent_len-1, current_c, current_h);	
 			
 		    if (loss_function == NCELoss)
 		    {
@@ -639,7 +655,9 @@ int main(int argc, char** argv)
 					 training_output_sent_data,
 					 data_log_likelihood,
 					 myParam.gradient_check,
-					 myParam.norm_clipping); 	
+					 myParam.norm_clipping, 
+					 init_c,
+					 init_h); 	
 
 	 			//Checking the compute probs function
 	 			//prop.computeProbs(training_output_sent_data,
@@ -648,7 +666,9 @@ int main(int argc, char** argv)
 				if (myParam.gradient_check) {		
 					cerr<<"Checking gradient"<<endl;	 
 					prop.gradientCheck(training_input_sent_data,
-						 		 training_output_sent_data);
+						 		 training_output_sent_data,
+								 current_c_for_gradCheck,
+								 current_h_for_gradCheck);
 				}
 				//getchar();											 
 				//Updating the gradients
@@ -714,7 +734,10 @@ int main(int argc, char** argv)
 		    //Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
 		    //Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
 		    //Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
-
+			Matrix<double,Dynamic,Dynamic> current_validation_c,current_validation_h;
+			current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
+			current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
+			
             for (int validation_batch =0;validation_batch < num_validation_batches;validation_batch++)
             {
 
@@ -764,7 +787,11 @@ int main(int argc, char** argv)
 				//exit(0);
 				//Calling fProp. Note that it should not matter for fProp if we're doing log 
 				//or NCE loss															
-				prop_validation.fProp(validation_input_sent_data,0,max_sent_len-1);	
+				prop_validation.fProp(validation_input_sent_data,
+										0,
+										max_sent_len-1, 
+										current_validation_c, 
+										current_validation_h);	
 		
 	
 						 
