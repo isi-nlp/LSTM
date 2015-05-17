@@ -27,11 +27,11 @@ input_words = dict((line.strip(),1) for line in open(options.input_words_file))
 output_words = dict((line.strip(),1) for line in open(options.output_words_file))
 
 
-for i,word in enumerate(input_words):
-  input_words[word] = i
+#for i,word in enumerate(input_words):
+#  input_words[word] = i
 
-for i,word in enumerate(output_words):
-  output_words[word] = i
+#for i,word in enumerate(output_words):
+#  output_words[word] = i
 
 
 g_input = lambda x: input_words[x]
