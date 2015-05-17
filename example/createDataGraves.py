@@ -23,9 +23,8 @@ parser.add_option("-l", "--sequence_length",type="int", dest="sequence_length",
 
 (options, args) = parser.parse_args()
 
-input_words = dict((line.strip(),1) for line in open(options.input_words_file))
-output_words = dict((line.strip(),1) for line in open(options.output_words_file))
-
+input_words = dict((line.strip(),i) for i,line in enumerate(open(options.input_words_file)))
+output_words = dict((line.strip(),i) for i,line in enumerate(open(options.output_words_file)))
 
 #for i,word in enumerate(input_words):
 #  input_words[word] = i
