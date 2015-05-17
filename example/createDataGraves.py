@@ -101,7 +101,7 @@ for i in range(num_minibatches-1):
 
   
 int_input_line = map(g_input,data[(num_minibatches-1)*options.sequence_length:-1])
-int_output_line = map(g_output,data[(num_minibatches-1)*options.minibatch_size+1:])
+int_output_line = map(g_output,data[(num_minibatches-1)*options.sequence_length+1:])
 input_file.write("%s\n"%' '.join(map(str,int_input_line)))
 output_file.write("%s\n"%' '.join(map(str,int_output_line)))
 
