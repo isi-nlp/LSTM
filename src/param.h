@@ -47,6 +47,7 @@ struct param
 	double init_forget;
 	bool norm_clipping;
 	bool gradient_check;
+	bool restart_states;
 	
     int num_noise_samples;
 
