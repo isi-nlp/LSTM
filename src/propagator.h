@@ -439,12 +439,13 @@ namespace nplm
  		plstm->W_h_to_f.resetGradient();
   		plstm->W_h_to_i.resetGradient();
    		plstm->W_h_to_c.resetGradient();
-
+		
+		/*
 		//updating params for weights out of cell
 		plstm->W_c_to_f.resetGradient();
 		plstm->W_c_to_i.resetGradient();
 		plstm->W_c_to_o.resetGradient();				
-
+		*/
 		
 		/*
 		//Error derivatives for the input word embeddings
@@ -533,6 +534,7 @@ namespace nplm
 		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i",init_c, init_h);
 		init_c = const_init_c;
 		init_h = const_init_h;		
+		/*
 		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o",init_c, init_h);
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -542,6 +544,8 @@ namespace nplm
 		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i",init_c, init_h);
 		init_c = const_init_c;
 		init_h = const_init_h;		
+		*/
+		
 		paramGradientCheck(input,output,plstm->o_t,"o_t",init_c, init_h);
 		init_c = const_init_c;
 		init_h = const_init_h;
