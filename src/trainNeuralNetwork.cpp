@@ -132,6 +132,9 @@ int main(int argc, char** argv)
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);
+	  ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
+		  Default: 1 = yes, \n \
+		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<double> norm_threshold("", "norm_threshold", "If doing norm clipping, then what is the threshold. Default 5", false,5., "double", cmd);
 
@@ -197,6 +200,7 @@ int main(int argc, char** argv)
 	  myParam.gradient_check = gradient_check.getValue();
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
+	  myParam.restart_states = norm_threshold.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -215,6 +219,7 @@ int main(int argc, char** argv)
 	  cerr << norm_clipping.getDescription() << sep << norm_clipping.getValue() <<endl;
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
+	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 
       if (embedding_dimension.getValue() >= 0)
       {
@@ -583,7 +588,7 @@ int main(int argc, char** argv)
 		  	*/
 	  
 	  
-		  	double adjusted_learning_rate = current_learning_rate/current_minibatch_size;
+
 		  	//double adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
@@ -642,7 +647,10 @@ int main(int argc, char** argv)
 			init_c = current_c;
 			init_h = current_h; 			
 			prop.fProp(training_input_sent_data,0,max_sent_len-1, current_c, current_h);	
-			
+		  	double adjusted_learning_rate = current_learning_rate;
+			if (!myParam.norm_clipping){
+				adjusted_learning_rate /= current_minibatch_size;			
+			}
 		    if (loss_function == NCELoss)
 		    {
 
@@ -673,7 +681,7 @@ int main(int argc, char** argv)
 				//getchar();											 
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
-							current_minibatch_size,
+							max_sent_len,
 					  		current_momentum,
 							myParam.L2_reg,
 							myParam.norm_clipping,
