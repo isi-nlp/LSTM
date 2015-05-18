@@ -104,8 +104,8 @@ namespace nplm
 				}
 				//lstm_nodes.fProp();
 			}
-			current_c = lstm_nodes[end_pos].c_t;
-			current_h = lstm_nodes[end_pos].h_t;
+			//current_c = lstm_nodes[end_pos].c_t;
+			//current_h = lstm_nodes[end_pos].h_t;
 	    }
 
 	    // Dense version (for standard log-likelihood)
@@ -253,6 +253,12 @@ namespace nplm
 			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
 			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+			//updating init c and init h
+			//if (1){
+			//	for (index=0; index<current_minibatch_size; index++){
+					
+			//	}
+			//}
 
 	  }
 	  

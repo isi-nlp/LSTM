@@ -142,7 +142,7 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 	UNCONST(Derived, const_param, param);
 	param /= current_minibatch_size;
 	double param_norm = param.norm();
-	if (param_norm > norm_threshold){
+	if (param_norm >= norm_threshold){
 		param *= norm_threshold/param_norm;
 	}
 }
