@@ -817,7 +817,8 @@ int main(int argc, char** argv)
 			cerr << "         		perplexity:                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.
-	        if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+			if (epoch > 0 && log_likelihood < 1.002*current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 	        { 
 	            current_learning_rate /= 2;
 	        }
