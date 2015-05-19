@@ -818,7 +818,7 @@ int main(int argc, char** argv)
 			
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
-			if (epoch > 0 && 1.002*current_validation_ll < log_likelihood && myParam.parameter_update != "ADA") //This is what mikolov does 
+			if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 	        { 
 	            current_learning_rate /= 2;
 	        }
