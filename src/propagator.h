@@ -86,13 +86,16 @@ namespace nplm
 				//cerr<<"i is"<<i<<endl;
 				if (i==0) {
 					//cerr<<"Current c is "<<current_c<<endl;
+					//cerr<<"this->c_t_minus_one "<<current_c<<endl;
+					//cerr<<"this->h_t_minus_one "<<current_h<<endl;
 					lstm_nodes[i].fProp(data.row(i),	
 										current_c,
 										current_h);
 				} else {
 					//cerr<<"Data is "<<data.row(i)<<endl;
 					//cerr<<"index is "<<i<<endl;
-					
+					//cerr<<"this->c_t_minus_one "<<lstm_nodes[i-1].c_t<<endl;
+					//cerr<<"this->h_t_minus_one "<<lstm_nodes[i-1].h_t<<endl;					
 					lstm_nodes[i].fProp(data.row(i),
 										lstm_nodes[i-1].c_t,
 										lstm_nodes[i-1].h_t);
@@ -104,8 +107,8 @@ namespace nplm
 				}
 				//lstm_nodes.fProp();
 			}
-			current_c = lstm_nodes[end_pos].c_t;
-			current_h = lstm_nodes[end_pos].h_t;
+			//current_c = lstm_nodes[end_pos].c_t;
+			//current_h = lstm_nodes[end_pos].h_t;
 	    }
 
 	    // Dense version (for standard log-likelihood)
