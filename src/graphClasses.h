@@ -472,10 +472,14 @@ public:
 							const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
 						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
 						int current_minibatch_size = sequence_cont_indices.cols();
+						cerr<<"current minibatch size "<<current_minibatch_size<<endl;
 						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
 							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
 						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
 							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+						cerr<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
+						cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
+						cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 		
 	}
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
