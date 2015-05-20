@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include "neuralClasses.h"
 #include <Eigen/Dense>
+#include <Eigen/Core>
 
 namespace nplm
 {
@@ -68,7 +69,7 @@ public:
     Node<Hidden_layer> i_t_node,f_t_node,o_t_node,tanh_c_prime_t_node;
 	Node<Activation_function> tanh_c_t_node;
 
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t;
+	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,c_t_minus_one, h_t_minus_one;
 	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_h_t,
 														d_Err_t_to_n_d_c_t,
 														d_Err_t_to_n_d_o_t,
@@ -151,6 +152,8 @@ public:
 		//Resizing all the local node matrices
 		h_t.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
 		c_t.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		h_t_minus_one.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
+		c_t_minus_one.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
 		d_Err_t_to_n_d_h_t.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_c_t.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_o_t.resize(o_t_node.param->n_outputs(),minibatch_size);
@@ -168,11 +171,11 @@ public:
 		
 	} 
 	
-	template<typename Derived, typename DerivedCIn, typename DerivedHIn>
-    void fProp(const MatrixBase<Derived> &data,	
-		const MatrixBase<DerivedCIn> &c_t_minus_one,
+	template<typename Derived> //, typename DerivedCIn, typename DerivedHIn>
+    void fProp(const MatrixBase<Derived> &data) { //,	
+		//const MatrixBase<DerivedCIn> &c_t_minus_one,
 		// MatrixBase<DerivedOut> const_c_t,
-		const MatrixBase<DerivedHIn> &h_t_minus_one) {
+		//const MatrixBase<DerivedHIn> &h_t_minus_one) {
 		//const MatrixBase<DerivedOut> const_h_t){
 		
 		//UNCONST(DerivedOut,const_c_t,c_t);
@@ -254,11 +257,11 @@ public:
 		//getchar();
 	}
 	
-	template<typename DerivedData, typename DerivedHIn, typename DerivedCIn, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
 	void bProp(const MatrixBase<DerivedData> &data,
 			   //const MatrixBase<DerivedIn> c_t,
-			   const MatrixBase<DerivedHIn> &h_t_minus_one,
-			   const MatrixBase<DerivedCIn> &c_t_minus_one,
+			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
+			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
 			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
@@ -462,7 +465,19 @@ public:
 		//										data);											
 	
 	}
-	
+	//This takes the sequence continuation indices, the previous hidden and cell states and creates new ones for this LSTM block
+	template <typename DerivedH, typename DerivedC, typename DerivedS>
+	void copyToHiddenStates(const MatrixBase<DerivedH> &h_t_minus_one,
+							const MatrixBase<DerivedC> &c_t_minus_one,
+							const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
+						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+						int current_minibatch_size = sequence_cont_indices.cols();
+						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
+							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
+							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+		
+	}
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 	//nonlinearities 
 	void clipGradient(){}

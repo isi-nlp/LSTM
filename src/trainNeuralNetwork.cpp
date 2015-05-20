@@ -125,6 +125,8 @@ int main(int argc, char** argv)
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
 	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
+	  ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
 	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , false, "", "string", cmd);
 	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , false, "", "string", cmd);	  
       ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
@@ -136,7 +138,7 @@ int main(int argc, char** argv)
 		  Default: 1 = yes, \n \
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
-	  ValueArg<double> norm_threshold("", "norm_threshold", "If doing norm clipping, then what is the threshold. Default 5", false,5., "double", cmd);
+	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
 
       cmd.parse(argc, argv);
 
@@ -152,6 +154,8 @@ int main(int argc, char** argv)
 	  myParam.output_sent_file = output_sent_file.getValue();
 	  myParam.input_validation_sent_file = input_validation_sent_file.getValue();
 	  myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
+	  myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
+	  myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	  
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
@@ -304,8 +308,8 @@ int main(int argc, char** argv)
     // Read training data
 
     vector<int> training_data_flat;
-	vector< vector<int> > training_input_sent, validation_input_sent;
-	vector< vector<int> > training_output_sent, validation_output_sent;
+	vector< vector<int> > training_input_sent, validation_input_sent, training_sequence_cont_sent;
+	vector< vector<int> > training_output_sent, validation_output_sent, validation_sequence_cont_sent;
 	
     vec * training_data_flat_mmap;
     data_size_t training_data_size, validation_data_size; //num_tokens;
@@ -322,13 +326,24 @@ int main(int argc, char** argv)
 	*/
 	
 	//Reading the input and output sent files
-	data_size_t total_output_tokens,total_input_tokens,total_validation_input_tokens, total_validation_output_tokens;
-	total_output_tokens = total_input_tokens = total_validation_input_tokens = total_validation_output_tokens = 0;
+	data_size_t total_output_tokens,
+				total_input_tokens,
+				total_validation_input_tokens, 
+				total_validation_output_tokens, 
+				total_training_sequence_tokens,
+				total_validation_sequence_tokens;
+				
+	total_output_tokens = 
+		total_input_tokens = 
+			total_validation_input_tokens = 
+				total_validation_output_tokens = 
+					total_training_sequence_tokens = 
+						total_validation_sequence_tokens = 0;
 	//data_size_t total_input_tokens = 0;
 	//data_size
 	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
 	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
-
+    readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
 	training_data_size = training_input_sent.size();
 
@@ -345,6 +360,7 @@ int main(int argc, char** argv)
     Matrix<int,Dynamic,Dynamic> training_data;
 	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
 	Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
+	Array<int,Dynamic,Dynamic> validation_sequence_cont_sent_data, training_sequence_cont_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
 	
@@ -390,8 +406,20 @@ int main(int argc, char** argv)
 	*/
 	
 	if (myParam.input_validation_sent_file != ""){
-		readSentFile(myParam.input_validation_sent_file, validation_input_sent,myParam.validation_minibatch_size, total_validation_input_tokens);
-		readSentFile(myParam.output_validation_sent_file, validation_output_sent,myParam.validation_minibatch_size, total_validation_output_tokens);	
+		readSentFile(myParam.input_validation_sent_file, 
+		validation_input_sent,
+		myParam.validation_minibatch_size, 
+		total_validation_input_tokens);
+		
+		readSentFile(myParam.output_validation_sent_file, 
+		validation_output_sent,
+		myParam.validation_minibatch_size, 
+		total_validation_output_tokens);
+		
+		readSentFile(myParam.validation_sequence_cont_file, 
+			validation_sequence_cont_sent,
+			myParam.validation_minibatch_size, 
+			total_validation_sequence_tokens);			
 	}
 	
 	cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;
@@ -599,10 +627,10 @@ int main(int argc, char** argv)
 		//
 			//Taking the input and output sentence and setting the training data to it.
 			//Getting a minibatch of sentences
-			vector<int> minibatch_input_sentences, minibatch_output_sentences;
+			vector<int> minibatch_input_sentences, minibatch_output_sentences, minibatch_sequence_cont_sentences;
 			unsigned int max_sent_len;
-			unsigned int minibatch_output_tokens,minibatch_input_tokens;
-			minibatch_output_tokens = minibatch_input_tokens =0;
+			unsigned int minibatch_output_tokens,minibatch_input_tokens, minibatch_sequence_cont_tokens;
+			minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;
 			miniBatchify(training_input_sent, 
 							minibatch_input_sentences,
 							minibatch_start_index,
@@ -616,7 +644,14 @@ int main(int argc, char** argv)
 							minibatch_end_index,
 							max_sent_len,
 							0,
-							minibatch_output_tokens);							
+							minibatch_output_tokens);					
+			miniBatchify(training_sequence_cont_sent, 
+							minibatch_sequence_cont_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_sent_len,
+							1,
+							minibatch_sequence_cont_tokens);		
 			/*
 			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_input_sent[batch].data(), 
 											training_input_sent[batch].size(),
@@ -633,6 +668,9 @@ int main(int argc, char** argv)
 			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																			max_sent_len,
 																			current_minibatch_size);
+			training_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
+																			max_sent_len,
+																			current_minibatch_size);
 			//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
 			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
 			//exit(0);
@@ -646,7 +684,13 @@ int main(int argc, char** argv)
 			}													
 			init_c = current_c;
 			init_h = current_h; 			
-			prop.fProp(training_input_sent_data,0,max_sent_len-1, current_c, current_h);	
+			prop.fProp(training_input_sent_data,
+						0,
+						max_sent_len-1,
+						current_c,
+						current_h,
+						training_sequence_cont_sent_data);	
+						
 		  	double adjusted_learning_rate = current_learning_rate;
 			if (!myParam.norm_clipping){
 				adjusted_learning_rate /= current_minibatch_size;			
@@ -663,9 +707,10 @@ int main(int argc, char** argv)
 					 training_output_sent_data,
 					 data_log_likelihood,
 					 myParam.gradient_check,
-					 myParam.norm_clipping, 
-					 init_c,
-					 init_h); 	
+					 myParam.norm_clipping); //, 
+					 //init_c,
+					 //init_h,
+					 //training_sequence_cont_sent_data); 	
 
 	 			//Checking the compute probs function
 	 			//prop.computeProbs(training_output_sent_data,
@@ -676,7 +721,8 @@ int main(int argc, char** argv)
 					prop.gradientCheck(training_input_sent_data,
 						 		 training_output_sent_data,
 								 current_c_for_gradCheck,
-								 current_h_for_gradCheck);
+								 current_h_for_gradCheck,
+								 training_sequence_cont_sent_data);
 				}
 				//getchar();											 
 				//Updating the gradients
@@ -761,10 +807,10 @@ int main(int argc, char** argv)
   
 				//Taking the input and output sentence and setting the validation data to it.
 				//Getting a minibatch of sentences
-				vector<int> minibatch_input_sentences, minibatch_output_sentences;
+				vector<int> minibatch_input_sentences, minibatch_output_sentences, minibatch_sequence_cont_sentences;
 				unsigned int max_sent_len;
-				unsigned int minibatch_output_tokens,minibatch_input_tokens;
-				minibatch_output_tokens = minibatch_input_tokens =0;				
+				unsigned int minibatch_output_tokens,minibatch_input_tokens,minibatch_sequence_cont_tokens;
+				minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;				
 				miniBatchify(validation_input_sent, 
 								minibatch_input_sentences,
 								minibatch_start_index,
@@ -779,7 +825,13 @@ int main(int argc, char** argv)
 								max_sent_len,
 								0,
 								minibatch_output_tokens);							
-
+				miniBatchify(validation_sequence_cont_sent, 
+								minibatch_sequence_cont_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_sent_len,
+								1,
+								minibatch_sequence_cont_tokens);
 				validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
 												max_sent_len,
 												current_minibatch_size);
@@ -787,6 +839,9 @@ int main(int argc, char** argv)
 				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																				max_sent_len,
 																				current_minibatch_size);
+				validation_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
+																					max_sent_len,
+																					current_minibatch_size);
 				//cerr<<"Validation input sent data "<<validation_input_sent_data<<endl;
 				//cerr<<"Validation output sent data "<<validation_output_sent_data<<endl;
 																			
@@ -799,7 +854,8 @@ int main(int argc, char** argv)
 										0,
 										max_sent_len-1, 
 										current_validation_c, 
-										current_validation_h);	
+										current_validation_h,
+										validation_sequence_cont_sent_data);	
 		
 	
 						 

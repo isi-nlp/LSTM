@@ -377,13 +377,13 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     
     file << "\\config" << endl;
     file << "version 1" << endl;
-    file << "ngram_size " << ngram_size << endl;
+    //file << "ngram_size " << ngram_size << endl;
     file << "input_vocab_size " << input_vocab_size << endl;
     file << "output_vocab_size " << output_vocab_size << endl;
-    file << "input_embedding_dimension " << input_embedding_dimension << endl;
+    //file << "input_embedding_dimension " << input_embedding_dimension << endl;
     file << "num_hidden " << num_hidden << endl;
-    file << "output_embedding_dimension " << output_embedding_dimension << endl;
-    file << "activation_function " << activation_function_to_string(activation_function) << endl;
+    //file << "output_embedding_dimension " << output_embedding_dimension << endl;
+    //file << "activation_function " << activation_function_to_string(activation_function) << endl;
     file << endl;
     
     if (input_pwords)

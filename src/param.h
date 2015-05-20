@@ -22,6 +22,8 @@ struct param
 	std::string output_sent_file;
 	std::string input_validation_sent_file;
 	std::string output_validation_sent_file;
+	std::string training_sequence_cont_file;
+	std::string validation_sequence_cont_file;
 
     int ngram_size;
     int vocab_size;
