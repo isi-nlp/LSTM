@@ -188,7 +188,12 @@ void readSentFile(const string &filename,
         int_ngram.push_back(boost::lexical_cast<int>(ngram[i]));
 
 	data.push_back(int_ngram);
-	num_tokens += int_ngram.size();
+	for (int j=0; j<int_ngram.size(); j++){
+		if (int_ngram[j] != -1) {
+			num_tokens++;
+		}
+	}
+	//num_tokens += int_ngram.size();
 	
     n_lines++;
     if (minibatch_size && n_lines % (minibatch_size * 10000) == 0)
