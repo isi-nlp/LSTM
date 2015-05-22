@@ -765,7 +765,7 @@ int main(int argc, char** argv)
 	cerr << endl;
 	#endif
 	
-	/*
+	
 	if (myParam.model_prefix != "")
 	{
 	    cerr << "Writing model" << endl;
@@ -774,7 +774,7 @@ int main(int argc, char** argv)
 	    else
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
 	}
-	*/
+	
 	
 		
         if (epoch % 1 == 0 && validation_data_size > 0)

@@ -1545,7 +1545,10 @@ class Hidden_layer
 		}
 		//<<b<<std::endl;
 	}	  
-	
+
+   void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
+   void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
+		
    template <typename DerivedIn, typename DerivedOut>
      void fProp(const MatrixBase<DerivedIn> &input,
 	   const MatrixBase<DerivedOut> &output) const

@@ -230,23 +230,23 @@ void model::readConfig(ifstream &config_file)
     activation_function_type activation_function = this->activation_function;
     while (getline(config_file, line) && line != "")
     {
-        splitBySpace(line, fields);
-	if (fields[0] == "ngram_size")
-	    ngram_size = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "vocab_size")
-	    input_vocab_size = output_vocab_size = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "input_vocab_size")
+       splitBySpace(line, fields);
+	//if (fields[0] == "ngram_size")
+	//    ngram_size = lexical_cast<int>(fields[1]);
+	//else if (fields[0] == "vocab_size")
+	//    input_vocab_size = output_vocab_size = lexical_cast<int>(fields[1]);
+	if (fields[0] == "input_vocab_size")
 	    input_vocab_size = lexical_cast<int>(fields[1]);
 	else if (fields[0] == "output_vocab_size")
 	    output_vocab_size = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "input_embedding_dimension")
-	    input_embedding_dimension = lexical_cast<int>(fields[1]);
+	//else if (fields[0] == "input_embedding_dimension")
+	//    input_embedding_dimension = lexical_cast<int>(fields[1]);
 	else if (fields[0] == "num_hidden")
 	    num_hidden = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "output_embedding_dimension")
-	    output_embedding_dimension = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "activation_function")
-	    activation_function = string_to_activation_function(fields[1]);
+	//else if (fields[0] == "output_embedding_dimension")
+	//    output_embedding_dimension = lexical_cast<int>(fields[1]);
+	//else if (fields[0] == "activation_function")
+	//    activation_function = string_to_activation_function(fields[1]);
 	else if (fields[0] == "version")
 	{
 	    int version = lexical_cast<int>(fields[1]);
@@ -327,20 +327,34 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    readWordsFile(file, output_words);
 	}
 
-	else if (line == "\\input_embeddings")
-	    input_layer.read(file);
-	else if (line == "\\hidden_weights 1")
-	    first_hidden_linear.read_weights(file);
-	else if (line == "\\hidden_biases 1")
-	    first_hidden_linear.read_biases (file);
-	else if (line == "\\hidden_weights 2")
-	    second_hidden_linear.read_weights(file);
-	else if (line == "\\hidden_biases 2")
-	    second_hidden_linear.read_biases (file);
+	else if (line == "\\W_x_to_i")
+	    W_x_to_i.read(file);
+	else if (line == "\\W_x_to_f")
+	    W_x_to_f.read(file);
+	else if (line == "\\W_x_to_o")
+	    W_x_to_o.read(file);
+	else if (line == "\\W_h_to_i")
+	    W_h_to_i.read_weights(file);
+	else if (line == "\\W_h_to_f")
+	    W_h_to_f.read_weights(file);
+	else if (line == "\\W_h_to_o")
+	    W_h_to_o.read_weights(file);
+	else if (line == "\\W_c_to_i")
+	    W_c_to_i.read_weights(file);
+	else if (line == "\\W_c_to_f")
+	    W_c_to_f.read_weights(file);
+	else if (line == "\\W_c_to_o")
+	    W_c_to_o.read_weights(file);
+	else if (line == "\\input_gate_biases")
+	    i_t.read_biases(file);	
+	else if (line == "\\forget_gate_biases")
+	    f_t.read_biases(file);	
+	else if (line == "\\tanh_c_prime_t_gate_biases")
+	    tanh_c_prime_t.read_biases(file);
+	else if (line == "\\output_gate_biases")
+	    o_t.read_biases(file);	
 	else if (line == "\\output_weights")
 	    output_layer.read_weights(file);
-	else if (line == "\\output_biases")
-	    output_layer.read_biases(file);
 	else if (line == "\\end")
 	    break;
 	else if (line == "")
@@ -400,33 +414,65 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
 	file << endl;
     }
 
-    file << "\\input_embeddings" << endl;
-    input_layer.write(file);
-    file << endl;
-    
-    file << "\\hidden_weights 1" << endl;
-    first_hidden_linear.write_weights(file);
+    file << "\\W_x_to_i" << endl;
+    W_x_to_i.write(file);
     file << endl;
 
-    file << "\\hidden_biases 1" << endl;
-    first_hidden_linear.write_biases(file);
-    file <<endl;
-    
-    file << "\\hidden_weights 2" << endl;
-    second_hidden_linear.write_weights(file);
+    file << "\\W_x_to_f" << endl;
+    W_x_to_f.write(file);
+    file << endl;
+	    
+    file << "\\W_x_to_o" << endl;
+    W_x_to_o.write(file);
     file << endl;
 
-    file << "\\hidden_biases 2" << endl;
-    second_hidden_linear.write_biases(file);
+    file << "\\W_h_to_i" << endl;
+    W_h_to_i.write_weights(file);
     file << endl;
-    
+
+    file << "\\W_h_to_f" << endl;
+    W_h_to_f.write_weights(file);
+    file << endl;
+
+    file << "\\W_h_to_o" << endl;
+    W_h_to_o.write_weights(file);
+    file << endl;
+
+    file << "\\W_c_to_i" << endl;
+    W_c_to_i.write_weights(file);
+    file << endl;
+
+    file << "\\W_c_to_f" << endl;
+    W_c_to_f.write_weights(file);
+    file << endl;
+
+    file << "\\W_c_to_o" << endl;
+    W_c_to_o.write_weights(file);
+    file << endl;
+ 
+    file << "\\input_gate_biases" << endl;
+    i_t.write_biases(file);
+    file << endl;
+
+    file << "\\forget_gate_biases" << endl;
+    f_t.write_biases(file);
+    file << endl;
+
+    file << "\\tanh_c_prime_t_gate_biases" << endl;
+    tanh_c_prime_t.write_biases(file);
+    file << endl;
+
+    file << "\\output_gate_biases" << endl;
+    o_t.write_biases(file);
+    file << endl;
+				   
     file << "\\output_weights" << endl;
     output_layer.write_weights(file);
     file << endl;
     
-    file << "\\output_biases" << endl;
-    output_layer.write_biases(file);
-    file << endl;
+    //file << "\\output_biases" << endl;
+    //output_layer.write_biases(file);
+    //file << endl;
     
     file << "\\end" << endl;
     file.close();
