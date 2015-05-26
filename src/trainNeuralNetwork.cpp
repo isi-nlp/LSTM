@@ -63,7 +63,7 @@ int main(int argc, char** argv)
     param myParam;
     try {
       // program options //
-      CmdLine cmd("Trains a two-layer neural probabilistic language model.", ' ' , "0.3\n","");
+      CmdLine cmd("Tests a LSTM neural probabilistic language model.", ' ' , "0.3\n","");
 
       // The options are printed in reverse order
 

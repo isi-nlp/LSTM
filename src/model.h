@@ -72,6 +72,8 @@ public:
             num_hidden,
             output_embedding_dimension);
     }
+	int get_hidden() {return num_hidden;}
+	
     model() : ngram_size(1), 
             premultiplied(false),
             activation_function(Rectifier),
@@ -110,7 +112,19 @@ public:
         first_hidden_activation.set_activation_function(f);
         second_hidden_activation.set_activation_function(f);
     }
+	
+    void set_activation_functions()
+    {
+		o_t.set_activation_function(Sigmoid);
 
+		f_t.set_activation_function(Sigmoid);	
+
+		i_t.set_activation_function(Sigmoid);		
+	
+		tanh_c_prime_t.set_activation_function(Tanh);
+	
+		tanh_c_t.set_activation_function(Tanh);
+    }
     void premultiply();
 
     // Since the vocabulary is not essential to the model,

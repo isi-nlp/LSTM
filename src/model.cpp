@@ -241,8 +241,11 @@ void model::readConfig(ifstream &config_file)
 	    output_vocab_size = lexical_cast<int>(fields[1]);
 	//else if (fields[0] == "input_embedding_dimension")
 	//    input_embedding_dimension = lexical_cast<int>(fields[1]);
-	else if (fields[0] == "num_hidden")
+	else if (fields[0] == "num_hidden") {
 	    num_hidden = lexical_cast<int>(fields[1]);
+		input_embedding_dimension = num_hidden;
+		output_embedding_dimension = num_hidden;
+	}
 	//else if (fields[0] == "output_embedding_dimension")
 	//    output_embedding_dimension = lexical_cast<int>(fields[1]);
 	//else if (fields[0] == "activation_function")
@@ -259,13 +262,15 @@ void model::readConfig(ifstream &config_file)
 	else
 	    cerr << "warning: unrecognized field in config: " << fields[0] << endl;
     }
-    resize(ngram_size,
+    resize(1,
         input_vocab_size,
         output_vocab_size,
         input_embedding_dimension,
         num_hidden,
         output_embedding_dimension);
-    set_activation_function(activation_function);
+    //set_activation_function(activation_function);
+	//setting all the activation functions
+	set_activation_functions();
 }
 
 void model::readConfig(const string &filename)
@@ -302,7 +307,8 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
     string line;
     
     while (getline(file, line))
-    {
+    {	
+		//cerr<<" line is "<<line<<endl;
 	if (line == "\\config")
 	{
 	    readConfig(file);
@@ -326,7 +332,8 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    output_words.clear();
 	    readWordsFile(file, output_words);
 	}
-
+	else if (line == "\\W_x_to_c")
+	    W_x_to_c.read(file);	
 	else if (line == "\\W_x_to_i")
 	    W_x_to_i.read(file);
 	else if (line == "\\W_x_to_f")
@@ -339,6 +346,8 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    W_h_to_f.read_weights(file);
 	else if (line == "\\W_h_to_o")
 	    W_h_to_o.read_weights(file);
+	else if (line == "\\W_h_to_c")
+	    W_h_to_c.read_weights(file);
 	else if (line == "\\W_c_to_i")
 	    W_c_to_i.read_weights(file);
 	else if (line == "\\W_c_to_f")
@@ -415,6 +424,7 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     }
 
     file << "\\W_x_to_i" << endl;
+	//cerr<<"Writing W_x_to_i"<<endl;
     W_x_to_i.write(file);
     file << endl;
 
@@ -426,6 +436,10 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     W_x_to_o.write(file);
     file << endl;
 
+    file << "\\W_x_to_c" << endl;
+    W_x_to_c.write(file);
+    file << endl;
+	
     file << "\\W_h_to_i" << endl;
     W_h_to_i.write_weights(file);
     file << endl;
@@ -438,6 +452,10 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     W_h_to_o.write_weights(file);
     file << endl;
 
+    file << "\\W_h_to_c" << endl;
+    W_h_to_c.write_weights(file);
+    file << endl;
+	
     file << "\\W_c_to_i" << endl;
     W_c_to_i.write_weights(file);
     file << endl;
