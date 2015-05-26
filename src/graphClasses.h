@@ -470,6 +470,24 @@ public:
 	void copyToHiddenStates(const MatrixBase<DerivedH> &h_t_minus_one,
 							const MatrixBase<DerivedC> &c_t_minus_one,
 							const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
+						int current_minibatch_size = sequence_cont_indices.cols();		
+						#pragma omp parallel for 
+						for (int index=0; index<current_minibatch_size; index++){ 
+							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+				
+							//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
+							if (sequence_cont_indices(index) == 0) {
+								this->h_t_minus_one.col(index).setZero(); 			
+								this->c_t_minus_one.col(index).setZero();
+								//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
+								//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
+								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
+							} else {
+								this->h_t_minus_one.col(index) = h_t_minus_one.col(index);
+								this->c_t_minus_one.col(index) = c_t_minus_one.col(index);
+							}
+						}							
+						/*
 						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
 						int current_minibatch_size = sequence_cont_indices.cols();
 						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
@@ -480,6 +498,7 @@ public:
 						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
 						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
 						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
+						*/
 		
 	}
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
