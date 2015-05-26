@@ -141,7 +141,7 @@ RANLIB=ranlib
 
 # Rules
 
-BINS=trainNeuralNetwork 
+BINS=trainNeuralNetwork testNeuralNetwork
 OBJS=util.o model.o
 
 all: $(BINS) 
@@ -163,6 +163,9 @@ shared/%.o: %.cpp
 
 trainNeuralNetwork: trainNeuralNetwork.o $(OBJS)
 	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
+	
+testNeuralNetwork: testNeuralNetwork.o $(OBJS)
+	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@	
 
 
 
