@@ -23,6 +23,7 @@ struct param
 	std::string input_validation_sent_file;
 	std::string output_validation_sent_file;
 	std::string training_sequence_cont_file;
+	std::string testing_sequence_cont_file;
 	std::string validation_sequence_cont_file;
 
     int ngram_size;
