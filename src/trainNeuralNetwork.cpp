@@ -458,8 +458,10 @@ int main(int argc, char** argv)
 			unigram_counts[output_word] += 1;
 		}
     }
+	/*
 	for (int i=0; i<unigram_counts.size(); i++)
 		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
+	*/
     multinomial<data_size_t> unigram (unigram_counts);
 	/*
 	//generating 10 noise samples for testing
