@@ -599,6 +599,7 @@ class Output_word_embeddings
         Matrix<double,Dynamic,1> b_running_gradient;
         Matrix<double,Dynamic,1> b_gradient;
         Matrix<double,Dynamic,1> b_running_parameter_update;
+		int_map update_map;
 
     public:
         Output_word_embeddings() { }
@@ -671,14 +672,22 @@ class Output_word_embeddings
     const MatrixBase<DerivedOutV> &output) const
 	  {
         UNCONST(DerivedOutV, output, my_output);
+		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
+		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
+		/* THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
         #pragma omp parallel for
         for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
         {
+		  if (samples(0, instance_id) == -1) 
+			  continue;
           for (int sample_id = 0; sample_id < samples.rows(); sample_id++)
           {
+			cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
             my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
           }
         }
+		*/
+		//THE ISSUE HERE IS THAT BECAUSE THE OUTPUT LABEL MIGHT BE GREATER THAN THE VOCABULARY
         USCMatrix<double> sparse_output(W->rows(), samples, my_output);
         uscgemm_masked(1.0, *W, input, sparse_output);
         my_output = sparse_output.values; // too bad, so much copying
@@ -871,6 +880,76 @@ template <typename DerivedIn, typename DerivedGOut>
             USCMatrix<double>(W->rows(), samples, weights),
             my_bProp_matrix.leftCols(samples.cols())); // narrow bProp_matrix for possible short minibatch
     }
+	
+	template <typename DerivedIn, typename DerivedGOutI, typename DerivedGOutV>
+	    void updateGradient(const MatrixBase<DerivedIn> &predicted_embeddings,
+			     const MatrixBase<DerivedGOutI> &samples,
+			     const MatrixBase<DerivedGOutV> &weights) 
+	{
+		
+		//ACCUMULATING gradient
+	
+	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    uscgemm(1.0,
+	      gradient_output,
+	      predicted_embeddings.leftCols(samples.cols()).transpose(),
+	      W_gradient);
+		  /*
+	    uscgemv(1.0, 
+	      gradient_output,
+		      Matrix<double,Dynamic,1>::Ones(weights.cols()),
+	      b_gradient);
+		  */
+		  
+	  //int_map update_map; //stores all the parameters that have been updated
+	  for (int sample_id=0; sample_id<samples.rows(); sample_id++)
+	        for (int train_id=0; train_id<samples.cols(); train_id++)
+		          update_map[samples(sample_id, train_id)] = 1;
+
+    
+	  //cerr<<"Finished gradient"<<endl;
+	}
+
+	void updateParamsNCE(double learning_rate,
+						int current_minibatch_size,
+						double momentum,
+					double L2_reg,
+					bool norm_clipping,
+					double norm_threshold){
+					
+	    // Convert to std::vector for parallelization
+	      std::vector<int> update_items;
+	      for (int_map::iterator it = this->update_map.begin(); it != this->update_map.end(); ++it)
+	      {
+	          update_items.push_back(it->first);
+	      }
+	      int num_items = update_items.size();
+
+	      #pragma omp parallel for
+	      for (int item_id=0; item_id<num_items; item_id++)
+	      {
+	          int update_item = update_items[item_id];
+			//cerr<<"the update item is "<<update_item<<endl;
+	          //UPDATE CLIPPING
+	          //W->row(update_item).array() += learning_rate*
+	          //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+	  		if (norm_clipping){
+	  			scaleAndNormClip(W_gradient.row(update_item),
+	  			  				 current_minibatch_size,
+	  			  				 norm_threshold);
+	  		}
+	          W->row(update_item) += learning_rate*
+	              W_gradient.row(update_item);
+	          //GRADIENT CLIPPING
+	          //W->row(update_item) += learning_rate*
+	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
+	          //SETTING THE GRADIENT TO ZERO
+	          W_gradient.row(update_item).setZero();
+	      }
+		//we have to clear the update map
+		this->update_map.clear();
+	}
+
 
 	template <typename DerivedIn, typename DerivedGOutI, typename DerivedGOutV>
         void computeGradient(const MatrixBase<DerivedIn> &predicted_embeddings,

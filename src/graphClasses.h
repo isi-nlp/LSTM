@@ -204,7 +204,7 @@ public:
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
 		//std::cerr<<"c to i fprop"<<W_c_to_i_node.fProp_matrix<<std::endl;
-		i_t_input_matrix = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
+		i_t_input_matrix.noalias() = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
 		//cerr<<"i t input matrix"<<i_t_input_matrix<<endl;
 		i_t_node.param->fProp(i_t_input_matrix,
 							i_t_node.fProp_matrix);
@@ -217,7 +217,7 @@ public:
 		//std::cerr<<"W_h_to_f_node fprop is "<<W_h_to_f_node.fProp_matrix<<std::endl;
 		W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
 		//std::cerr<<"W_c_to_f_node fprop is "<<W_c_to_f_node.fProp_matrix<<std::endl;
-		f_t_input_matrix = W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix;
+		f_t_input_matrix.noalias() = W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix;
 		//std::cerr<<" f t node input matrix is "<<f_t_input_matrix<<std::endl;
 		f_t_node.param->fProp(f_t_input_matrix,
 							f_t_node.fProp_matrix);
@@ -225,7 +225,7 @@ public:
 		//computing c_prime_t
 		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
-		tanh_c_prime_t_input_matrix = W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
+		tanh_c_prime_t_input_matrix.noalias() = W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
 										tanh_c_prime_t_node.fProp_matrix);
 		
@@ -241,7 +241,7 @@ public:
 		//W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
-		o_t_input_matrix = W_x_to_o_node.fProp_matrix +  
+		o_t_input_matrix.noalias() = W_x_to_o_node.fProp_matrix +  
 						   W_h_to_o_node.fProp_matrix + 
 						   W_c_to_o_node.fProp_matrix;
 		//std::cerr<<"o t input matrix is "<<o_t_input_matrix<<std::endl;

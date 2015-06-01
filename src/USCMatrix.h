@@ -165,6 +165,30 @@ void uscgemm_masked(double alpha,
 	}
 }
 
+template <typename DerivedA, typename DerivedB, typename ScalarC, typename Index>
+void uscgemm_masked_nce(double alpha,
+		    const MatrixBase<DerivedA> &a,
+		    const MatrixBase<DerivedB> &b,
+		    USCMatrix<ScalarC,Index> &c)
+{
+    eigen_assert(a.rows() == c.rows());
+    eigen_assert(a.cols() == b.rows());
+    eigen_assert(b.cols() == c.cols());
+
+    #pragma omp parallel for
+    for (Index k=0; k<b.cols(); k++)
+        for (Index r=0; r<c.indexes.rows(); r++)
+	{
+	    Index i = c.indexes(r, k);
+		if (i == -1){
+			continue;
+		}
+	    eigen_assert(i >= 0);
+	    eigen_assert(i < a.rows());
+	    c.values(r, k) += alpha * a.row(i) * b.col(k);
+	}
+}
+
 // sparse matrix - dense vector product
 template <typename ScalarA, typename Index, typename DerivedB, typename DerivedC>
 void uscgemv(double alpha, 

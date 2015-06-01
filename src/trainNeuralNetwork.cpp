@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 	  ValueArg<double> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "double", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
-      ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: nce.", false, "log", "string", cmd);
+      ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
       ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
@@ -447,25 +447,26 @@ int main(int argc, char** argv)
     }
 	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
 	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
-	/*
+	
     ///// Construct unigram model and sampler that will be used for NCE
 
     vector<data_size_t> unigram_counts(myParam.output_vocab_size);
-    for (data_size_t train_id=0; train_id < training_data_size; train_id++)
+    for (data_size_t train_id=0; train_id < training_output_sent.size(); train_id++)
     {
-        int output_word;
-        if (use_mmap_file == false) {
-          output_word = training_data(myParam.ngram_size-1, train_id);
-        } else {
-	      //cerr<<"mmap word is "<<training_data_flat_mmap->at((train_id+1)*myParam.ngram_size - 1)<<endl;
-          output_word = training_data_flat_mmap->at((train_id+1)*myParam.ngram_size - 1);
-        }
-		//cerr<<"output word is "<<output_word<<endl;
-	    unigram_counts[output_word] += 1;
+		for (int j=0; j<training_output_sent[train_id].size(); j++) {
+			int output_word = training_output_sent[train_id][j];
+			unigram_counts[output_word] += 1;
+		}
     }
+	for (int i=0; i<unigram_counts.size(); i++)
+		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
     multinomial<data_size_t> unigram (unigram_counts);
+	/*
+	//generating 10 noise samples for testing
+	for (int i=0; i<20; i++){
+		cerr<<"A sample is "<<unigram.sample(rng)<<endl;
+	}
 	*/
-
     ///// Create and initialize the neural network and associated propagators.
     model nn;
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
@@ -495,8 +496,14 @@ int main(int argc, char** argv)
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     propagator prop(nn, myParam.minibatch_size);
+	//IF we're using NCE, then the minibatches have different sizes
+	if (loss_function == NCELoss)
+		prop.resizeNCE(myParam.num_noise_samples);
     propagator prop_validation(nn, myParam.validation_minibatch_size);
-    //SoftmaxNCELoss<multinomial<data_size_t> > softmax_loss(unigram);
+	//if (loss_function == NCELoss){
+	//	propagator.
+	//}
+    SoftmaxNCELoss<multinomial<data_size_t> > softmax_nce_loss(unigram);
     // normalization parameters
     //vector_map c_h, c_h_running_gradient;
     
@@ -561,6 +568,7 @@ int main(int argc, char** argv)
 	    num_samples = output_vocab_size;
 	else if (loss_function == NCELoss)
 	    num_samples = 1+num_noise_samples;
+	//Generating 10 samples
 	
 	/*
 	Matrix<double,Dynamic,Dynamic> minibatch_weights(num_samples, minibatch_size);
@@ -695,19 +703,25 @@ int main(int argc, char** argv)
 			if (!myParam.norm_clipping){
 				adjusted_learning_rate /= current_minibatch_size;			
 			}
-		    if (loss_function == NCELoss)
-		    {
+		    //if (loss_function == NCELoss)
+		    //{
 
-		    }
-		    else if (loss_function == LogLoss)
-		    {
+
+		    //}
+		    //else if (loss_function == LogLoss)
+		    //{
 
 				//Calling backprop
 			    prop.bProp(training_input_sent_data,
 					 training_output_sent_data,
 					 data_log_likelihood,
 					 myParam.gradient_check,
-					 myParam.norm_clipping); //, 
+					 myParam.norm_clipping,
+					 loss_function,
+					 unigram,
+					 num_noise_samples,
+					 rng,
+					 softmax_nce_loss); //, 
 					 //init_c,
 					 //init_h,
 					 //training_sequence_cont_sent_data); 	
@@ -731,12 +745,13 @@ int main(int argc, char** argv)
 					  		current_momentum,
 							myParam.L2_reg,
 							myParam.norm_clipping,
-							myParam.norm_threshold);														
+							myParam.norm_threshold,
+							loss_function);														
 	
 				//Resetting the gradients
 
 				prop.resetGradient();
-	      }
+	      //}
 		  
 	 }
 	 cerr << "done." << endl;
@@ -752,8 +767,11 @@ int main(int argc, char** argv)
 		cerr << "Training cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
 		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
-	else if (loss_function == NCELoss)
-	    cerr << "Training NCE log-likelihood: " << log_likelihood << endl;
+	else if (loss_function == NCELoss) 
+	{
+	    cerr << "Training NCE log-likelihood: " << data_log_likelihood << endl;
+		cerr << "Average NCE log-likelihood " << data_log_likelihood/(total_output_tokens*myParam.num_noise_samples) << endl;
+	}
 	
 	if (myParam.use_momentum)
         current_momentum += momentum_delta;

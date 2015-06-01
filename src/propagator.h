@@ -18,17 +18,20 @@ namespace nplm
 		Matrix<double,Dynamic,Dynamic> minibatch_weights;
 		Matrix<double,Dynamic,Dynamic> d_Err_t_d_output;
 		Matrix<int,Dynamic,Dynamic> minibatch_samples;
-		Matrix<double,Dynamic,Dynamic> probs;		
+		Matrix<int,Dynamic,Dynamic> minibatch_samples_no_negative;
+		Matrix<double,Dynamic,Dynamic> probs;	
 		int num_hidden;
 
 	public:
 	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(100,LSTM_node()),num_hidden(0) { }
 
-	    propagator (model &lstm, int minibatch_size)
+	    propagator (model &lstm, 
+					int minibatch_size)
 	      : plstm(&lstm),
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&lstm.output_layer,minibatch_size),
-			lstm_nodes(vector<LSTM_node>(100,LSTM_node(lstm,minibatch_size))) {
+			lstm_nodes(vector<LSTM_node>(100,LSTM_node(lstm,minibatch_size)))
+			{
 				resize(minibatch_size);
 			}
 		    // This must be called if the underlying model is resized.
@@ -40,16 +43,27 @@ namespace nplm
 			  lstm_nodes[i].resize(minibatch_size);
 		  }
 		  //cerr<<"minibatch size is propagator is "<<minibatch_size<<endl;
-		  //I HAVE TO INITIALIZE THE MATRICES
+		  //I HAVE TO INITIALIZE THE MATRICES 
+		  
+		  //CURRENTLY, THE RESIZING IS WRONG FOR SOME OF THE MINIBATCHES
 		  d_Err_tPlusOne_to_n_d_c_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 		  d_Err_tPlusOne_to_n_d_h_t.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 		  scores.resize(output_layer_node.param->n_outputs(),minibatch_size); 
   		  minibatch_weights.resize(output_layer_node.param->n_outputs(),minibatch_size);
   		  minibatch_samples.resize(output_layer_node.param->n_outputs(),minibatch_size);
+		  minibatch_samples_no_negative.resize(output_layer_node.param->n_outputs(),minibatch_size);
   		  probs.resize(output_layer_node.param->n_outputs(),minibatch_size);
 		  d_Err_t_d_output.resize(output_layer_node.param->n_outputs(),minibatch_size);
 	    }
-
+		//Resizing some of the NCE mibatch matrices
+		void resizeNCE(int num_noise_samples){
+			minibatch_weights.setZero(num_noise_samples+1,minibatch_size);
+			minibatch_samples.setZero(num_noise_samples+1,minibatch_size);
+			minibatch_samples_no_negative.setZero(num_noise_samples+1,minibatch_size);
+			scores.setZero(num_noise_samples+1,minibatch_size);
+			probs.setZero(num_noise_samples+1,minibatch_size);
+			
+		}
 	    void resize() { resize(minibatch_size); }
 		
 		//Both the input and the output sentences are columns. Even ifs a minibatch of sentences, each sentence is a column
@@ -121,12 +135,17 @@ namespace nplm
 	    }
 
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    template <typename DerivedIn, typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bProp(const MatrixBase<DerivedIn> &data,
 			 const MatrixBase<DerivedOut> &output,
 			 double &log_likelihood,
 			 bool gradient_check,
-			 bool norm_clipping)//,
+			 bool norm_clipping,
+			 loss_function_type loss_function,
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss)//,
 			 //const MatrixBase<DerivedC> &init_c,
 			 //const MatrixBase<DerivedH> &init_h,
 			 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
@@ -146,53 +165,122 @@ namespace nplm
 			
 			for (int i=sent_len-1; i>=0; i--) {
 				//cerr<<"i is "<<i<<endl;
-				//First doing fProp for the output layer
+				if (loss_function == LogLoss) {
+					//First doing fProp for the output layer
+					//The number of columns in scores will be the current minibatch size
+					output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+					//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
+					//then compute the log loss of the objective
+					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+					//cerr<<"Score is"<<endl;
+					//cerr<<scores<<endl;
 				
-				//The number of columns in scores will be the current minibatch size
-				output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
-				//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
-				//then compute the log loss of the objective
-				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
-				//cerr<<"Score is"<<endl;
-				//cerr<<scores<<endl;
-				
-		        double minibatch_log_likelihood;
-		        start_timer(5);
-		        SoftmaxLogLoss().fProp(scores, 
-		                   output.row(i), 
-		                   probs, 
-		                   minibatch_log_likelihood);
-				//cerr<<"probs is "<<probs<<endl;
-				//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
-		        stop_timer(5);
-		        log_likelihood += minibatch_log_likelihood;
-				//getchar();
-		        ///// Backward propagation
+			        double minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores, 
+			                   output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);
+					//cerr<<"probs is "<<probs<<endl;
+					//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
+			        stop_timer(5);
+			        log_likelihood += minibatch_log_likelihood;
+					//getchar();
+			        ///// Backward propagation
         
-		        start_timer(6);
-		        //SoftmaxLogLoss().bProp(output.row(i), 
-		        //           probs.leftCols(current_minibatch_size), 
-		        //           minibatch_weights);
-   		        SoftmaxLogLoss().bProp(output.row(i), 
-   		                   probs.leftCols(current_minibatch_size), 
-   		                   d_Err_t_d_output);
-				//cerr<<"d_Err_t_d_output is "<<d_Err_t_d_output<<endl;
-		        stop_timer(6);
+			        start_timer(6);
+			        //SoftmaxLogLoss().bProp(output.row(i), 
+			        //           probs.leftCols(current_minibatch_size), 
+			        //           minibatch_weights);
+	   		        SoftmaxLogLoss().bProp(output.row(i), 
+	   		                   probs.leftCols(current_minibatch_size), 
+	   		                   d_Err_t_d_output);
+					//cerr<<"d_Err_t_d_output is "<<d_Err_t_d_output<<endl;
+			        stop_timer(6);
 				
 
-				//Oh wow, i have not even been updating the gradient of the output embeddings
-				//Now computing the derivative of the output layer
-				//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
-   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-   						       output_layer_node.bProp_matrix);	
-				//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
-				//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
-				//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
-				//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
-   		        output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
-				//cerr<<" i is "<<i<<endl;
-				//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
+					//Oh wow, i have not even been updating the gradient of the output embeddings
+					//Now computing the derivative of the output layer
+					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
+	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
+	   						       output_layer_node.bProp_matrix);	
+					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
+					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
+					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
+					//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
+	   		        output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
+					//cerr<<" i is "<<i<<endl;
+					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
+				} else if (loss_function == NCELoss){
+			  	      ///// Noise-contrastive estimation
+
+			  	      // Generate noise samples. Gather positive and negative samples into matrix.
+
+			  	      start_timer(3);
+
+			          minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
+    				  /*
+			          for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++)
+					  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
+			                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
+							  cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
+						}
+      				  */
+					  
+					  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
+							//No need to generate samples if the output word is -1
+							//if (minibatch_samples(0, train_id) == -1) 
+							//	continue;
+							for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++) {
+			                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
+							  minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
+							  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
+						  }
+						}	
+						//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
+						//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
+						//nce layer will make sure that the gradient is 0. Therefore, it doesnt matter what the embeddings are. 
+						for (int train_id = 0; train_id < current_minibatch_size; train_id++) {
+							if (minibatch_samples(0, train_id) == -1)
+								minibatch_samples_no_negative(0, train_id) = 0;
+							else
+								minibatch_samples_no_negative(0, train_id) = minibatch_samples(0, train_id);
+						}
+			          stop_timer(3);
+					  minibatch_weights.setZero();
+			          // Final forward propagation step (sparse)
+			          start_timer(4);
+			          output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+			                      minibatch_samples_no_negative.leftCols(current_minibatch_size), 
+								  minibatch_weights.leftCols(current_minibatch_size));
+			          stop_timer(4);
+
+
+			          double minibatch_log_likelihood;
+			          start_timer(5);
+			          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
+			                 minibatch_samples,
+			                 probs, 
+							 minibatch_log_likelihood);
+			          stop_timer(5);
+			          log_likelihood += minibatch_log_likelihood;
+
+			          ///// Backward propagation
+
+			          start_timer(6);
+			          softmax_nce_loss.bProp(probs, minibatch_weights);
+			          stop_timer(6);
+					  // Now doing sparse backprop for the output layer
+			          output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
+			              minibatch_weights.leftCols(current_minibatch_size), 
+			  			  output_layer_node.bProp_matrix);	
+						  
+					  //Updating the gradient for the output layer
+				      output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+				                 minibatch_samples_no_negative.leftCols(current_minibatch_size),
+				                 minibatch_weights.leftCols(current_minibatch_size));						  			  
+				}
 				//getchar();
 				// Now calling backprop for the LSTM nodes
 				if (i==0) {
@@ -274,15 +362,29 @@ namespace nplm
 				  		double momentum,
 						double L2_reg,
 						bool norm_clipping,
-						double norm_threshold) {
+						double norm_threshold,
+						loss_function_type loss_function) {
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
-		plstm->output_layer.updateParams(learning_rate,
-						current_minibatch_size,
-	  					momentum,
-	  					L2_reg,
-						norm_clipping,
-						norm_threshold);
+		if (loss_function == LogLoss){
+			plstm->output_layer.updateParams(learning_rate,
+							current_minibatch_size,
+		  					momentum,
+		  					L2_reg,
+							norm_clipping,
+							norm_threshold);			
+		} else if (loss_function == NCELoss){
+			plstm->output_layer.updateParamsNCE(learning_rate,
+							current_minibatch_size,
+		  					momentum,
+		  					L2_reg,
+							norm_clipping,
+							norm_threshold);				
+		} else {
+			cerr<<loss_function<<" is an invalid loss function type"<<endl;
+			exit(0);
+		}
+
 		// updating the rest of the parameters
 		
 		//updating params for weights out of hidden layer 
