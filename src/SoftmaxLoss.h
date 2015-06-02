@@ -129,7 +129,7 @@ public:
 		double log_likelihood = 0.0;
 		int num_noise_samples = minibatch_samples.rows()-1;
 		double log_num_noise_samples = std::log(num_noise_samples);
-		//std::cerr<<"minibatch samples is "<<minibatch_samples<<std::endl;
+		//td::cerr<<"minibatch samples are "<<minibatch_samples<<std::endl;
         #pragma omp parallel for reduction(+:log_likelihood) schedule(static)
 		for (int train_id = 0; train_id < scores.cols(); train_id++)
 		{
@@ -168,7 +168,8 @@ public:
 		    output.col(train_id) = -probs.col(train_id);
 		    output(0, train_id) += 1.0;
 		}
-		//std::cerr<<"output is "<<output<<std::endl;
+		//std::cerr<<"gradient from output layer is "<<output<<std::endl;
+		//getchar();
     }
 };
 

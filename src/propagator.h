@@ -248,12 +248,12 @@ namespace nplm
 								minibatch_samples_no_negative(0, train_id) = minibatch_samples(0, train_id);
 						}
 			          stop_timer(3);
-					  minibatch_weights.setZero();
+					  scores.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT
 			          // Final forward propagation step (sparse)
 			          start_timer(4);
 			          output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
 			                      minibatch_samples_no_negative.leftCols(current_minibatch_size), 
-								  minibatch_weights.leftCols(current_minibatch_size));
+								  scores.leftCols(current_minibatch_size));
 			          stop_timer(4);
 
 
@@ -267,7 +267,7 @@ namespace nplm
 			          log_likelihood += minibatch_log_likelihood;
 
 			          ///// Backward propagation
-
+					  minibatch_weights.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT	
 			          start_timer(6);
 			          softmax_nce_loss.bProp(probs, minibatch_weights);
 			          stop_timer(6);
