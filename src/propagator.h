@@ -62,7 +62,7 @@ namespace nplm
 			minibatch_samples_no_negative.setZero(num_noise_samples+1,minibatch_size);
 			scores.setZero(num_noise_samples+1,minibatch_size);
 			probs.setZero(num_noise_samples+1,minibatch_size);
-			
+			cerr<<"Size of scores is "<<scores.cols()<<" "<<scores.rows()<<endl;
 		}
 	    void resize() { resize(minibatch_size); }
 		
@@ -256,7 +256,8 @@ namespace nplm
 								  scores.leftCols(current_minibatch_size));
 			          stop_timer(4);
 
-
+					  //Adding a constant amount to scores for stability
+					  scores.array() += 5.;
 			          double minibatch_log_likelihood;
 			          start_timer(5);
 			          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
