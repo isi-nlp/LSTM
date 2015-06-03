@@ -45,6 +45,7 @@ struct param
     double conditioning_constant;
     double decay;
     double adagrad_epsilon;
+	double fixed_partition_function;
     bool init_normal;
     double init_range;
 	double init_forget;
