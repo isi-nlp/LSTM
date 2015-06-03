@@ -226,6 +226,8 @@ int main(int argc, char** argv)
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
+	  cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
+	  
 
       if (embedding_dimension.getValue() >= 0)
       {
