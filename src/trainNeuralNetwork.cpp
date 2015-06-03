@@ -502,7 +502,7 @@ int main(int argc, char** argv)
     propagator prop(nn, myParam.minibatch_size);
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
-		prop.resizeNCE(myParam.num_noise_samples);
+		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
     propagator prop_validation(nn, myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.

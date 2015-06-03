@@ -24,7 +24,7 @@ namespace nplm
 		double fixed_partition_function; 
 
 	public:
-	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(100,LSTM_node()),num_hidden(0) { }
+	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(100,LSTM_node()),num_hidden(0), fixed_partition_function(0){ }
 
 	    propagator (model &lstm, 
 					int minibatch_size)
@@ -64,6 +64,7 @@ namespace nplm
 			scores.setZero(num_noise_samples+1,minibatch_size);
 			probs.setZero(num_noise_samples+1,minibatch_size);
 			cerr<<"Size of scores is "<<scores.cols()<<" "<<scores.rows()<<endl;
+			this->fixed_partition_function = fixed_partition_function;
 		}
 	    void resize() { resize(minibatch_size); }
 		
@@ -258,7 +259,7 @@ namespace nplm
 			          stop_timer(4);
 
 					  //Adding a constant amount to scores for stability
-					  scores.array() += 5.;
+					  scores.array() += this->fixed_partition_function;
 			          double minibatch_log_likelihood;
 			          start_timer(5);
 			          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
