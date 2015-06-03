@@ -87,6 +87,7 @@ int main(int argc, char** argv)
       ValueArg<double> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
 
       ValueArg<double> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "double", cmd);
+	  ValueArg<double> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "double", cmd);
 
       ValueArg<double> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "double", cmd);
 
@@ -190,6 +191,7 @@ int main(int argc, char** argv)
       myParam.conditioning_constant = conditioning_constant.getValue();
       myParam.decay = decay.getValue();
       myParam.adagrad_epsilon = adagrad_epsilon.getValue();
+	  myParam.fixed_partition_function = fixed_partition_function.getValue();
       myParam.use_momentum = use_momentum.getValue();
       myParam.share_embeddings = share_embeddings.getValue();
       myParam.normalization = normalization.getValue();

@@ -21,6 +21,7 @@ namespace nplm
 		Matrix<int,Dynamic,Dynamic> minibatch_samples_no_negative;
 		Matrix<double,Dynamic,Dynamic> probs;	
 		int num_hidden;
+		double fixed_partition_function; 
 
 	public:
 	    propagator() : minibatch_size(0), plstm(0), lstm_nodes(100,LSTM_node()),num_hidden(0) { }
@@ -56,7 +57,7 @@ namespace nplm
 		  d_Err_t_d_output.resize(output_layer_node.param->n_outputs(),minibatch_size);
 	    }
 		//Resizing some of the NCE mibatch matrices
-		void resizeNCE(int num_noise_samples){
+		void resizeNCE(int num_noise_samples, double fixed_partition_function){
 			minibatch_weights.setZero(num_noise_samples+1,minibatch_size);
 			minibatch_samples.setZero(num_noise_samples+1,minibatch_size);
 			minibatch_samples_no_negative.setZero(num_noise_samples+1,minibatch_size);
