@@ -240,6 +240,7 @@ namespace nplm
 							  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
 						  }
 						}	
+						//cerr<<"Minibatch samples are"<<minibatch_samples<<endl;
 						//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
 						//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
 						//nce layer will make sure that the gradient is 0. Therefore, it doesnt matter what the embeddings are. 
@@ -282,7 +283,12 @@ namespace nplm
 					  //Updating the gradient for the output layer
 				      output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
 				                 minibatch_samples_no_negative.leftCols(current_minibatch_size),
-				                 minibatch_weights.leftCols(current_minibatch_size));						  			  
+				                 minibatch_weights.leftCols(current_minibatch_size));	
+					  //cerr<<"minibatch_weights "<<minibatch_weights.leftCols(current_minibatch_size)<<endl;
+					  //cerr<<"probs "<<probs.leftCols(current_minibatch_size)<<endl;	
+					  //cerr<<" output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
+					  //cerr<<" output layer node cols and rows"<<output_layer_node.bProp_matrix.rows()<<" "<<output_layer_node.bProp_matrix.cols()<<endl;
+					  //getchar();			  			  
 				}
 				//getchar();
 				// Now calling backprop for the LSTM nodes
@@ -500,8 +506,106 @@ namespace nplm
 		*/
 	  }
 	  
-	  template <typename DerivedOut>
+	  template <typename DerivedOut, typename data_type>
 	  void computeProbs(const MatrixBase<DerivedOut> &output,
+						multinomial<data_type> &unigram,
+						int num_noise_samples,
+						boost::random::mt19937 &rng,
+						loss_function_type loss_function,
+						SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
+	  					double &log_likelihood) 
+	  {	
+			
+			//cerr<<"In computeProbs..."<<endl;
+			int current_minibatch_size = output.cols();
+
+			Matrix<double,Dynamic,Dynamic> dummy_zero;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
+
+			int sent_len = output.rows(); 
+			//double log_likelihood = 0.;
+
+			for (int i=sent_len-1; i>=0; i--) {
+				//cerr<<"i in gradient check is "<<i<<endl;
+				//First doing fProp for the output layer
+				if (loss_function == LogLoss) {
+					output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+					//then compute the log loss of the objective
+					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+					//cerr<<"Score is"<<endl;
+					//cerr<<scores<<endl;
+	
+			        double minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+			                   output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);
+					//cerr<<"probs is "<<probs<<endl;
+			        stop_timer(5);
+			        log_likelihood += minibatch_log_likelihood;		
+				} else if (loss_function == NCELoss) {
+	  		          minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
+	  				  /*
+	  		          for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++)
+	  				  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
+	  		                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
+	  						  cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
+	  					}
+	  					  */
+			  
+	  				  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
+	  						//No need to generate samples if the output word is -1
+	  						//if (minibatch_samples(0, train_id) == -1) 
+	  						//	continue;
+	  						for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++) {
+	  		                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
+	  						  minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
+	  						  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
+	  					  }
+	  					}	
+	  					//cerr<<"Minibatch samples are"<<minibatch_samples<<endl;
+	  					//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
+	  					//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
+	  					//nce layer will make sure that the gradient is 0. Therefore, it doesnt matter what the embeddings are. 
+	  					for (int train_id = 0; train_id < current_minibatch_size; train_id++) {
+	  						if (minibatch_samples(0, train_id) == -1)
+	  							minibatch_samples_no_negative(0, train_id) = 0;
+	  						else
+	  							minibatch_samples_no_negative(0, train_id) = minibatch_samples(0, train_id);
+	  					}
+	  		          stop_timer(3);
+	  				  scores.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT
+	  		          // Final forward propagation step (sparse)
+	  		          start_timer(4);
+	  		          output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	  		                      minibatch_samples_no_negative.leftCols(current_minibatch_size), 
+	  							  scores.leftCols(current_minibatch_size));
+	  		          stop_timer(4);
+
+	  				  //Adding a constant amount to scores for stability
+	  				  scores.array() += this->fixed_partition_function;
+	  		          double minibatch_log_likelihood;
+	  		          start_timer(5);
+	  		          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
+	  		                 minibatch_samples,
+	  		                 probs, 
+	  						 minibatch_log_likelihood);
+	  		          stop_timer(5);
+	  		          log_likelihood += minibatch_log_likelihood;
+				}
+			}
+			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+			//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+			//log_likelihood /= sent_len;
+	  }	  
+
+	  template <typename DerivedOut>
+	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
 	  					double &log_likelihood) 
 	  {	
 			
@@ -524,7 +628,7 @@ namespace nplm
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
 				//cerr<<scores<<endl;
-	
+
 		        double minibatch_log_likelihood;
 		        start_timer(5);
 		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
@@ -541,7 +645,8 @@ namespace nplm
 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 			//log_likelihood /= sent_len;
 	  }	  
-	  
+
+
   	void resetGradient(){
 		plstm->output_layer.resetGradient();
 		// updating the rest of the parameters
@@ -579,15 +684,22 @@ namespace nplm
   	}	
 	
 	//Use finite differences to do gradient check
-	template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
     void gradientCheck(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 const MatrixBase<DerivedC> &const_init_c,
 			 const MatrixBase<DerivedH> &const_init_h,
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 loss_function_type loss_function,
+			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
+				 
     {
 		Matrix<double,Dynamic,Dynamic> init_c = const_init_c;
 		Matrix<double,Dynamic,Dynamic> init_h = const_init_h;
+		//boost::random::mt19937 init_rng = rng;
 		//cerr<<"init c is "<<init_c<<endl;
 		//cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
@@ -618,68 +730,216 @@ namespace nplm
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
 
-		paramGradientCheck(input,output,plstm->output_layer,"output_layer", init_c, init_h, sequence_cont_indices);		
+		paramGradientCheck(input,output,plstm->output_layer,"output_layer", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);		
+		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_h_to_c,"W_h_to_c",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_h_to_c,"W_h_to_c", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,plstm->W_h_to_f,"W_h_to_f",init_c, init_h, sequence_cont_indices);	
+		paramGradientCheck(input,output,plstm->W_h_to_f,"W_h_to_f", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;	
 		init_c = const_init_c;
 		init_h = const_init_h;										
-		paramGradientCheck(input,output,plstm->W_h_to_o,"W_h_to_o",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_h_to_o,"W_h_to_o", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_h_to_i ,"W_h_to_i",init_c, init_h, sequence_cont_indices);	
+		paramGradientCheck(input,output,plstm->W_h_to_i ,"W_h_to_i", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_x_to_c,"W_x_to_c",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_x_to_c,"W_x_to_c", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_x_to_f,"W_x_to_f",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_x_to_f,"W_x_to_f", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_x_to_o,"W_x_to_o",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_x_to_o,"W_x_to_o", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_x_to_i,"W_x_to_i", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_c_to_o,"W_c_to_o", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_c_to_f,"W_c_to_f",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_c_to_f,"W_c_to_f", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//nit_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->W_c_to_i,"W_c_to_i", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,plstm->o_t,"o_t",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->o_t,"o_t",  
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->f_t,"f_t",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->f_t,"f_t",
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->i_t,"i_t",init_c, init_h, sequence_cont_indices);
+		paramGradientCheck(input,output,plstm->i_t,"i_t",
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);
+		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t",init_c, init_h, sequence_cont_indices);		
+		paramGradientCheck(input,output,plstm->tanh_c_prime_t,"tanh_c_prime_t", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 softmax_nce_loss,
+							 sequence_cont_indices);		
 		
 		//paramGradientCheck(input,output,plstm->input_layer,"input_layer");
 		
 		
 	}
-	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
 	void paramGradientCheck(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 testParam &param,
 			 const string param_name,
 			 const MatrixBase<DerivedC> &init_c,
 			 const MatrixBase<DerivedH> &init_h, 
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 loss_function_type loss_function,			 
+			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
 		//Going over all dimensions of the parameter
 		for(int row=0; row<param.rows(); row++){
-			for (int col=0; col<param.cols(); col++){
+			for (int col=0; col<param.cols(); col++){		
 				getFiniteDiff(input, 
 							output, 
 							param, 
@@ -688,12 +948,17 @@ namespace nplm
 							col, 
 							init_c, 
 							init_h,
+				   			unigram,
+				   			num_noise_samples,
+				   			rng,
+				   			loss_function,
+							softmax_nce_loss,
 							sequence_cont_indices);
 			}
 		}
 	}
 	
-	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
     void getFiniteDiff(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 testParam &param,
@@ -702,9 +967,15 @@ namespace nplm
 			 int col,
 			 const MatrixBase<DerivedC> &const_init_c,
 			 const MatrixBase<DerivedH> &const_init_h,
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 loss_function_type loss_function,
+			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) {
 				Matrix<double,Dynamic,Dynamic> init_c; 
 				Matrix<double,Dynamic,Dynamic> init_h;
+				boost::random::mt19937 init_rng = rng;
 				init_c = const_init_c;
 				init_h = const_init_h;
 				//cerr<<"Row is :"<<row<<" col is " <<col<<endl;
@@ -722,17 +993,28 @@ namespace nplm
 				//cerr<<"input cols is "<<input.cols()<<endl;					
 		 		fProp(input, 0, input.rows()-1, init_c, init_h, sequence_cont_indices);
 		 		computeProbs(output,
-		 			  		before_log_likelihood);
+				   			 unigram,
+				   			 num_noise_samples,
+				   			 init_rng,
+				   			 loss_function,	
+							 softmax_nce_loss,
+		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
 		 	    param.changeRandomParam(-2e-5, 
 		 								rand_row,
 		 								rand_col);		
 				init_c = const_init_c;
 				init_h = const_init_h;
+				init_rng = rng;
 		 		double after_log_likelihood = 0;						
 		 		fProp(input,0, input.rows()-1, init_c, init_h, sequence_cont_indices);	
 		 		computeProbs(output,
-		 			  		after_log_likelihood);		
+				   			 unigram,
+				   			 num_noise_samples,
+				   			 init_rng,
+				   			 loss_function,	
+							 softmax_nce_loss,
+		 			  		 after_log_likelihood);		
 		 		//returning the parameter back to its own value
 		 	    param.changeRandomParam(1e-5 , 
 		 								rand_row,
@@ -762,11 +1044,15 @@ namespace nplm
 	
 	
 	
-	template <typename DerivedIn, typename DerivedOut, typename testParam>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename data_type>
     void getFiniteDiff(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &output,
 			 const MatrixBase<testParam> & const_test_param,
-			 const string param_name) {
+			 const string param_name,
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 loss_function_type loss_function) {
 				 
 				 UNCONST(testParam,const_test_param,test_param);
 		 		int rand_row;
@@ -781,7 +1067,11 @@ namespace nplm
 				cerr<<"input cols is "<<input.cols()<<endl;					
 		 		fProp(input, 0, input.rows()-1);
 		 		computeProbs(output,
-		 			  		before_log_likelihood);
+				   			 unigram,
+				   			 num_noise_samples,
+				   			 rng,
+				   			 loss_function,				
+		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
 				/*
 		 	    param.changeRandomParam(-2e-5, 

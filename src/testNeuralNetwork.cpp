@@ -611,7 +611,7 @@ int main(int argc, char** argv)
 						current_h,
 						testing_sequence_cont_sent_data);	
 			
-			prop.computeProbs(testing_output_sent_data,
+			prop.computeProbsLog(testing_output_sent_data,
 								minibatch_log_likelihood);	
 			data_log_likelihood += 	minibatch_log_likelihood;
 			/*				

@@ -304,7 +304,7 @@ int main(int argc, char** argv)
 
     //unsigned seed = std::time(0);
     unsigned seed = 1234; //for testing only
-    mt19937 rng(seed);
+    mt19937 rng(seed), rng_grad_check(seed);
 
     /////////////////////////READING IN THE TRAINING AND VALIDATION DATA///////////////////
     /////////////////////////////////////////////////////////////////////////////////////
@@ -498,6 +498,8 @@ int main(int argc, char** argv)
           myParam.parameter_update,
           myParam.adagrad_epsilon);
       nn.set_activation_function(string_to_activation_function(myParam.activation_function));
+	  rng_grad_check = rng; //The range for gradient check should have exactly the same state as rng for the NCE gradient checking to work
+	  
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
@@ -737,12 +739,20 @@ int main(int argc, char** argv)
 	 			//					data_log_likelihood);	
 				//cerr<<"training_input_sent_data len"		
 				if (myParam.gradient_check) {		
-					cerr<<"Checking gradient"<<endl;	 
+					cerr<<"Checking gradient"<<endl;
+						 
 					prop.gradientCheck(training_input_sent_data,
 						 		 training_output_sent_data,
 								 current_c_for_gradCheck,
 								 current_h_for_gradCheck,
+								 unigram,
+								 num_noise_samples,
+					   			 rng_grad_check,
+					   			 loss_function,
+								 softmax_nce_loss,
 								 training_sequence_cont_sent_data);
+					//for the next minibatch, we want the range to be updated as well
+					rng_grad_check = rng;
 				}
 				//getchar();											 
 				//Updating the gradients
@@ -883,7 +893,7 @@ int main(int argc, char** argv)
 		
 	
 						 
-		 		prop_validation.computeProbs(validation_output_sent_data,
+		 		prop_validation.computeProbsLog(validation_output_sent_data,
 		 		 			  	minibatch_log_likelihood);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;
