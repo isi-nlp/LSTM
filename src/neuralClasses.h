@@ -1405,6 +1405,12 @@ class Input_word_embeddings
             update_items.push_back(it->first);
         }
         int num_items = update_items.size();
+		if (norm_clipping){
+			scaleAndNormClip(W_gradient,
+							 update_items,
+			  				 current_minibatch_size,
+			  				 norm_threshold);
+		}
 
         #pragma omp parallel for
         for (int item_id=0; item_id<num_items; item_id++)
@@ -1414,11 +1420,13 @@ class Input_word_embeddings
             //UPDATE CLIPPING
             //W->row(update_item).array() += learning_rate*
             //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+			/*
 	  		if (norm_clipping){
 	  			scaleAndNormClip(W_gradient.row(update_item),
 	  			  				 current_minibatch_size,
 	  			  				 norm_threshold);
 	  		}
+			*/
             W->row(update_item) += learning_rate*
                 W_gradient.row(update_item);
             //GRADIENT CLIPPING

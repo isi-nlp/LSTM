@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <math.h>
 
 #include <boost/unordered_map.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -145,13 +146,14 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 					 double norm_threshold){
 	UNCONST(Derived, const_param, param);
 	int num_items = update_items.size();
-	double param_norm = 0.;
+	double squared_param_norm = 0.;
     for (int item_id=0; item_id<num_items; item_id++)
     {
         int update_item = update_items[item_id];
 		param.row(update_item) /= current_minibatch_size;
-		param_norm += param.row(update_item).norm();
+		squared_param_norm += param.row(update_item).squaredNorm();
 	}
+	double param_norm = sqrt(squared_param_norm);
 	if (param_norm > norm_threshold){
 		//param *= norm_threshold/param_norm;
 	    for (int item_id=0; item_id<num_items; item_id++)
