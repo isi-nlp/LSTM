@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 
+#include <boost/unordered_map.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -47,6 +48,8 @@ struct gradClipper{
     //return(x);
   }
 };
+
+typedef boost::unordered_map<int,bool> int_map;
 
 void splitBySpace(const std::string &line, std::vector<std::string> &items);
 void readWordsFile(std::ifstream &TRAININ, std::vector<std::string> &word_list);
@@ -134,6 +137,33 @@ void initMatrix(boost::random::mt19937 &engine,
         }
     }
 }
+
+template<typename Derived>
+void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
+					 std::vector<int> &update_items,
+					 int current_minibatch_size,
+					 double norm_threshold){
+	UNCONST(Derived, const_param, param);
+	int num_items = update_items.size();
+	double param_norm = 0.;
+    for (int item_id=0; item_id<num_items; item_id++)
+    {
+        int update_item = update_items[item_id];
+		param.row(update_item) /= current_minibatch_size;
+		param_norm += param.row(update_item).norm();
+	}
+	if (param_norm > norm_threshold){
+		//param *= norm_threshold/param_norm;
+	    for (int item_id=0; item_id<num_items; item_id++)
+	    {
+	        int update_item = update_items[item_id];
+			param.row(update_item) *= norm_threshold/param_norm;
+			
+		}
+	}
+
+}
+
 
 template<typename Derived>
 void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,

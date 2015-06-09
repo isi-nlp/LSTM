@@ -6,7 +6,7 @@
 #include <cmath>
 #include <vector>
 
-#include <boost/unordered_map.hpp> 
+//#include <boost/unordered_map.hpp> 
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include "maybe_omp.h"
@@ -34,7 +34,7 @@ using Eigen::Array;
 using Eigen::MatrixBase;
 using Eigen::Dynamic;
 
-typedef boost::unordered_map<int,bool> int_map;
+//typedef boost::unordered_map<int,bool> int_map;
 
 struct Clipper{
   double operator() (double x) const { 
@@ -913,9 +913,9 @@ template <typename DerivedIn, typename DerivedGOut>
 	void updateParamsNCE(double learning_rate,
 						int current_minibatch_size,
 						double momentum,
-					double L2_reg,
-					bool norm_clipping,
-					double norm_threshold){
+						double L2_reg,
+						bool norm_clipping,
+						double norm_threshold){
 					
 	    // Convert to std::vector for parallelization
 	      std::vector<int> update_items;
@@ -924,7 +924,12 @@ template <typename DerivedIn, typename DerivedGOut>
 	          update_items.push_back(it->first);
 	      }
 	      int num_items = update_items.size();
-
+		  if (norm_clipping) {
+			scaleAndNormClip(W_gradient,
+							 update_items,
+			  				 current_minibatch_size,
+			  				 norm_threshold);
+		 }
 	      #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
 	      {
@@ -933,11 +938,13 @@ template <typename DerivedIn, typename DerivedGOut>
 	          //UPDATE CLIPPING
 	          //W->row(update_item).array() += learning_rate*
 	          //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
+			  /*
 	  		if (norm_clipping){
 	  			scaleAndNormClip(W_gradient.row(update_item),
 	  			  				 current_minibatch_size,
 	  			  				 norm_threshold);
 	  		}
+			  */
 	          W->row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
 	          //GRADIENT CLIPPING
