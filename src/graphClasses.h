@@ -9,6 +9,14 @@
 namespace nplm
 {
 
+	struct stateClipper{
+	  double operator() (double x) const { 
+	    return std::min(25., std::max(x,-25.));
+	    //return(x);
+	  }
+	};
+
+
 template <class X>
 class Node {
     public:
@@ -484,7 +492,7 @@ public:
 								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 							} else {
 								this->h_t_minus_one.col(index) = h_t_minus_one.col(index);
-								this->c_t_minus_one.col(index) = c_t_minus_one.col(index);
+								this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
 							}
 						}							
 						/*
