@@ -818,7 +818,7 @@ int main(int argc, char** argv)
             ////////////////////////////////////////////////////////////////
 
             double log_likelihood = 0.0;
-			
+			double correct_validation = 0.0;
 		    //Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
 		    //Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
 		    //Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
@@ -830,6 +830,8 @@ int main(int argc, char** argv)
             {
 
 				double minibatch_log_likelihood = 0.;
+				double minibatch_correct_validation = 0;
+				
 	            data_size_t minibatch_start_index = validation_minibatch_size * validation_batch;
 				data_size_t minibatch_end_index = min(validation_data_size-1, static_cast<data_size_t> (minibatch_start_index+validation_minibatch_size-1));
 				//cerr<<"Minibatch start index is "<<minibatch_start_index<<endl;
@@ -894,9 +896,11 @@ int main(int argc, char** argv)
 	
 						 
 		 		prop_validation.computeProbsLog(validation_output_sent_data,
-		 		 			  	minibatch_log_likelihood);
+		 		 			  	minibatch_log_likelihood,
+								minibatch_correct_validation);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;
+				correct_validation + minibatch_correct_validation;
 			}
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
@@ -905,6 +909,7 @@ int main(int argc, char** argv)
 			cerr << "		Validation log-likelihood base 2:     " << log_likelihood/log(2.) << endl;
 			cerr<<  "		Validation cross entropy in base 2 is "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
 			cerr << "         		perplexity:                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
+			cerr << "         		accuracy:                    "<< correct_validation/total_validation_output_tokens << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
