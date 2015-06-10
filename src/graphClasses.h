@@ -493,6 +493,7 @@ public:
 							} else {
 								this->h_t_minus_one.col(index) = h_t_minus_one.col(index);
 								this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
+								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
 							}
 						}							
 						/*

@@ -646,6 +646,53 @@ namespace nplm
 			//log_likelihood /= sent_len;
 	  }	  
 
+	  template <typename DerivedOut>
+	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
+	  					double &log_likelihood,
+						double &validation_correct_labels){
+		  
+			//cerr<<"In computeProbs..."<<endl;
+			int current_minibatch_size = output.cols();
+			validation_correct_labels =0.;
+			Matrix<double,Dynamic,Dynamic> dummy_zero;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
+
+			int sent_len = output.rows(); 
+			//double log_likelihood = 0.;
+
+			for (int i=sent_len-1; i>=0; i--) {
+				//cerr<<"i is "<<i<<endl;
+				//First doing fProp for the output layer
+				output_layer_node.param->fProp(lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				//then compute the log loss of the objective
+				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+				//cerr<<"Score is"<<endl;
+				//cerr<<scores<<endl;
+
+		        double minibatch_log_likelihood;
+		        start_timer(5);
+		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+		                   output.row(i), 
+		                   probs, 
+		                   minibatch_log_likelihood);
+				//cerr<<"probs is "<<probs<<endl;
+		        stop_timer(5);
+		   		for (int minibatch_instance=0; minibatch_instance < current_minibatch_size; minibatch_instance++){
+		   			Matrix<double,1,Dynamic>::Index max_index;
+		   			probs.col(minibatch_instance).maxCoeff(&max_index);
+					//validation_argmaxes.push_back(max_index);
+		   			if (output.row(i)(minibatch_instance) != -1 && max_index == output.row(i)(minibatch_instance)){
+		   					validation_correct_labels += 1.;
+		   			}
+		   		}						
+		        log_likelihood += minibatch_log_likelihood;		
+			}
+  
+        // writeVector(validation_argmaxes,argmax_file);
+    }
+
 
   	void resetGradient(){
 		plstm->output_layer.resetGradient();
