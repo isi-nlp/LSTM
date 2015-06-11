@@ -37,6 +37,7 @@ struct param
     std::string activation_function;
     std::string loss_function;
     std::string parameter_update;
+	std::string input_embeddings_file;
 
     int minibatch_size;
     int validation_minibatch_size;
@@ -52,6 +53,7 @@ struct param
 	bool norm_clipping;
 	bool gradient_check;
 	bool restart_states;
+
 	
     int num_noise_samples;
 
