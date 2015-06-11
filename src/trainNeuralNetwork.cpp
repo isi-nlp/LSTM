@@ -140,6 +140,7 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
+	  ValueArg<string> input_embeddings_file("","input_embeddings_file", "Read the input embeddings from the specified file. Default: none", false,"","string",cmd);
 
       cmd.parse(argc, argv);
 
@@ -207,6 +208,7 @@ int main(int argc, char** argv)
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
 	  myParam.restart_states = norm_threshold.getValue();
+	  myParam.input_embeddings_file = input_embeddings_file.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -501,6 +503,12 @@ int main(int argc, char** argv)
 	  rng_grad_check = rng; //The range for gradient check should have exactly the same state as rng for the NCE gradient checking to work
 	  
     }
+	if (myParam.input_embeddings_file != ""){
+		nn.W_x_to_i.read(myParam.input_embeddings_file);
+		nn.W_x_to_f.read(myParam.input_embeddings_file);
+		nn.W_x_to_c.read(myParam.input_embeddings_file);
+		nn.W_x_to_o.read(myParam.input_embeddings_file);
+	}
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     propagator prop(nn, myParam.minibatch_size);
