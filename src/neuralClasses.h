@@ -1191,7 +1191,12 @@ class Input_word_embeddings
 
         void read(std::ifstream &W_file) { readMatrix(W_file, *W); }
         void write(std::ofstream &W_file) { writeMatrix(*W, W_file); }
-
+		// Initialize the input weights from the input embeddings file
+		void read(std::string &W_filename) { 
+		    ifstream W_file(W_filename.c_str());
+		    if (!W_file) throw runtime_error("Could not open file " + W_filename);
+			readMatrix(W_file, *W); 
+		}
       template <typename Engine>
       void initialize(Engine &engine,
           bool init_normal,
