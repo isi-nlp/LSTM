@@ -141,7 +141,7 @@ RANLIB=ranlib
 
 # Rules
 
-BINS=trainNeuralNetwork testNeuralNetwork
+BINS=trainNeuralNetwork testNeuralNetwork initTaggerFromLM
 OBJS=util.o model.o
 
 all: $(BINS) 
@@ -166,6 +166,10 @@ trainNeuralNetwork: trainNeuralNetwork.o $(OBJS)
 	
 testNeuralNetwork: testNeuralNetwork.o $(OBJS)
 	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@	
+	
+initTaggerFromLM: initTaggerFromLM.o $(OBJS)
+	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
+
 
 
 
