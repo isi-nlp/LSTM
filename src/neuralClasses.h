@@ -609,6 +609,8 @@ class Output_word_embeddings
         {
           W->setZero(rows, cols);
           b.setZero(rows);
+	      W_gradient.setZero(W->rows(),W->cols());
+	      b_gradient.setZero(b.size());
         }
     void set_W(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *input_W) {
       W = input_W;
@@ -1187,6 +1189,7 @@ class Input_word_embeddings
         context_size = context;
         vocab_size = rows;
         W->setZero(rows, cols);
+		W_gradient.setZero(W->rows(),W->cols());
       }
 
         void read(std::ifstream &W_file) { readMatrix(W_file, *W); }
