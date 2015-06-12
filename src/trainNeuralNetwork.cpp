@@ -905,7 +905,8 @@ int main(int argc, char** argv)
 						 
 		 		prop_validation.computeProbsLog(validation_output_sent_data,
 		 		 			  	minibatch_log_likelihood,
-								minibatch_correct_validation);
+								minibatch_correct_validation,
+								0);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;
 				correct_validation + minibatch_correct_validation;

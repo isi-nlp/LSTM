@@ -649,7 +649,8 @@ namespace nplm
 	  template <typename DerivedOut>
 	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
 	  					double &log_likelihood,
-						double &validation_correct_labels){
+						double &validation_correct_labels,
+						int no_point_label){ //you get no point if the correct label is this. 
 		  
 			//cerr<<"In computeProbs..."<<endl;
 			int current_minibatch_size = output.cols();
@@ -683,7 +684,8 @@ namespace nplm
 		   			Matrix<double,1,Dynamic>::Index max_index;
 		   			probs.col(minibatch_instance).maxCoeff(&max_index);
 					//validation_argmaxes.push_back(max_index);
-		   			if (output.row(i)(minibatch_instance) != -1 && max_index == output.row(i)(minibatch_instance)){
+		   			if (output.row(i)(minibatch_instance) != -1 && max_index == output.row(i)(minibatch_instance)
+							&& output.row(i)(minibatch_instance) != no_point_label){
 		   					validation_correct_labels += 1.;
 		   			}
 		   		}						
