@@ -108,7 +108,7 @@ typedef __m128i v4si;
 #define v2dil(x) ((const v4si) { (x), (x) })
 #define v4sil(x) v2dil((((unsigned long long) (x)) << 32) | (x))
 
-typedef union { v4sf f; float array[4]; } v4sfindexer;
+typedef union { v4sf f; double array[4]; } v4sfindexer;
 #define v4sf_index(_findx, _findi)      \
   ({                                    \
      v4sfindexer _findvx = { _findx } ; \
@@ -185,34 +185,34 @@ typedef union { v4sf f; v4si i; } v4sfv4sipun;
 // Underflow of exponential is common practice in numerical routines,
 // so handle it here.
 
-static inline float
-fastpow2 (float p)
+static inline double
+fastpow2 (double p)
 {
-  float offset = (p < 0) ? 1.0f : 0.0f;
-  float clipp = (p < -126) ? -126.0f : p;
+  double offset = (p < 0) ? 1.0f : 0.0f;
+  double clipp = (p < -126) ? -126.0f : p;
   int w = clipp;
-  float z = clipp - w + offset;
-  union { uint32_t i; float f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
+  double z = clipp - w + offset;
+  union { uint32_t i; double f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
 
   return v.f;
 }
 
-static inline float
-fastexp (float p)
+static inline double
+fastexp (double p)
 {
   return fastpow2 (1.442695040f * p);
 }
 
-static inline float
-fasterpow2 (float p)
+static inline double
+fasterpow2 (double p)
 {
-  float clipp = (p < -126) ? -126.0f : p;
-  union { uint32_t i; float f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 126.94269504f) ) };
+  double clipp = (p < -126) ? -126.0f : p;
+  union { uint32_t i; double f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 126.94269504f) ) };
   return v.f;
 }
 
-static inline float
-fasterexp (float p)
+static inline double
+fasterexp (double p)
 {
   return fasterpow2 (1.442695040f * p);
 }
@@ -317,12 +317,12 @@ vfasterexp (const v4sf p)
 
 #include <stdint.h>
 
-static inline float 
-fastlog2 (float x)
+static inline double 
+fastlog2 (double x)
 {
-  union { float f; uint32_t i; } vx = { x };
-  union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-  float y = vx.i;
+  union { double f; uint32_t i; } vx = { x };
+  union { uint32_t i; double f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+  double y = vx.i;
   y *= 1.1920928955078125e-7f;
 
   return y - 124.22551499f
@@ -330,28 +330,28 @@ fastlog2 (float x)
            - 1.72587999f / (0.3520887068f + mx.f);
 }
 
-static inline float
-fastlog (float x)
+static inline double
+fastlog (double x)
 {
   return 0.69314718f * fastlog2 (x);
 }
 
-static inline float 
-fasterlog2 (float x)
+static inline double 
+fasterlog2 (double x)
 {
-  union { float f; uint32_t i; } vx = { x };
-  float y = vx.i;
+  union { double f; uint32_t i; } vx = { x };
+  double y = vx.i;
   y *= 1.1920928955078125e-7f;
   return y - 126.94269504f;
 }
 
-static inline float
-fasterlog (float x)
+static inline double
+fasterlog (double x)
 {
 //  return 0.69314718f * fasterlog2 (x);
 
-  union { float f; uint32_t i; } vx = { x };
-  float y = vx.i;
+  union { double f; uint32_t i; } vx = { x };
+  double y = vx.i;
   y *= 8.2629582881927490e-8f;
   return y - 87.989971088f;
 }
@@ -465,27 +465,27 @@ vfasterlog (v4sf x)
 // ... although vectorized version is interesting
 //     and fastererfc is very fast
 
-static inline float
-fasterfc (float x)
+static inline double
+fasterfc (double x)
 {
-  static const float k = 3.3509633149424609f;
-  static const float a = 0.07219054755431126f;
-  static const float b = 15.418191568719577f;
-  static const float c = 5.609846028328545f;
+  static const double k = 3.3509633149424609f;
+  static const double a = 0.07219054755431126f;
+  static const double b = 15.418191568719577f;
+  static const double c = 5.609846028328545f;
 
-  union { float f; uint32_t i; } vc = { c * x };
-  float xsq = x * x;
-  float xquad = xsq * xsq;
+  union { double f; uint32_t i; } vc = { c * x };
+  double xsq = x * x;
+  double xquad = xsq * xsq;
 
   vc.i |= 0x80000000;
 
   return 2.0f / (1.0f + fastpow2 (k * x)) - a * x * (b * xquad - 1.0f) * fasterpow2 (vc.f);
 }
 
-static inline float
-fastererfc (float x)
+static inline double
+fastererfc (double x)
 {
-  static const float k = 3.3509633149424609f;
+  static const double k = 3.3509633149424609f;
 
   return 2.0f / (1.0f + fasterpow2 (k * x));
 }
@@ -494,37 +494,37 @@ fastererfc (float x)
 // ... although vectorized version is interesting
 //     and fastererf is very fast
 
-static inline float
-fasterf (float x)
+static inline double
+fasterf (double x)
 {
   return 1.0f - fasterfc (x);
 }
 
-static inline float
-fastererf (float x)
+static inline double
+fastererf (double x)
 {
   return 1.0f - fastererfc (x);
 }
 
-static inline float
-fastinverseerf (float x)
+static inline double
+fastinverseerf (double x)
 {
-  static const float invk = 0.30004578719350504f;
-  static const float a = 0.020287853348211326f;
-  static const float b = 0.07236892874789555f;
-  static const float c = 0.9913030456864257f;
-  static const float d = 0.8059775923760193f;
+  static const double invk = 0.30004578719350504f;
+  static const double a = 0.020287853348211326f;
+  static const double b = 0.07236892874789555f;
+  static const double c = 0.9913030456864257f;
+  static const double d = 0.8059775923760193f;
 
-  float xsq = x * x;
+  double xsq = x * x;
 
   return invk * fastlog2 ((1.0f + x) / (1.0f - x)) 
        + x * (a - b * xsq) / (c - d * xsq);
 }
 
-static inline float
-fasterinverseerf (float x)
+static inline double
+fasterinverseerf (double x)
 {
-  static const float invk = 0.30004578719350504f;
+  static const double invk = 0.30004578719350504f;
 
   return invk * fasterlog2 ((1.0f + x) / (1.0f - x));
 }
@@ -641,11 +641,11 @@ vfasterinverseerf (v4sf x)
 
 /* gamma/digamma functions only work for positive inputs */
 
-static inline float
-fastlgamma (float x)
+static inline double
+fastlgamma (double x)
 {
-  float logterm = fastlog (x * (1.0f + x) * (2.0f + x));
-  float xp3 = 3.0f + x;
+  double logterm = fastlog (x * (1.0f + x) * (2.0f + x));
+  double xp3 = 3.0f + x;
 
   return - 2.081061466f 
          - x 
@@ -654,8 +654,8 @@ fastlgamma (float x)
          + (2.5f + x) * fastlog (xp3);
 }
 
-static inline float
-fasterlgamma (float x)
+static inline double
+fasterlgamma (double x)
 {
   return - 0.0810614667f 
          - x
@@ -663,21 +663,21 @@ fasterlgamma (float x)
          + (0.5f + x) * fasterlog (1.0f + x);
 }
 
-static inline float
-fastdigamma (float x)
+static inline double
+fastdigamma (double x)
 {
-  float twopx = 2.0f + x;
-  float logterm = fastlog (twopx);
+  double twopx = 2.0f + x;
+  double logterm = fastlog (twopx);
 
   return (-48.0f + x * (-157.0f + x * (-127.0f - 30.0f * x))) /
          (12.0f * x * (1.0f + x) * twopx * twopx)
          + logterm;
 }
 
-static inline float
-fasterdigamma (float x)
+static inline double
+fasterdigamma (double x)
 {
-  float onepx = 1.0f + x;
+  double onepx = 1.0f + x;
 
   return -1.0f / x - 1.0f / (2 * onepx) + fasterlog (onepx);
 }
@@ -786,38 +786,38 @@ vfasterdigamma (v4sf x)
 
 #include <stdint.h>
 
-static inline float
-fastsinh (float p)
+static inline double
+fastsinh (double p)
 {
   return 0.5f * (fastexp (p) - fastexp (-p));
 }
 
-static inline float
-fastersinh (float p)
+static inline double
+fastersinh (double p)
 {
   return 0.5f * (fasterexp (p) - fasterexp (-p));
 }
 
-static inline float
-fastcosh (float p)
+static inline double
+fastcosh (double p)
 {
   return 0.5f * (fastexp (p) + fastexp (-p));
 }
 
-static inline float
-fastercosh (float p)
+static inline double
+fastercosh (double p)
 {
   return 0.5f * (fasterexp (p) + fasterexp (-p));
 }
 
-static inline float
-fasttanh (float p)
+static inline double
+fasttanh (double p)
 {
   return -1.0f + 2.0f / (1.0f + fastexp (-2.0f * p));
 }
 
-static inline float
-fastertanh (float p)
+static inline double
+fastertanh (double p)
 {
   return -1.0f + 2.0f / (1.0f + fasterexp (-2.0f * p));
 }
@@ -924,79 +924,79 @@ vfastertanh (const v4sf p)
 
 // these functions compute the upper branch aka W_0
 
-static inline float
-fastlambertw (float x)
+static inline double
+fastlambertw (double x)
 {
-  static const float threshold = 2.26445f;
+  static const double threshold = 2.26445f;
 
-  float c = (x < threshold) ? 1.546865557f : 1.0f;
-  float d = (x < threshold) ? 2.250366841f : 0.0f;
-  float a = (x < threshold) ? -0.737769969f : 0.0f;
+  double c = (x < threshold) ? 1.546865557f : 1.0f;
+  double d = (x < threshold) ? 2.250366841f : 0.0f;
+  double a = (x < threshold) ? -0.737769969f : 0.0f;
 
-  float logterm = fastlog (c * x + d);
-  float loglogterm = fastlog (logterm);
+  double logterm = fastlog (c * x + d);
+  double loglogterm = fastlog (logterm);
 
-  float minusw = -a - logterm + loglogterm - loglogterm / logterm;
-  float expminusw = fastexp (minusw);
-  float xexpminusw = x * expminusw;
-  float pexpminusw = xexpminusw - minusw;
+  double minusw = -a - logterm + loglogterm - loglogterm / logterm;
+  double expminusw = fastexp (minusw);
+  double xexpminusw = x * expminusw;
+  double pexpminusw = xexpminusw - minusw;
 
   return (2.0f * xexpminusw - minusw * (4.0f * xexpminusw - minusw * pexpminusw)) /
          (2.0f + pexpminusw * (2.0f - minusw));
 }
 
-static inline float
-fasterlambertw (float x)
+static inline double
+fasterlambertw (double x)
 {
-  static const float threshold = 2.26445f;
+  static const double threshold = 2.26445f;
 
-  float c = (x < threshold) ? 1.546865557f : 1.0f;
-  float d = (x < threshold) ? 2.250366841f : 0.0f;
-  float a = (x < threshold) ? -0.737769969f : 0.0f;
+  double c = (x < threshold) ? 1.546865557f : 1.0f;
+  double d = (x < threshold) ? 2.250366841f : 0.0f;
+  double a = (x < threshold) ? -0.737769969f : 0.0f;
 
-  float logterm = fasterlog (c * x + d);
-  float loglogterm = fasterlog (logterm);
+  double logterm = fasterlog (c * x + d);
+  double loglogterm = fasterlog (logterm);
 
-  float w = a + logterm - loglogterm + loglogterm / logterm;
-  float expw = fasterexp (-w);
+  double w = a + logterm - loglogterm + loglogterm / logterm;
+  double expw = fasterexp (-w);
 
   return (w * w + expw * x) / (1.0f + w);
 }
 
-static inline float
-fastlambertwexpx (float x)
+static inline double
+fastlambertwexpx (double x)
 {
-  static const float k = 1.1765631309f;
-  static const float a = 0.94537622168f;
+  static const double k = 1.1765631309f;
+  static const double a = 0.94537622168f;
 
-  float logarg = fmaxf (x, k);
-  float powarg = (x < k) ? a * (x - k) : 0;
+  double logarg = fmaxf (x, k);
+  double powarg = (x < k) ? a * (x - k) : 0;
 
-  float logterm = fastlog (logarg);
-  float powterm = fasterpow2 (powarg);  // don't need accuracy here
+  double logterm = fastlog (logarg);
+  double powterm = fasterpow2 (powarg);  // don't need accuracy here
 
-  float w = powterm * (logarg - logterm + logterm / logarg);
-  float logw = fastlog (w);
-  float p = x - logw;
+  double w = powterm * (logarg - logterm + logterm / logarg);
+  double logw = fastlog (w);
+  double p = x - logw;
 
   return w * (2.0f + p + w * (3.0f + 2.0f * p)) /
          (2.0f - p + w * (5.0f + 2.0f * w));
 }
 
-static inline float
-fasterlambertwexpx (float x)
+static inline double
+fasterlambertwexpx (double x)
 {
-  static const float k = 1.1765631309f;
-  static const float a = 0.94537622168f;
+  static const double k = 1.1765631309f;
+  static const double a = 0.94537622168f;
 
-  float logarg = fmaxf (x, k);
-  float powarg = (x < k) ? a * (x - k) : 0;
+  double logarg = fmaxf (x, k);
+  double powarg = (x < k) ? a * (x - k) : 0;
 
-  float logterm = fasterlog (logarg);
-  float powterm = fasterpow2 (powarg);
+  double logterm = fasterlog (logarg);
+  double powterm = fasterpow2 (powarg);
 
-  float w = powterm * (logarg - logterm + logterm / logarg);
-  float logw = fasterlog (w);
+  double w = powterm * (logarg - logterm + logterm / logarg);
+  double logw = fasterlog (w);
 
   return w * (1.0f + x - logw) / (1.0f + w);
 }
@@ -1136,16 +1136,16 @@ vfasterlambertwexpx (v4sf x)
 
 #include <stdint.h>
 
-static inline float
-fastpow (float x,
-         float p)
+static inline double
+fastpow (double x,
+         double p)
 {
   return fastpow2 (p * fastlog2 (x));
 }
 
-static inline float
-fasterpow (float x,
-           float p)
+static inline double
+fasterpow (double x,
+           double p)
 {
   return fasterpow2 (p * fasterlog2 (x));
 }
@@ -1214,14 +1214,14 @@ vfasterpow (const v4sf x,
 
 #include <stdint.h>
 
-static inline float
-fastsigmoid (float x)
+static inline double
+fastsigmoid (double x)
 {
   return 1.0f / (1.0f + fastexp (-x));
 }
 
-static inline float
-fastersigmoid (float x)
+static inline double
+fastersigmoid (double x)
 {
   return 1.0f / (1.0f + fasterexp (-x));
 }
@@ -1306,22 +1306,22 @@ vfastersigmoid (const v4sf x)
 //   * vectorized versions are competitive
 //   * faster full versions are competitive
 
-static inline float
-fastsin (float x)
+static inline double
+fastsin (double x)
 {
-  static const float fouroverpi = 1.2732395447351627f;
-  static const float fouroverpisq = 0.40528473456935109f;
-  static const float q = 0.78444488374548933f;
-  union { float f; uint32_t i; } p = { 0.20363937680730309f };
-  union { float f; uint32_t i; } r = { 0.015124940802184233f };
-  union { float f; uint32_t i; } s = { -0.0032225901625579573f };
+  static const double fouroverpi = 1.2732395447351627f;
+  static const double fouroverpisq = 0.40528473456935109f;
+  static const double q = 0.78444488374548933f;
+  union { double f; uint32_t i; } p = { 0.20363937680730309f };
+  union { double f; uint32_t i; } r = { 0.015124940802184233f };
+  union { double f; uint32_t i; } s = { -0.0032225901625579573f };
 
-  union { float f; uint32_t i; } vx = { x };
+  union { double f; uint32_t i; } vx = { x };
   uint32_t sign = vx.i & 0x80000000;
   vx.i = vx.i & 0x7FFFFFFF;
 
-  float qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
-  float qpproxsq = qpprox * qpprox;
+  double qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
+  double qpproxsq = qpprox * qpprox;
 
   p.i |= sign;
   r.i |= sign;
@@ -1330,119 +1330,119 @@ fastsin (float x)
   return q * qpprox + qpproxsq * (p.f + qpproxsq * (r.f + qpproxsq * s.f));
 }
 
-static inline float
-fastersin (float x)
+static inline double
+fastersin (double x)
 {
-  static const float fouroverpi = 1.2732395447351627f;
-  static const float fouroverpisq = 0.40528473456935109f;
-  static const float q = 0.77633023248007499f;
-  union { float f; uint32_t i; } p = { 0.22308510060189463f };
+  static const double fouroverpi = 1.2732395447351627f;
+  static const double fouroverpisq = 0.40528473456935109f;
+  static const double q = 0.77633023248007499f;
+  union { double f; uint32_t i; } p = { 0.22308510060189463f };
 
-  union { float f; uint32_t i; } vx = { x };
+  union { double f; uint32_t i; } vx = { x };
   uint32_t sign = vx.i & 0x80000000;
   vx.i &= 0x7FFFFFFF;
 
-  float qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
+  double qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
 
   p.i |= sign;
 
   return qpprox * (q + p.f * qpprox);
 }
 
-static inline float
-fastsinfull (float x)
+static inline double
+fastsinfull (double x)
 {
-  static const float twopi = 6.2831853071795865f;
-  static const float invtwopi = 0.15915494309189534f;
+  static const double twopi = 6.2831853071795865f;
+  static const double invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  float half = (x < 0) ? -0.5f : 0.5f;
+  double half = (x < 0) ? -0.5f : 0.5f;
   return fastsin ((half + k) * twopi - x);
 }
 
-static inline float
-fastersinfull (float x)
+static inline double
+fastersinfull (double x)
 {
-  static const float twopi = 6.2831853071795865f;
-  static const float invtwopi = 0.15915494309189534f;
+  static const double twopi = 6.2831853071795865f;
+  static const double invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  float half = (x < 0) ? -0.5f : 0.5f;
+  double half = (x < 0) ? -0.5f : 0.5f;
   return fastersin ((half + k) * twopi - x);
 }
 
-static inline float
-fastcos (float x)
+static inline double
+fastcos (double x)
 {
-  static const float halfpi = 1.5707963267948966f;
-  static const float halfpiminustwopi = -4.7123889803846899f;
-  float offset = (x > halfpi) ? halfpiminustwopi : halfpi;
+  static const double halfpi = 1.5707963267948966f;
+  static const double halfpiminustwopi = -4.7123889803846899f;
+  double offset = (x > halfpi) ? halfpiminustwopi : halfpi;
   return fastsin (x + offset);
 }
 
-static inline float
-fastercos (float x)
+static inline double
+fastercos (double x)
 {
-  static const float twooverpi = 0.63661977236758134f;
-  static const float p = 0.54641335845679634f;
+  static const double twooverpi = 0.63661977236758134f;
+  static const double p = 0.54641335845679634f;
 
-  union { float f; uint32_t i; } vx = { x };
+  union { double f; uint32_t i; } vx = { x };
   vx.i &= 0x7FFFFFFF;
 
-  float qpprox = 1.0f - twooverpi * vx.f;
+  double qpprox = 1.0f - twooverpi * vx.f;
 
   return qpprox + p * qpprox * (1.0f - qpprox * qpprox);
 }
 
-static inline float
-fastcosfull (float x)
+static inline double
+fastcosfull (double x)
 {
-  static const float halfpi = 1.5707963267948966f;
+  static const double halfpi = 1.5707963267948966f;
   return fastsinfull (x + halfpi);
 }
 
-static inline float
-fastercosfull (float x)
+static inline double
+fastercosfull (double x)
 {
-  static const float halfpi = 1.5707963267948966f;
+  static const double halfpi = 1.5707963267948966f;
   return fastersinfull (x + halfpi);
 }
 
-static inline float
-fasttan (float x)
+static inline double
+fasttan (double x)
 {
-  static const float halfpi = 1.5707963267948966f;
+  static const double halfpi = 1.5707963267948966f;
   return fastsin (x) / fastsin (x + halfpi);
 }
 
-static inline float
-fastertan (float x)
+static inline double
+fastertan (double x)
 {
   return fastersin (x) / fastercos (x);
 }
 
-static inline float
-fasttanfull (float x)
+static inline double
+fasttanfull (double x)
 {
-  static const float twopi = 6.2831853071795865f;
-  static const float invtwopi = 0.15915494309189534f;
+  static const double twopi = 6.2831853071795865f;
+  static const double invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  float half = (x < 0) ? -0.5f : 0.5f;
-  float xnew = x - (half + k) * twopi;
+  double half = (x < 0) ? -0.5f : 0.5f;
+  double xnew = x - (half + k) * twopi;
 
   return fastsin (xnew) / fastcos (xnew);
 }
 
-static inline float
-fastertanfull (float x)
+static inline double
+fastertanfull (double x)
 {
-  static const float twopi = 6.2831853071795865f;
-  static const float invtwopi = 0.15915494309189534f;
+  static const double twopi = 6.2831853071795865f;
+  static const double invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  float half = (x < 0) ? -0.5f : 0.5f;
-  float xnew = x - (half + k) * twopi;
+  double half = (x < 0) ? -0.5f : 0.5f;
+  double xnew = x - (half + k) * twopi;
 
   return fastersin (xnew) / fastercos (xnew);
 }
