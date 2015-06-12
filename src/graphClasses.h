@@ -11,7 +11,7 @@ namespace nplm
 
 	struct stateClipper{
 	  double operator() (double x) const { 
-	    return std::min(25., std::max(x,-25.));
+	    return (double) std::min(25., std::max(double(x),-25.));
 	    //return(x);
 	  }
 	};
@@ -492,7 +492,8 @@ public:
 								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 							} else {
 								this->h_t_minus_one.col(index) = h_t_minus_one.col(index);
-								this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
+								this->c_t_minus_one.col(index) = c_t_minus_one.col(index);
+								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
 							}
 						}							
 						/*

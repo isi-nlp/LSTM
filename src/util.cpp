@@ -15,7 +15,7 @@
 
 #include "util.h"
 
-extern double drand48();
+//extern double drand48();
 
 using namespace Eigen;
 using namespace std;
@@ -36,7 +36,7 @@ void splitBySpace(const std::string &line, std::vector<std::string> &items)
     boost::split(items, copy, boost::is_any_of(" \t"), boost::token_compress_on);
 }
 
-void readWeightsFile(ifstream &TRAININ, vector<float> &weights) {
+void readWeightsFile(ifstream &TRAININ, vector<double> &weights) {
   string line;
   while (getline(TRAININ, line) && line != "")
   {
@@ -47,7 +47,7 @@ void readWeightsFile(ifstream &TRAININ, vector<float> &weights) {
         cerr << "Error: weights file should have only one weight per line" << endl;
         exit(-1);
     }
-    weights.push_back(boost::lexical_cast<float>(items[0]));
+    weights.push_back(boost::lexical_cast<double>(items[0]));
   }
 }
 

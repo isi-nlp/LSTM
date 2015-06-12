@@ -38,7 +38,7 @@ using Eigen::Dynamic;
 
 struct Clipper{
   double operator() (double x) const { 
-    return std::min(50000000., std::max(x,-5000000.));
+    return (double) std::min(50000000., std::max(double(x),-5000000.));
     //return(x);
   }
 };
@@ -1009,7 +1009,7 @@ template <typename DerivedIn, typename DerivedGOut>
             //UPDATE CLIPPING
             W->row(update_item) += (learning_rate * W_gradient.row(update_item)).array().unaryExpr(Clipper()).matrix();
             double update = learning_rate * b_gradient(update_item);
-            b(update_item) += std::min(0.5, std::max(update,-0.5));
+            b(update_item) += std::min(0.5, std::max(double(update),-0.5));
             //GRADIENT CLIPPING
             W_gradient.row(update_item).setZero();
             b_gradient(update_item) = 0.;

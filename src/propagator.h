@@ -985,7 +985,7 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-		 	    param.changeRandomParam(1e-5, 
+		 	    param.changeRandomParam(1e-4, 
 		 								rand_row,
 		 								rand_col);
 		 		//then do an fprop
@@ -1000,7 +1000,7 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
-		 	    param.changeRandomParam(-2e-5, 
+		 	    param.changeRandomParam(-2e-4, 
 		 								rand_row,
 		 								rand_col);		
 				init_c = const_init_c;
@@ -1016,28 +1016,35 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 after_log_likelihood);		
 		 		//returning the parameter back to its own value
-		 	    param.changeRandomParam(1e-5 , 
+		 	    param.changeRandomParam(1e-4 , 
 		 								rand_row,
 		 								rand_col);			
 
 				
 				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
 		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/2e-5;	
-				double graves_threshold = pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
+				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/2e-4;	
+				double graves_threshold = pow(10.0, (double) max(0.0, (double) ceil(log10(min(fabs(param.getGradient(rand_row,
 		 								rand_col)), fabs(symmetric_finite_diff_grad)))))-6);
 				double gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
 		 								rand_col);
+				double relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
+					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
 				if (gradient_diff > graves_threshold) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
 					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
 						<<" and col: "<<rand_col<<" is "<<gradient_diff<<endl;	
+					cerr<<"The likelihoods before and after perturbation are "<< before_log_likelihood<<" "<<
+									after_log_likelihood<<endl;
+					cerr<<"Graves threshold is "<<graves_threshold<<endl;
+					cerr<<"Relative error is "<<relative_error<<endl;
 					exit(1);
 				} else {
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
-						<<" and col: "<<rand_col<<" is "<<gradient_diff<<endl;
+						<<" and col: "<<rand_col<<" is "<<gradient_diff<<" and relative error is "<<relative_error<<endl;
+					//cerr<<"Relative error is "<<relative error<<endl
 				}
 		 	
 	}	

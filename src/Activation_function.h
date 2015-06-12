@@ -71,7 +71,7 @@ struct dsigmoid_functor {
 };
 
 struct rectifier_functor {
-  double operator() (double x) const { return std::max(x, 0.); }
+  double operator() (double x) const { return std::max(double(x), 0.); }
 };
 
 struct drectifier_functor {
