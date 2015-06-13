@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 	string arg_input_embeddings_file = input_embeddings_file.getValue();
 	
     if (arg_lm_model_file != ""){
-      nn.read(myParam.model_file);
+      nn.read(arg_lm_model_file);
       cerr<<"reading the model"<<endl;
     } else {
 		cerr<<"the model file has to be specified!"<<endl;
