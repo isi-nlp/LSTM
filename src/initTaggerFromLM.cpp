@@ -90,7 +90,7 @@ int main(int argc, char** argv)
 	string arg_tagger_model_file = tagger_model_file.getValue();
 	string arg_input_embeddings_file = input_embeddings_file.getValue();
 	
-    if (myParam.model_file != ""){
+    if (arg_lm_model_file != ""){
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
     } else {
