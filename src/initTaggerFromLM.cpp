@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     }
 
     vector<string> output_words;
-    if (myParam.output_words_file != "")
+    if (output_words_file.getValue() != "")
     {
         readWordsFile(output_words_file.getValue(), output_words);
 		if (output_vocab_size == 0)
