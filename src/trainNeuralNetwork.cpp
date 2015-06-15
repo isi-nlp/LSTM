@@ -481,11 +481,27 @@ int main(int argc, char** argv)
     // LOAD THE NEURAL NETWORK MODEL
 	myParam.input_embedding_dimension = myParam.num_hidden;
 	myParam.output_embedding_dimension = myParam.num_hidden;
-	
+
+	//initializing the nn
+    nn.resize(myParam.ngram_size,
+        myParam.input_vocab_size,
+        myParam.output_vocab_size,
+        myParam.input_embedding_dimension,
+        myParam.num_hidden,
+        myParam.output_embedding_dimension);
+
+    nn.initialize(rng,
+        myParam.init_normal,
+        myParam.init_range,
+        myParam.init_forget,
+        myParam.parameter_update,
+        myParam.adagrad_epsilon);
+			
     if (myParam.model_file != ""){
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
     } else {
+		/*
       nn.resize(myParam.ngram_size,
           myParam.input_vocab_size,
           myParam.output_vocab_size,
@@ -499,6 +515,7 @@ int main(int argc, char** argv)
           myParam.init_forget,
           myParam.parameter_update,
           myParam.adagrad_epsilon);
+		*/
       nn.set_activation_function(string_to_activation_function(myParam.activation_function));
 	  rng_grad_check = rng; //The range for gradient check should have exactly the same state as rng for the NCE gradient checking to work
 	  
