@@ -45,7 +45,7 @@ namespace nplm
 	
 struct gradClipper{
   double operator() (double x) const { 
-    return (double) std::min(1., std::max(double(x),-1.));
+    return std::min(1., std::max(x,-1.));
     //return(x);
   }
 };
@@ -59,7 +59,7 @@ void writeWordsFile(const std::vector<std::string> &words, std::ofstream &file);
 void writeWordsFile(const std::vector<std::string> &words, const std::string &filename);
 void readDataFile(const std::string &filename, int &ngram_size, std::vector<int> &data, int minibatch_size=0);
 void readUnigramProbs(const std::string &unigram_probs_file, std::vector<double> &unigram_probs);
-void readWeightsFile(std::ifstream &TRAININ, std::vector<double> &weights);
+void readWeightsFile(std::ifstream &TRAININ, std::vector<float> &weights);
 void readSentFile(const std::string &filename, std::vector<std::vector <int> > &data, int minibatch_size, data_size_t &num_tokens);
 void miniBatchify(const std::vector<std::vector <int> > &sentences, 
 				 std::vector<int > &minibatch_sentences,

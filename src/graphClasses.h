@@ -495,7 +495,8 @@ public:
 								this->c_t_minus_one.col(index) = c_t_minus_one.col(index);
 								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
 							}
-						}							
+						}	
+												
 						/*
 						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
 						int current_minibatch_size = sequence_cont_indices.cols();
