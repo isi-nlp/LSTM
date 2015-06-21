@@ -476,7 +476,13 @@ class Linear_diagonal_layer
 	  }
 	  //cerr<<"output to linear diagonal layer is "<<my_output<<endl;
       //my_output.leftCols(input.cols()).noalias() = U.array()*input.array();
-
+	  /*
+      int num_examples = input.cols();
+      for (int example = 0;example < num_examples;example++) 
+      {
+          my_output.leftCols(input.cols()).col(example) += b;
+      }
+	  */
   }
    
 
@@ -546,168 +552,14 @@ class Linear_diagonal_layer
       }
       else
       {
-
-		  if (norm_clipping){
-			  scaleAndNormClip(U_gradient,
-			  				   current_minibatch_size,
-			  				   norm_threshold);
-		  }		  	  
-          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
-		  U += learning_rate * U_gradient;
-          //b += learning_rate * b_gradient;
-
-		  
-      } 	
-  }
-  void resetGradient(){
-	  U_gradient.setZero();
-	  //b_gradient.setZero();
-  }
-
-};
-
-
-
-/*
-//This uses the diagonal layer class from eigen
-class Linear_diagonal_layer
-{
-    private: 
-        Eigen::DiagonalMatrix<double,Dynamic> U;
-        Eigen::DiagonalMatrix<double,Dynamic> U_gradient;
-        Eigen::DiagonalMatrix<double,Dynamic> U_velocity;
-        Eigen::DiagonalMatrix<double,Dynamic> U_running_gradient;
-        Eigen::DiagonalMatrix<double,Dynamic> U_running_parameter_update;
-        // Biases
-        Matrix<double,Dynamic,1> b;
-        Matrix<double,Dynamic,1> b_velocity;
-        Matrix<double,Dynamic,1> b_running_gradient;
-        Matrix<double,Dynamic,1> b_running_parameter_update;
-        Matrix<double,Dynamic,1> b_gradient;
-
-    friend class model;
-
-    public:
-	Linear_diagonal_layer() { }
-        Linear_diagonal_layer(int rows) { resize(rows); }
-
-	void resize(int rows)
-	{
-	    U.setZero(rows);
-        U_gradient.setZero(rows);
-
-	}
-
-	void read_weights(std::ifstream &U_file) { readMatrix(U_file, U); }
-	void write_weights(std::ofstream &U_file) { writeMatrix(U, U_file); }
-  void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
-  void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
-
-
-	template <typename Engine>
-	void initialize(Engine &engine,
-      bool init_normal,
-      double init_range,
-      string &parameter_update,
-      double adagrad_epsilon)
-	{
-      if (parameter_update == "ADA") {
-        U_running_gradient = DiagonalMatrix<double,Dynamic>::Ones(U.size())*adagrad_epsilon;
-        //b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
-      }
-      if (parameter_update == "ADAD") {
-        U_running_gradient.setZero(U.size());
-        //b_running_gradient.setZero(b.size());
-        U_running_parameter_update.setZero(U.size());
-        //b_running_parameter_update.setZero(b.size());
-      }
-
-	    initMatrix(engine, U, init_normal, init_range);
-		//std::cerr<<U<<std::endl;
-      //initBias(engine, b, init_normal, init_range);
-	}	  
-
-	int n_inputs () const { return U.rows(); }
-	int n_outputs () const { return U.rows(); }
-	
-	int rows() const {return U.rows(); }
-	int cols() const {return U.cols(); }
-  template <typename DerivedIn, typename DerivedOut>
-	void fProp(const MatrixBase<DerivedIn> &input,
-      const MatrixBase<DerivedOut> &output) const
-  {
-      UNCONST(DerivedOut, output, my_output);
-	  int num_examples = input.cols();
-	  //Can this be sped up with broadcasting ?
-
-	  my_output.leftCols(input.cols()).noalias() = U*input;
-
-  }
-   
-
-  
-    template <typename DerivedGOut, typename DerivedGIn>
-	void bProp(const MatrixBase<DerivedGOut> &input,
-      MatrixBase<DerivedGIn> &output) const
-    {
-		
-	    UNCONST(DerivedGIn, output, my_output);
-  	    int num_examples = input.cols();
-		//Can this be sped up with broadcasting ? 
-  	    for (int i=0; i<num_examples; i++){
-		  //cerr<<" i "<<i<<endl;	
-  	  	  my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
-  	    }
-	    //my_output.noalias() = U.array()*input.array();
-	}
-	
-	
-    template <typename DerivedGOut, typename DerivedIn>
-    void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
-       const MatrixBase<DerivedIn> &fProp_input)
-    {
-
-      	U_gradient += bProp_input*fProp_input.transpose();
-        // get the bias gradient for all dimensions in parallel
-        //int size = b.size();
-        //b_gradient += bProp_input.rowwise().sum();
-
-  	}
-	
-	//
-    void changeRandomParam(double offset, 
-							int &rand_row,
-							int &rand_col){
-    	changeRandomParamInMatrix(U, offset, rand_row, rand_col);
-    }		
-
-  	double getGradient(int row,
-  			 int col) { return U_gradient(row,col);}
-				 	
-    void updateParams(double learning_rate,
-					  int current_minibatch_size,
-                      double momentum,
-					  double L2_reg,
-					  bool norm_clipping,
-					  double norm_threshold){
-						  
-      // get the bias gradient for all dimensions in parallel
-      int size = b.size();
-      // This used to be multithreaded, but there was no measureable difference
-      if (L2_reg > 0.0)
-      {
-          U_gradient -=  2*L2_reg*U;
-          //b_gradient -= 2*L2_reg*b;
-      }
-      if (momentum > 0.0)
-      {
-          U_velocity = momentum*U_velocity + U_gradient;
-          U += learning_rate * U_velocity;
-
-      }
-      else
-      {
-
+		  /*
+		  U_gradient /= current_minibatch_size;
+		  double grad_norm = U_gradient.norm();
+		  if (U_gradient.norm() >= 5.) {
+			  U_gradient *= 5./grad_norm;
+		  }
+		  U += learning_rate*U_gradient;	
+		  */
 		  if (norm_clipping){
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
@@ -717,7 +569,10 @@ class Linear_diagonal_layer
 		  U += learning_rate * U_gradient;
           //b += learning_rate * b_gradient;
 		  
-
+		  /*
+          U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
+          b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
+		  */
 		  
       } 	
   }
@@ -727,8 +582,6 @@ class Linear_diagonal_layer
   }
 
 };
-
-*/
 
 class Output_word_embeddings
 {
@@ -807,8 +660,9 @@ class Output_word_embeddings
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-        //my_output = ((*W) * input).colwise() ;//+ b; //No bias for output words
-		my_output = (*W) * input ;//+ b; //No bias for output words
+        my_output = ((*W) * input).colwise() + b; //No bias for output words
+		//my_output = (*W) * input ; //No bias for output words
+
 	  }
 
 
@@ -846,7 +700,8 @@ class Output_word_embeddings
            int word,
            int instance) const 
     {
-        return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
+        return W->row(word).dot(input.col(instance)) + b(word);
+		//return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
     }
 
     // Dense versions (for log-likelihood loss)
@@ -905,7 +760,7 @@ template <typename DerivedIn, typename DerivedGOut>
     // bProp_input is vocab_size x minibatch_size
 	
     W_gradient += bProp_input * predicted_embeddings.transpose();
-    //b_gradient += bProp_input.rowwise().sum();
+    b_gradient += bProp_input.rowwise().sum();
 	
     /*
     //GRADIENT CLIPPING
@@ -936,9 +791,12 @@ template <typename DerivedIn, typename DerivedGOut>
 		  scaleAndNormClip(W_gradient,
 		  				   current_minibatch_size,
 		  				   norm_threshold);
+		  scaleAndNormClip(b_gradient,
+		  				   current_minibatch_size,
+		  				   norm_threshold);						   
 	  }	  
 	  *W += learning_rate*W_gradient;
-	  //b += learning_rate*b_gradient;
+	  b += learning_rate*b_gradient;
   }
   
   void resetGradient(){
@@ -1308,7 +1166,6 @@ template <typename DerivedIn, typename DerivedGOut>
 		    Matrix<double,Dynamic,1>::Ones(weights.cols()), my_gradient_b);
   }
 };
-
 
 class Input_word_embeddings
 {
@@ -1836,7 +1693,8 @@ class Hidden_layer
   			  				 current_minibatch_size,
   			  				 norm_threshold);
   		}
-		b += learning_rate*b_gradient/current_minibatch_size;
+		//b += learning_rate*b_gradient/current_minibatch_size;
+		b += learning_rate*b_gradient;
 		//cerr<<"b is "<<b<<endl;				
 	}
 	void resetGradient(){

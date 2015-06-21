@@ -490,10 +490,12 @@ int main(int argc, char** argv)
           myParam.input_embedding_dimension,
           myParam.num_hidden,
           myParam.output_embedding_dimension);
-
+	  //cerr<<"log output vocab size is "<<-log(myParam.output_vocab_size)<<endl;
+	  //getchar();
       nn.initialize(rng,
           myParam.init_normal,
           myParam.init_range,
+		  -log(myParam.output_vocab_size),
           myParam.init_forget,
           myParam.parameter_update,
           myParam.adagrad_epsilon);

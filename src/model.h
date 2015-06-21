@@ -102,6 +102,7 @@ public:
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
         double init_range,
+		double init_output_bias,
         double init_forget_bias,
         string &parameter_udpate,
         double adagrad_epsilon);

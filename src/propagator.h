@@ -985,7 +985,8 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-		 	    param.changeRandomParam(1e-4, 
+				double perturbation = 1e-3;
+		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);
 		 		//then do an fprop
@@ -1000,7 +1001,7 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
-		 	    param.changeRandomParam(-2e-4, 
+		 	    param.changeRandomParam(-2*perturbation, 
 		 								rand_row,
 		 								rand_col);		
 				init_c = const_init_c;
@@ -1016,21 +1017,21 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 after_log_likelihood);		
 		 		//returning the parameter back to its own value
-		 	    param.changeRandomParam(1e-4 , 
+		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);			
 
 				
 				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
 		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/2e-4;	
+				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/(2*perturbation);	
 				double graves_threshold = pow(10.0, (double) max(0.0, (double) ceil(log10(min(fabs(param.getGradient(rand_row,
 		 								rand_col)), fabs(symmetric_finite_diff_grad)))))-6);
 				double gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
 		 								rand_col);
 				double relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
-				if (gradient_diff > graves_threshold) {
+				if (gradient_diff > graves_threshold && relative_error > 1e-5) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
 					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
@@ -1044,6 +1045,8 @@ namespace nplm
 				} else {
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
 						<<" and col: "<<rand_col<<" is "<<gradient_diff<<" and relative error is "<<relative_error<<endl;
+					cerr<<"The symmetric finite difference gradient is "<<symmetric_finite_diff_grad<<" and analytic gradient is"<<
+						param.getGradient(rand_row,rand_col)<<endl;
 					//cerr<<"Relative error is "<<relative error<<endl
 				}
 		 	
