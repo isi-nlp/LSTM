@@ -962,6 +962,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
 	          //SETTING THE GRADIENT TO ZERO
 	          W_gradient.row(update_item).setZero();
+			  b_gradient(update_item) = 0;
 	      }
 		//we have to clear the update map
 		this->update_map.clear();
