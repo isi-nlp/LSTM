@@ -660,8 +660,9 @@ class Output_word_embeddings
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-        //my_output = ((*W) * input).colwise() ;//+ b; //No bias for output words
-		my_output = (*W) * input ;//+ b; //No bias for output words
+        my_output = ((*W) * input).colwise() + b; //No bias for output words
+		//my_output = (*W) * input ; //No bias for output words
+
 	  }
 
 
@@ -674,7 +675,7 @@ class Output_word_embeddings
         UNCONST(DerivedOutV, output, my_output);
 		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
 		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
-		/* THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
+		//THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
         #pragma omp parallel for
         for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
         {
@@ -682,11 +683,11 @@ class Output_word_embeddings
 			  continue;
           for (int sample_id = 0; sample_id < samples.rows(); sample_id++)
           {
-			cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
+			//cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
             my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
           }
         }
-		*/
+		
 		//THE ISSUE HERE IS THAT BECAUSE THE OUTPUT LABEL MIGHT BE GREATER THAN THE VOCABULARY
         USCMatrix<double> sparse_output(W->rows(), samples, my_output);
         uscgemm_masked(1.0, *W, input, sparse_output);
@@ -699,7 +700,8 @@ class Output_word_embeddings
            int word,
            int instance) const 
     {
-        return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
+        return W->row(word).dot(input.col(instance)) + b(word);
+		//return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
     }
 
     // Dense versions (for log-likelihood loss)
@@ -758,7 +760,7 @@ template <typename DerivedIn, typename DerivedGOut>
     // bProp_input is vocab_size x minibatch_size
 	
     W_gradient += bProp_input * predicted_embeddings.transpose();
-    //b_gradient += bProp_input.rowwise().sum();
+    b_gradient += bProp_input.rowwise().sum();
 	
     /*
     //GRADIENT CLIPPING
@@ -789,9 +791,12 @@ template <typename DerivedIn, typename DerivedGOut>
 		  scaleAndNormClip(W_gradient,
 		  				   current_minibatch_size,
 		  				   norm_threshold);
+		  scaleAndNormClip(b_gradient,
+		  				   current_minibatch_size,
+		  				   norm_threshold);						   
 	  }	  
 	  *W += learning_rate*W_gradient;
-	  //b += learning_rate*b_gradient;
+	  b += learning_rate*b_gradient;
   }
   
   void resetGradient(){
@@ -894,12 +899,12 @@ template <typename DerivedIn, typename DerivedGOut>
 	      gradient_output,
 	      predicted_embeddings.leftCols(samples.cols()).transpose(),
 	      W_gradient);
-		  /*
+		  
 	    uscgemv(1.0, 
 	      gradient_output,
 		      Matrix<double,Dynamic,1>::Ones(weights.cols()),
 	      b_gradient);
-		  */
+		  
 		  
 	  //int_map update_map; //stores all the parameters that have been updated
 	  for (int sample_id=0; sample_id<samples.rows(); sample_id++)
@@ -929,6 +934,10 @@ template <typename DerivedIn, typename DerivedGOut>
 							 update_items,
 			  				 current_minibatch_size,
 			  				 norm_threshold);
+ 			scaleAndNormClip(b_gradient,
+ 							 update_items,
+ 			  				 current_minibatch_size,
+ 			  				 norm_threshold);
 		 }
 	      #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
@@ -947,11 +956,13 @@ template <typename DerivedIn, typename DerivedGOut>
 			  */
 	          W->row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
+			  b(update_item) += learning_rate*b_gradient(update_item);
 	          //GRADIENT CLIPPING
 	          //W->row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
 	          //SETTING THE GRADIENT TO ZERO
 	          W_gradient.row(update_item).setZero();
+			  b_gradient(update_item) = 0;
 	      }
 		//we have to clear the update map
 		this->update_map.clear();
@@ -1688,7 +1699,8 @@ class Hidden_layer
   			  				 current_minibatch_size,
   			  				 norm_threshold);
   		}
-		b += learning_rate*b_gradient/current_minibatch_size;
+		//b += learning_rate*b_gradient/current_minibatch_size;
+		b += learning_rate*b_gradient;
 		//cerr<<"b is "<<b<<endl;				
 	}
 	void resetGradient(){

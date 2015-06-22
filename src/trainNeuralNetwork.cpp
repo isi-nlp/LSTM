@@ -720,10 +720,9 @@ int main(int argc, char** argv)
 		    //}
 		    //else if (loss_function == LogLoss)
 		    //{
-
-				//Calling backprop
-			    prop.bProp(training_input_sent_data,
-					 training_output_sent_data,
+				
+				//computing losses
+			    prop.computeLosses(training_output_sent_data,
 					 data_log_likelihood,
 					 myParam.gradient_check,
 					 myParam.norm_clipping,
@@ -732,6 +731,11 @@ int main(int argc, char** argv)
 					 num_noise_samples,
 					 rng,
 					 softmax_nce_loss); //, 
+				//Calling backprop
+			    prop.bProp(training_input_sent_data,
+					 data_log_likelihood,
+					 myParam.gradient_check,
+					 myParam.norm_clipping); //, 
 					 //init_c,
 					 //init_h,
 					 //training_sequence_cont_sent_data); 	
