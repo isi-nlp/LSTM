@@ -675,7 +675,7 @@ class Output_word_embeddings
         UNCONST(DerivedOutV, output, my_output);
 		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
 		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
-		/* THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
+		//THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
         #pragma omp parallel for
         for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
         {
@@ -687,7 +687,7 @@ class Output_word_embeddings
             my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
           }
         }
-		*/
+		
 		//THE ISSUE HERE IS THAT BECAUSE THE OUTPUT LABEL MIGHT BE GREATER THAN THE VOCABULARY
         USCMatrix<double> sparse_output(W->rows(), samples, my_output);
         uscgemm_masked(1.0, *W, input, sparse_output);
@@ -899,12 +899,12 @@ template <typename DerivedIn, typename DerivedGOut>
 	      gradient_output,
 	      predicted_embeddings.leftCols(samples.cols()).transpose(),
 	      W_gradient);
-		  /*
+		  
 	    uscgemv(1.0, 
 	      gradient_output,
 		      Matrix<double,Dynamic,1>::Ones(weights.cols()),
 	      b_gradient);
-		  */
+		  
 		  
 	  //int_map update_map; //stores all the parameters that have been updated
 	  for (int sample_id=0; sample_id<samples.rows(); sample_id++)
@@ -934,6 +934,10 @@ template <typename DerivedIn, typename DerivedGOut>
 							 update_items,
 			  				 current_minibatch_size,
 			  				 norm_threshold);
+ 			scaleAndNormClip(b_gradient,
+ 							 update_items,
+ 			  				 current_minibatch_size,
+ 			  				 norm_threshold);
 		 }
 	      #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
@@ -952,6 +956,7 @@ template <typename DerivedIn, typename DerivedGOut>
 			  */
 	          W->row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
+			  b(update_item) += learning_rate*b_gradient(update_item);
 	          //GRADIENT CLIPPING
 	          //W->row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
