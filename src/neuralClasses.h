@@ -653,7 +653,7 @@ class Output_word_embeddings
     int n_outputs () const { return W->rows(); }
 
 	int rows() const {return W->rows(); }
-	int cols() const {return W->cols(); }
+	int cols() const {return W->cols()+1; }
 	
     template <typename DerivedIn, typename DerivedOut>
     void fProp(const MatrixBase<DerivedIn> &input,
@@ -747,8 +747,14 @@ class Output_word_embeddings
 	  
 	  double getGradient(int row,
 	  			 int col) {
-					 //cerr<<"W_gradient"<<endl;
-					 return W_gradient(row,col);}
+		 //cerr<<"W_gradient"<<endl;
+		 if (col >0 && col % W->cols() ==0 ) {
+			 //cerr<<"Returning b gradient for row "<<row<<" and col "<<col<<endl;
+			return b_gradient(row);
+		 }
+	 	 else 
+	 		return W_gradient(row,col);
+	}
 				 
 template <typename DerivedIn, typename DerivedGOut>
       void updateGradient(const MatrixBase<DerivedIn> &predicted_embeddings,
@@ -801,13 +807,22 @@ template <typename DerivedIn, typename DerivedGOut>
   
   void resetGradient(){
 	  W_gradient.setZero();
-	  //b_gradient.setZero();
+	  b_gradient.setZero();
   }
   
   void changeRandomParam(double offset, 
 						int &rand_row,
 						int &rand_col){
-  	changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+	//int temp_rand_row = rand_row%W->rows();
+	//cerr<<"Changing "<<rand_row<<" and "<<rand_col<<endl;
+	if (rand_col >0 && rand_col % W->cols() ==0 ) {
+		int temp_rand_col = 0;
+		//cerr<<"changing row "<<rand_row<<" in bias"<<endl;
+  		changeRandomParamInMatrix(b, offset, rand_row, temp_rand_col);
+	}
+	else {
+		changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+	}
   } 
   
     template <typename DerivedIn, typename DerivedGOut>
@@ -1259,6 +1274,8 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	        output.middleRows(ngram*embedding_dimension, embedding_dimension) = W.transpose() * input.middleRows(ngram*vocab_size, vocab_size);
 	    */
+			
+			
 
 	    UNCONST(DerivedOut, output, my_output);
 	    my_output.setZero();
