@@ -683,7 +683,7 @@ class Output_word_embeddings
 			  continue;
           for (int sample_id = 0; sample_id < samples.rows(); sample_id++)
           {
-			cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
+			//cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
             my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
           }
         }
