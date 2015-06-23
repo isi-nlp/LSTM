@@ -1031,7 +1031,7 @@ namespace nplm
 		 								rand_col);
 				double relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
-				if (gradient_diff > graves_threshold && relative_error > 1e-5) {
+				if (relative_error > 1e-5) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
 					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
