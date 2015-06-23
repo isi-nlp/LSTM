@@ -189,7 +189,7 @@ namespace nplm
 	 			                   probs, 
 	 			                   minibatch_log_likelihood);
 	 					//cerr<<"probs is "<<probs<<endl;
-						cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
+						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
 	 			        stop_timer(5);
 	 			        log_likelihood += minibatch_log_likelihood;
 	 					//getchar();
