@@ -734,7 +734,6 @@ int main(int argc, char** argv)
 					 softmax_nce_loss); //, 
 				//Calling backprop
 			    prop.bProp(training_input_sent_data,
-					 data_log_likelihood,
 					 myParam.gradient_check,
 					 myParam.norm_clipping); //, 
 					 //init_c,

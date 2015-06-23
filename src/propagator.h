@@ -283,7 +283,7 @@ namespace nplm
 	 					  // Now doing sparse backprop for the output layer
 	 			          output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 	 			              minibatch_weights.leftCols(current_minibatch_size), 
-	 			  			  losses[i].d_Err_t_d_h_t);	
+	 			  			  losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));	
 						  
 	 					  //Updating the gradient for the output layer
 	 				      output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
@@ -306,7 +306,6 @@ namespace nplm
 	    // Dense version (for standard log-likelihood)
 	    template <typename DerivedIn> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bProp(const MatrixBase<DerivedIn> &data,
-			 double &log_likelihood,
 			 bool gradient_check,
 			 bool norm_clipping)//,
 			 //const MatrixBase<DerivedC> &init_c,
