@@ -497,7 +497,7 @@ int main(int argc, char** argv)
       nn.initialize(rng,
           myParam.init_normal,
           myParam.init_range,
-		  0.,//-log(myParam.output_vocab_size),
+		  -log(myParam.output_vocab_size),
           myParam.init_forget,
           myParam.parameter_update,
           myParam.adagrad_epsilon);
@@ -600,6 +600,7 @@ int main(int argc, char** argv)
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
 
+	/*
 	if (myParam.model_prefix != "")
 	{
 	    cerr << "Writing model" << endl;
@@ -609,6 +610,7 @@ int main(int argc, char** argv)
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
 	}
 	exit(0);	
+	*/
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
             if (batch > 0 && batch % 100 == 0)
