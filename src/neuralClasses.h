@@ -801,7 +801,7 @@ template <typename DerivedIn, typename DerivedGOut>
   
   void resetGradient(){
 	  W_gradient.setZero();
-	  //b_gradient.setZero();
+	  b_gradient.setZero();
   }
   
   void changeRandomParam(double offset, 
