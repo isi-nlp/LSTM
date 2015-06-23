@@ -210,7 +210,8 @@ namespace nplm
 	 					//Now computing the derivative of the output layer
 	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
 	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-	 	   						       losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));	
+	 	   						       //losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size),
+									   output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
 	 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
 	 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
 	 					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
@@ -283,7 +284,8 @@ namespace nplm
 	 					  // Now doing sparse backprop for the output layer
 	 			          output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 	 			              minibatch_weights.leftCols(current_minibatch_size), 
-	 			  			  losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));	
+	 			  			  //losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size),
+							  output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
 						  
 	 					  //Updating the gradient for the output layer
 	 				      output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
@@ -334,7 +336,8 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //init_h,
 				   			   //init_c,
-				   			   losses[i].d_Err_t_d_h_t,
+				   			   //losses[i].d_Err_t_d_h_t,
+							   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
@@ -362,7 +365,8 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //(lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   losses[i].d_Err_t_d_h_t,
+				   			   //losses[i].d_Err_t_d_h_t,
+							   output_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero,
 							   gradient_check,
@@ -380,7 +384,8 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //(lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   losses[i].d_Err_t_d_h_t,
+				   			   //losses[i].d_Err_t_d_h_t,
+							   output_layer_node.bProp_matrix,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
