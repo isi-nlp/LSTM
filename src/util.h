@@ -120,7 +120,8 @@ void initMatrix(boost::random::mt19937 &engine,
         {
             for (int j = 0; j< p.cols(); j++)
             {
-                p(i,j) = unif_real(engine);    
+                p(i,j) = unif_real(engine);  
+				//p(i,j) = 1.; 
             }
         }
 
@@ -208,7 +209,8 @@ void initBias(boost::random::mt19937 &engine,
         boost::random::uniform_real_distribution<> unif_real(-range, range); 
         for (int i = 0; i < p.size(); i++)
         {
-            p(i) = unif_real(engine);    
+            p(i) = unif_real(engine);
+			//p(i) = 1;  
         }
 
     }
@@ -289,7 +291,7 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, const std::string &fil
     std::cerr << "Writing parameters to " << filename << std::endl;
 
     std::ofstream OUT;
-    OUT.precision(16);
+    //OUT.precision(16);
     OUT.open(filename.c_str());
     if (! OUT)
     {
@@ -303,6 +305,7 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, const std::string &fil
 template <typename Derived>
 void writeMatrix(const Eigen::MatrixBase<Derived> &param, std::ofstream &OUT)
 {
+	
     for (int row = 0;row < param.rows();row++)
     {
         int col;

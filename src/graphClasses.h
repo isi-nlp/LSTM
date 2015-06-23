@@ -66,6 +66,22 @@ class Node {
 
 };
 
+class Output_loss_node {
+	int minibatch_size;
+public:
+	Matrix<double,Dynamic,Dynamic> d_Err_t_d_h_t;
+	Output_loss_node() :minibatch_size(0),d_Err_t_d_h_t(Matrix<double,Dynamic,Dynamic>()) {}
+	
+	void resize(int num_hidden,int minibatch_size) {
+		//d_Err_t_d_h_t.resize(num_hidden, minibatch_size);
+		//Need to make this smarter
+		d_Err_t_d_h_t.setZero(num_hidden, minibatch_size);
+	}
+	//void resize(int num_hidden,int minibatch_size){
+	//	d_Err_t_d_h_t.resize(num_hidden, minibatch_size);
+	//}
+};
+
 class LSTM_node {
 	int minibatch_size;
 public:

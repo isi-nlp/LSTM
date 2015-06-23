@@ -22,7 +22,8 @@ namespace nplm
 		Matrix<double,Dynamic,Dynamic> probs;	
 		int num_hidden;
 		double fixed_partition_function; 
-		vector<Matrix<double,Dynamic,Dynamic> > losses;
+		//vector<Matrix<double,Dynamic,Dynamic> > losses;
+		vector<Output_loss_node> losses;
 
 	public:
 	    propagator() : minibatch_size(0), 
@@ -30,7 +31,7 @@ namespace nplm
 					lstm_nodes(100,LSTM_node()),
 					num_hidden(0), 
 					fixed_partition_function(0), 
-					losses(vector<Matrix<double,Dynamic,Dynamic> >(100,Matrix<double,Dynamic,Dynamic>())){ }
+					losses(vector<Output_loss_node>(100,Output_loss_node())){ }
 
 	    propagator (model &lstm, 
 					int minibatch_size)
@@ -38,7 +39,8 @@ namespace nplm
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&lstm.output_layer,minibatch_size),
 			lstm_nodes(vector<LSTM_node>(100,LSTM_node(lstm,minibatch_size))),
-			losses(vector<Matrix<double,Dynamic,Dynamic> >(100,Matrix<double,Dynamic,Dynamic>()))
+			//losses(vector<Matrix<double,Dynamic,Dynamic> >(100,Matrix<double,Dynamic,Dynamic>()))
+			losses(vector<Output_loss_node>(100,Output_loss_node()))
 			{
 				resize(minibatch_size);
 			}
@@ -50,7 +52,7 @@ namespace nplm
 		  for (int i=0; i<lstm_nodes.size(); i++){
 			  lstm_nodes[i].resize(minibatch_size);
 			  losses[i].resize(output_layer_node.param->n_inputs(),minibatch_size);
-			  losses[i].setZero(output_layer_node.param->n_inputs(),minibatch_size);
+			  //losses[i].setZero(output_layer_node.param->n_inputs(),minibatch_size);
 		  }
 		  //cerr<<"minibatch size is propagator is "<<minibatch_size<<endl;
 		  //I HAVE TO INITIALIZE THE MATRICES 
@@ -208,7 +210,7 @@ namespace nplm
 	 					//Now computing the derivative of the output layer
 	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
 	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-	 	   						       losses[i]);	
+	 	   						       losses[i].d_Err_t_d_h_t);	
 	 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
 	 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
 	 					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
@@ -281,7 +283,7 @@ namespace nplm
 	 					  // Now doing sparse backprop for the output layer
 	 			          output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 	 			              minibatch_weights.leftCols(current_minibatch_size), 
-	 			  			  losses[i]);	
+	 			  			  losses[i].d_Err_t_d_h_t);	
 						  
 	 					  //Updating the gradient for the output layer
 	 				      output_layer_node.param->updateGradient(lstm_nodes[i].h_t.leftCols(current_minibatch_size),
@@ -333,7 +335,7 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //init_h,
 				   			   //init_c,
-				   			   losses[i],
+				   			   losses[i].d_Err_t_d_h_t,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
@@ -361,7 +363,7 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //(lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   losses[i],
+				   			   losses[i].d_Err_t_d_h_t,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero,
 							   gradient_check,
@@ -379,7 +381,7 @@ namespace nplm
 				    lstm_nodes[i].bProp(data.row(i),
 							   //(lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   losses[i],
+				   			   losses[i].d_Err_t_d_h_t,
 				   			   lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,

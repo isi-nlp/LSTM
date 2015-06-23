@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <boost/lexical_cast.hpp>
 
 #include "model.h"
@@ -63,6 +64,7 @@ void model::resize(int ngram_size,
 void model::initialize(mt19937 &init_engine,
     bool init_normal,
     double init_range,
+	double init_output_bias,
     double init_forget_bias,
     string &parameter_update,
     double adagrad_epsilon)
@@ -77,7 +79,7 @@ void model::initialize(mt19937 &init_engine,
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
-        0.,
+        init_output_bias,
         parameter_update,
         adagrad_epsilon);
     first_hidden_linear.initialize(init_engine,
@@ -364,6 +366,8 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    o_t.read_biases(file);	
 	else if (line == "\\output_weights")
 	    output_layer.read_weights(file);
+	else if (line == "\\output_biases")
+	    output_layer.read_biases(file);	
 	else if (line == "\\end")
 	    break;
 	else if (line == "")
@@ -396,6 +400,7 @@ void model::write(const string &filename)
 void model::write(const string &filename, const vector<string> *input_pwords, const vector<string> *output_pwords)
 {
     ofstream file(filename.c_str());
+	file << std::setprecision(15);
     if (!file) throw runtime_error("Could not open file " + filename);
     
     file << "\\config" << endl;
@@ -483,7 +488,11 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     file << "\\output_gate_biases" << endl;
     o_t.write_biases(file);
     file << endl;
-				   
+
+    file << "\\output_biases" << endl;
+    output_layer.write_biases(file);
+    file << endl;
+					   
     file << "\\output_weights" << endl;
     output_layer.write_weights(file);
     file << endl;
