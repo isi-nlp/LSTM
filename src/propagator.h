@@ -230,6 +230,7 @@ namespace nplm
 						}
       				  */
 					  
+					  /*
 					  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
 							//No need to generate samples if the output word is -1
 							//if (minibatch_samples(0, train_id) == -1) 
@@ -238,8 +239,21 @@ namespace nplm
 			                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
 							  minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
 							  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
-						  }
+						  	}
 						}	
+					  */
+					  
+						for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++) {
+		                  //minibatch_samples(sample_id, train_id) = unigram.sample(rng);
+						  int sample = unigram.sample(rng);
+						  //minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
+
+						  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
+								minibatch_samples(sample_id, train_id) = sample;
+								minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
+							}						  
+					  	}
+						
 						//cerr<<"Minibatch samples are"<<minibatch_samples<<endl;
 						//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
 						//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
