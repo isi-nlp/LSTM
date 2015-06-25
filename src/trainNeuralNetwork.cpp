@@ -506,11 +506,11 @@ int main(int argc, char** argv)
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator prop(nn, myParam.minibatch_size);
+    propagator<LSTM_node> prop(nn, myParam.minibatch_size);
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
-    propagator prop_validation(nn, myParam.validation_minibatch_size);
+    propagator<LSTM_node> prop_validation(nn, myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}

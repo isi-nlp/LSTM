@@ -7,11 +7,12 @@
 
 namespace nplm
 {
+	template <class LSTM_node_type>
 	class propagator {
 	public:
 	    int minibatch_size;
 	    model *plstm;
-		vector<LSTM_node> lstm_nodes; //We will allow only 20 positions now. 
+		vector<LSTM_node_type> lstm_nodes; //We will allow only 20 positions now. 
 		Node<Output_word_embeddings> output_layer_node;
 		Matrix<double,Dynamic,Dynamic> d_Err_tPlusOne_to_n_d_c_t,d_Err_tPlusOne_to_n_d_h_t; //Derivatives wrt the future h_t and c_t
 		Matrix<double,Dynamic,Dynamic> scores;
