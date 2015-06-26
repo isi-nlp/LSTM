@@ -316,7 +316,7 @@ namespace nplm
 			 //const MatrixBase<DerivedH> &init_h,
 			 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
 	    {	
-			
+		
 			//cerr<<"In backprop..."<<endl;
 			int current_minibatch_size = data.cols();
 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
@@ -330,7 +330,6 @@ namespace nplm
 			//double log_likelihood = 0.;
 			
 			for (int i=sent_len-1; i>=0; i--) {
-
 				//getchar();
 				// Now calling backprop for the LSTM nodes
 				if (i==0) {
