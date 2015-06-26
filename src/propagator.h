@@ -306,6 +306,7 @@ namespace nplm
 	 			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 	 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;		  		 	
 		}
+		
 	    // Dense version (for standard log-likelihood)
 	    template <typename DerivedIn> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bProp(const MatrixBase<DerivedIn> &data,
