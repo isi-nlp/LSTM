@@ -505,5 +505,149 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     file.close();
 }
 
+void model::updateParams(double learning_rate,
+ 					int current_minibatch_size,
+			  		double momentum,
+					double L2_reg,
+					bool norm_clipping,
+					double norm_threshold){
+						// updating the rest of the parameters
+		
+						//updating params for weights out of hidden layer 
+						//cerr<<"updating params"<<endl;
+						W_h_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+				 		W_h_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+				  		W_h_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+				   		W_h_to_c.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+
+						//updating params for weights out of cell
+						W_c_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						W_c_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						W_c_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);				
+
+
+						//Error derivatives for the input word embeddings
+						W_x_to_c.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						W_x_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						W_x_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						W_x_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+
+
+						o_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						f_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);
+						i_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);	
+						tanh_c_prime_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															norm_clipping,
+															norm_threshold);							
+}
+
+void model::resetGradient(){
+	output_layer.resetGradient();
+	// updating the rest of the parameters
+	
+	//updating params for weights out of hidden layer 
+	W_h_to_o.resetGradient();
+	W_h_to_f.resetGradient();
+	W_h_to_i.resetGradient();
+	W_h_to_c.resetGradient();
+
+	//updating params for weights out of cell
+	W_c_to_f.resetGradient();
+	W_c_to_i.resetGradient();
+	W_c_to_o.resetGradient();				
+
+	
+	/*
+	//Error derivatives for the input word embeddings
+	W_x_to_c.resetGradient();
+	W_x_to_o.resetGradient();
+	W_x_to_f.resetGradient();
+	W_x_to_i.resetGradient();
+	*/
+
+	//Computing gradients of the paramters
+
+	o_t.resetGradient();
+	f_t.resetGradient();
+	i_t.resetGradient();	
+	tanh_c_prime_t.resetGradient();	
+							
+	//The gradients of the input layer are being reset in update params sinc the gradient is sparse
+	//Derivatives of the input embeddings							
+    //plstm->input_layer.resetGradient();		
+}	
 
 } // namespace nplm

@@ -534,10 +534,56 @@ public:
 	
 	void resetGradient(){
 		
-	}	  				  
+	}	
+	  				  
 	
 };
 
-
+class Standard_Input_node{
+	int minibatch_size;
+	//Each LSTM node has a bunch of nodes and temporary data structures
+    Node<Input_word_embeddings> input_layer_node,W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+	
+	Standard_Input_node(): 
+		W_x_to_i_node(),
+		W_x_to_f_node(),
+		W_x_to_c_node(),
+		W_x_to_o_node() {}	
+		
+	Standard_Input_node(model &lstm, int minibatch_size): 
+		W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
+		W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
+		W_x_to_c_node(&lstm.W_x_to_c, minibatch_size),
+		W_x_to_o_node(&lstm.W_x_to_o, minibatch_size) {}
+	
+	template <typename Derived>
+	void fProp(const MatrixBase<Derived> &data){
+		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
+		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
+		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
+		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);				
+	}	
+	
+	template<typename DerivedData, typename DerivedDIn>
+	void bProp(const MatrixBase<DerivedData> &data,
+				const MatrixBase<DerivedDIn> o_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> i_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> f_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> tanh_c_prime_t_node_bProp_matrix){
+		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
+		//cerr<<"W_x_to_o_node"<<endl;
+		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_i_node"<<endl;									
+		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_f_node"<<endl;									
+		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix,
+											data);	
+		//cerr<<"W_x_to_c_node"<<endl;									
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
+											data);					
+	}
+};
 
 } // namespace nplm

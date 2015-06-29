@@ -437,107 +437,7 @@ namespace nplm
 			exit(0);
 		}
 
-		// updating the rest of the parameters
-		
-		//updating params for weights out of hidden layer 
-		//cerr<<"updating params"<<endl;
-		plstm->W_h_to_o.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
- 		plstm->W_h_to_f.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-  		plstm->W_h_to_i.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-   		plstm->W_h_to_c.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
 
-		//updating params for weights out of cell
-		plstm->W_c_to_f.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->W_c_to_i.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->W_c_to_o.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);				
-
-
-		//Error derivatives for the input word embeddings
-		plstm->W_x_to_c.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->W_x_to_o.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->W_x_to_f.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->W_x_to_i.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-
-
-		plstm->o_t.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->f_t.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
-		plstm->i_t.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);	
-		plstm->tanh_c_prime_t.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);	
 		/*						
 		//Derivatives of the input embeddings							
 	    plstm->input_layer.updateParams(learning_rate,
@@ -547,6 +447,12 @@ namespace nplm
 											norm_clipping,
 											norm_threshold);		
 		*/
+	    plstm->updateParams(learning_rate,
+											current_minibatch_size,
+											momentum,
+											L2_reg,
+											norm_clipping,
+											norm_threshold);	
 	  }
 	  
 	  template <typename DerivedOut, typename data_type>
@@ -691,35 +597,7 @@ namespace nplm
 
 
   	void resetGradient(){
-		plstm->output_layer.resetGradient();
-		// updating the rest of the parameters
-		
-		//updating params for weights out of hidden layer 
-		plstm->W_h_to_o.resetGradient();
- 		plstm->W_h_to_f.resetGradient();
-  		plstm->W_h_to_i.resetGradient();
-   		plstm->W_h_to_c.resetGradient();
-
-		//updating params for weights out of cell
-		plstm->W_c_to_f.resetGradient();
-		plstm->W_c_to_i.resetGradient();
-		plstm->W_c_to_o.resetGradient();				
-
-		
-		/*
-		//Error derivatives for the input word embeddings
-		plstm->W_x_to_c.resetGradient();
-		plstm->W_x_to_o.resetGradient();
-		plstm->W_x_to_f.resetGradient();
-		plstm->W_x_to_i.resetGradient();
-		*/
-
-		//Computing gradients of the paramters
-
-		plstm->o_t.resetGradient();
-		plstm->f_t.resetGradient();
-		plstm->i_t.resetGradient();	
-		plstm->tanh_c_prime_t.resetGradient();	
+		plstm->resetGradient();	
 								
 		//The gradients of the input layer are being reset in update params sinc the gradient is sparse
 		//Derivatives of the input embeddings							

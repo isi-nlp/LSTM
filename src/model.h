@@ -139,6 +139,13 @@ public:
     void write(const std::string &filename);
     void write(const std::string &filename, const std::vector<std::string> &words);
     void write(const std::string &filename, const std::vector<std::string> &input_words, const std::vector<std::string> &output_words);
+	void updateParams(double learning_rate,
+	 					int current_minibatch_size,
+				  		double momentum,
+						double L2_reg,
+						bool norm_clipping,
+						double norm_threshold);
+	void resetGradient();			
 
  private:
     void readConfig(std::ifstream &config_file);
