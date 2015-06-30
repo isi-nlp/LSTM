@@ -432,7 +432,7 @@ int main(int argc, char** argv)
 	*/
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator<LSTM_node> prop(nn, myParam.minibatch_size);
+    propagator prop(nn, myParam.minibatch_size);
     //propagator prop_validation(nn, myParam.validation_minibatch_size);
     //SoftmaxNCELoss<multinomial<data_size_t> > softmax_loss(unigram);
     // normalization parameters

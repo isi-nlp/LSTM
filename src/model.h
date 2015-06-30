@@ -12,6 +12,42 @@
 namespace nplm
 {
 
+class input_model{
+public:
+		int num_hidden, input_vocab_size, input_embedding_dimension;
+	input_model():
+		num_hidden(0),
+		input_vocab_size(0),
+		input_embedding_dimension(0){}
+	input_model(int num_hidden, 
+				int input_vocab_size, 
+				int input_embedding_dimension) :
+				num_hidden(num_hidden),
+				input_vocab_size(input_vocab_size),
+				input_embedding_dimension(input_embedding_dimension){}
+				
+	virtual void resize(int input_vocab_size,
+    int input_embedding_dimension,
+    int num_hidden)	= 0;
+
+	virtual void initialize(boost::random::mt19937 &init_engine,
+        bool init_normal,
+        double init_range,
+        string &parameter_udpate,
+        double adagrad_epsilon) = 0;
+	
+	virtual void updateParams(double learning_rate,
+		 					int current_minibatch_size,
+					  		double momentum,
+							double L2_reg,
+							bool norm_clipping,
+							double norm_threshold) = 0;
+	virtual void resetGradient() = 0;	
+				
+};
+
+
+	//template <class input_model_type>
 class model {
 public:
     Input_word_embeddings input_layer, W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
@@ -32,6 +68,8 @@ public:
   	Linear_diagonal_layer W_c_to_i, W_c_to_f, W_c_to_o;
     Hidden_layer i_t,f_t,o_t,tanh_c_prime_t;
   	Activation_function tanh_c_t;
+	input_model *input;
+	//input_model_type * input_model;
     
     activation_function_type activation_function;
     int ngram_size, input_vocab_size, output_vocab_size, input_embedding_dimension, num_hidden, output_embedding_dimension;
@@ -74,7 +112,10 @@ public:
     }
 	int get_hidden() {return num_hidden;}
 	
-    model() : ngram_size(1), 
+	void set_input(input_model &input){this->input = &input;}
+	
+    model() : input(NULL),
+			ngram_size(1), 
             premultiplied(false),
             activation_function(Rectifier),
             output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
@@ -83,6 +124,7 @@ public:
 			W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
 			W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
 			W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+			//input_model(NULL)
         {
           output_layer.set_W(&output_embedding_matrix);
           input_layer.set_W(&input_embedding_matrix);
@@ -91,6 +133,7 @@ public:
 		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
 		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);		  
         }
+		
 
     void resize(int ngram_size,
         int input_vocab_size,
@@ -153,6 +196,151 @@ public:
     void write(const std::string &filename, const std::vector<std::string> *input_pwords, const std::vector<std::string> *output_pwords);
 };
 
+
+
+
+class google_input_model : public input_model {
+
+public:
+    Input_word_embeddings input_layer;
+    Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> input_embedding_matrix;
+	Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+ 
+    int num_hidden, input_vocab_size, input_embedding_dimension;
+
+    google_input_model(int num_hidden,
+		int input_vocab_size,
+        int input_embedding_dimension):input_model(num_hidden,input_vocab_size,input_embedding_dimension)  
+    {
+          input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+          input_layer.set_W(&input_embedding_matrix);
+    }
+	
+    google_input_model() : 
+			input_model(),
+            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+        {
+          input_layer.set_W(&input_embedding_matrix);  
+        }
+
+    void resize(int input_vocab_size,
+    int input_embedding_dimension,
+    int num_hidden);
+
+    void initialize(boost::random::mt19937 &init_engine,
+        bool init_normal,
+        double init_range,
+        string &parameter_udpate,
+        double adagrad_epsilon);	
+		
+	void updateParams(double learning_rate,
+		 					int current_minibatch_size,
+					  		double momentum,
+							double L2_reg,
+							bool norm_clipping,
+							double norm_threshold);
+	void resetGradient();
+};
+
+class hidden_to_hidden_input_model : public input_model {
+
+public:
+
+	Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+ 
+    int num_hidden, input_vocab_size, input_embedding_dimension;
+
+    hidden_to_hidden_input_model(int num_hidden,
+		int input_vocab_size,
+        int input_embedding_dimension):input_model(num_hidden,input_vocab_size,input_embedding_dimension)  
+    {
+
+    }
+	
+    hidden_to_hidden_input_model() : 
+			input_model()
+        {
+          //input_layer.set_W(&input_embedding_matrix);  
+        }
+
+    void resize(int input_vocab_size,
+    int input_embedding_dimension,
+    int num_hidden);
+
+    void initialize(boost::random::mt19937 &init_engine,
+        bool init_normal,
+        double init_range,
+        string &parameter_udpate,
+        double adagrad_epsilon);	
+		
+	void updateParams(double learning_rate,
+		 					int current_minibatch_size,
+					  		double momentum,
+							double L2_reg,
+							bool norm_clipping,
+							double norm_threshold);
+	void resetGradient();
+};
+
+
+class standard_input_model : public input_model{
+
+public:
+    Input_word_embeddings W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+    Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>  W_x_to_i_embedding_matrix, 
+	  W_x_to_f_embedding_matrix, 
+	  W_x_to_c_embedding_matrix, 
+	  W_x_to_o_embedding_matrix; 
+ 
+    //int num_hidden, input_vocab_size, input_embedding_dimension;
+
+    standard_input_model(int num_hidden,
+		int input_vocab_size,
+        int input_embedding_dimension) :input_model(num_hidden,input_vocab_size,input_embedding_dimension) 
+    {
+	  W_x_to_i_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_f_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_o_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_c_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
+	  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
+	  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
+	  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);
+    }
+	
+    standard_input_model() : 
+		input_model(),
+		W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+        {
+  		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
+  		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
+  		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
+  		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);	 
+        }
+
+    void resize(int input_vocab_size,
+    int input_embedding_dimension,
+    int num_hidden);
+
+    void initialize(boost::random::mt19937 &init_engine,
+        bool init_normal,
+        double init_range,
+        string &parameter_udpate,
+        double adagrad_epsilon);
+			
+		void updateParams(double learning_rate,
+			 					int current_minibatch_size,
+						  		double momentum,
+								double L2_reg,
+								bool norm_clipping,
+								double norm_threshold);
+	   void resetGradient(){}
+};
+
 } //namespace nplm
 
+//#include "model.ipp"
 #endif

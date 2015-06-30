@@ -59,7 +59,7 @@ class Linear_layer
         Matrix<double,Dynamic,1> b_running_parameter_update;
         Matrix<double,Dynamic,1> b_gradient;
 
-    friend class model;
+		friend class model;
 
     public:
 	Linear_layer() { }
@@ -409,7 +409,7 @@ class Linear_diagonal_layer
         Matrix<double,Dynamic,1> b_running_parameter_update;
         Matrix<double,Dynamic,1> b_gradient;
 
-    friend class model;
+		friend class model;
 
     public:
 	Linear_diagonal_layer() { }
@@ -1183,16 +1183,19 @@ class Input_word_embeddings
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_gradient;
 		int_map update_map; //stores all the parameters that have been updated
 
-	friend class model;
+		//template <class T> friend class model;
+		friend class model;
 
     public:
         Input_word_embeddings() : context_size(0), vocab_size(0) { }
         Input_word_embeddings(int rows, int cols, int context) { resize(rows, cols, context); }
  
+      Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>* get_W() {
+        return(W);
+      }
       void set_W(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *input_W) {
         W = input_W;
       }
-
       void resize(int rows, int cols, int context)
       {
         context_size = context;

@@ -20,14 +20,11 @@ void model::resize(int ngram_size,
     int num_hidden,
     int output_embedding_dimension)
 {
-	/*
     //input_layer.resize(input_vocab_size, input_embedding_dimension, 1); // the input is always dimension 1 now.
 	W_x_to_c.resize(input_vocab_size, input_embedding_dimension, 1);
 	W_x_to_o.resize(input_vocab_size, input_embedding_dimension, 1);
 	W_x_to_f.resize(input_vocab_size, input_embedding_dimension, 1);
 	W_x_to_i.resize(input_vocab_size, input_embedding_dimension, 1);
-	*/
-	
     //first_hidden_linear.resize(num_hidden, input_embedding_dimension*(ngram_size-1));
     //first_hidden_activation.resize(num_hidden);
     //second_hidden_linear.resize(output_embedding_dimension, num_hidden);
@@ -72,7 +69,6 @@ void model::initialize(mt19937 &init_engine,
     string &parameter_update,
     double adagrad_epsilon)
 {
-	/*
 	//cerr<<"Input word embeddings init"<<endl;
     input_layer.initialize(init_engine,
         init_normal,
@@ -80,7 +76,6 @@ void model::initialize(mt19937 &init_engine,
         parameter_update,
         adagrad_epsilon);
 	//cerr<<"output word embeddings init"<<endl;
-	*/
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
@@ -126,7 +121,6 @@ void model::initialize(mt19937 &init_engine,
         parameter_update,
         adagrad_epsilon);
 
-	/*
 	//cerr<<"W_x_to_c init"<<endl;
 	W_x_to_c.initialize(init_engine,
         init_normal,
@@ -154,7 +148,7 @@ void model::initialize(mt19937 &init_engine,
         init_range,
         parameter_update,
         adagrad_epsilon);		
-	*/
+
 	//cerr<<"W_c_to_i init"<<endl;
 	W_c_to_i.initialize(init_engine,
         init_normal,
@@ -566,7 +560,7 @@ void model::updateParams(double learning_rate,
 															norm_clipping,
 															norm_threshold);				
 
-						/*											
+
 						//Error derivatives for the input word embeddings
 						W_x_to_c.updateParams(learning_rate,
 															current_minibatch_size,
@@ -593,8 +587,7 @@ void model::updateParams(double learning_rate,
 															norm_clipping,
 															norm_threshold);
 
-						*/
-																										
+
 						o_t.updateParams(learning_rate,
 															current_minibatch_size,
 															momentum,
@@ -618,15 +611,7 @@ void model::updateParams(double learning_rate,
 															momentum,
 															L2_reg,
 															norm_clipping,
-															norm_threshold);	
-															
-						//Updaging the parameters of the input model
-						input->updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);				
+															norm_threshold);							
 }
 
 void model::resetGradient(){
@@ -663,7 +648,6 @@ void model::resetGradient(){
 	//The gradients of the input layer are being reset in update params sinc the gradient is sparse
 	//Derivatives of the input embeddings							
     //plstm->input_layer.resetGradient();		
-	input->resetGradient();
 }	
 
 void google_input_model::resize(int input_vocab_size,
@@ -688,6 +672,8 @@ void google_input_model::resize(int input_vocab_size,
 void google_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
     double init_range,
+	double init_output_bias,
+    double init_forget_bias,
     string &parameter_update,
     double adagrad_epsilon)
 {
@@ -779,105 +765,6 @@ void google_input_model::resetGradient(){
 
 }	
 
-void hidden_to_hidden_input_model::resize(int input_vocab_size,
-    int input_embedding_dimension,
-    int num_hidden)
-{
-    this->input_vocab_size = input_vocab_size;
-    this->input_embedding_dimension = input_embedding_dimension;
-    this->num_hidden = num_hidden;
-	
-
-	W_x_to_c.resize(num_hidden,num_hidden);
-	W_x_to_o.resize(num_hidden,num_hidden);
-	W_x_to_f.resize(num_hidden,num_hidden);
-	W_x_to_i.resize(num_hidden,num_hidden);
-	
-
-}
-  
-void hidden_to_hidden_input_model::initialize(mt19937 &init_engine,
-    bool init_normal,
-    double init_range,
-    string &parameter_update,
-    double adagrad_epsilon)
-{
-
-		W_x_to_c.initialize(init_engine,
-	        init_normal,
-	        init_range,
-	        parameter_update,
-	        adagrad_epsilon);
-	
-		//cerr<<"W_x_to_i init"<<endl;
-		W_x_to_i.initialize(init_engine,
-	        init_normal,
-	        init_range,
-	        parameter_update,
-	        adagrad_epsilon);	
-		
-		//cerr<<"W_x_to_o init"<<endl;
-		W_x_to_o.initialize(init_engine,
-	        init_normal,
-	        init_range,
-	        parameter_update,
-	        adagrad_epsilon);
-		
-		//cerr<<"W_x_to_f init"<<endl;	
-		W_x_to_f.initialize(init_engine,
-	        init_normal,
-	        init_range,
-	        parameter_update,
-	        adagrad_epsilon);			
-}
-
-void hidden_to_hidden_input_model::updateParams(double learning_rate,
- 					int current_minibatch_size,
-			  		double momentum,
-					double L2_reg,
-					bool norm_clipping,
-					double norm_threshold){
-						
-
-						//Error derivatives for the linear layers from the input word embeddings
-						W_x_to_c.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_o.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_f.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_i.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-
-						
-}
-
-void hidden_to_hidden_input_model::resetGradient(){
-
-	//Error derivatives for the input word embeddings
-	W_x_to_c.resetGradient();
-	W_x_to_o.resetGradient();
-	W_x_to_f.resetGradient();
-	W_x_to_i.resetGradient();
-
-}	
-
 void standard_input_model::resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden)
@@ -898,6 +785,8 @@ void standard_input_model::resize(int input_vocab_size,
 void standard_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
     double init_range,
+	double init_output_bias,
+    double init_forget_bias,
     string &parameter_update,
     double adagrad_epsilon)
 {

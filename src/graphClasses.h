@@ -16,6 +16,34 @@ namespace nplm
 	  }
 	};
 
+typedef Matrix<int,Dynamic,Dynamic> IndexMatrix;
+typedef Matrix<double,Dynamic,Dynamic> DoubleMatrix;
+
+/*
+//Virtual class that specifies the skeleton for the different input nodes
+class Input_node{
+	Input_node();
+
+	//template <typename Derived>
+	virtual void fProp(const IndexMatrix &data) { throw std::logic_error("attempted to use IndexMatrix"); }
+	virtual void fProp(const DoubleMatrix &data) { throw std::logic_error("attempted to use DoubleMatrix"); }
+
+	//template<typename DerivedData, typename DerivedDIn>
+	virtual void bProp(const IndexMatrix &data,
+				const DoubleMatrix &o_t_node_bProp_matrix,
+				const DoubleMatrix &i_t_node_bProp_matrix,
+				const DoubleMatrix &f_t_node_bProp_matrix,
+				const DoubleMatrix &tanh_c_prime_t_node_bProp_matrix) {throw std::logic_error("attempted to use IndexMatrix");}
+			
+	virtual void bProp(const DoubleMatrix &data,
+				const DoubleMatrix &o_t_node_bProp_matrix,
+				const DoubleMatrix &i_t_node_bProp_matrix,
+				const DoubleMatrix &f_t_node_bProp_matrix,
+				const DoubleMatrix &tanh_c_prime_t_node_bProp_matrix) {throw std::logic_error("attempted to use IndexMatrix");}
+};
+
+*/
+
 
 template <class X>
 class Node {
@@ -83,6 +111,7 @@ public:
 	//}
 };
 
+template <class input_node_type>
 class LSTM_node {
 	int minibatch_size;
 public:
@@ -112,7 +141,8 @@ public:
 														
 	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic>	d_Err_t_to_n_d_h_tMinusOne,
 														d_Err_t_to_n_d_c_tMinusOne;
-
+										
+	input_node_type *input_node;
 	
 	LSTM_node(): 
 		W_x_to_i_node(),
@@ -131,7 +161,8 @@ public:
 		o_t_node(),
 		tanh_c_prime_t_node(),
 		tanh_c_t_node(),
-		input_layer_node() {}
+		input_layer_node(),
+		input_node(NULL) {}
 
 	LSTM_node(model &lstm, int minibatch_size): 
 		W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
@@ -150,7 +181,8 @@ public:
 		o_t_node(&lstm.o_t,minibatch_size),
 		tanh_c_prime_t_node(&lstm.tanh_c_prime_t,minibatch_size),
 		tanh_c_t_node(&lstm.tanh_c_t,minibatch_size),
-		input_layer_node(&lstm.input_layer,minibatch_size)
+		input_layer_node(&lstm.input_layer,minibatch_size),
+		input_node(NULL)
 		 {
 			this->minibatch_size = minibatch_size;
 		 }
@@ -196,6 +228,8 @@ public:
 		
 	} 
 	
+	void set_input_node(input_node_type &input_node){this->input_node = &input_node;}
+	
 	template<typename Derived> //, typename DerivedCIn, typename DerivedHIn>
     void fProp(const MatrixBase<Derived> &data) { //,	
 		//const MatrixBase<DerivedCIn> &c_t_minus_one,
@@ -211,11 +245,13 @@ public:
 		//getchar();
         //start_timer(0);
 		//cerr<<"data is "<<data<<endl;
+		input_node->fProp(data);
     	//input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
 		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
 		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
 		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
 		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);
+		
 		//current_minibatch_size = data.cols();
     	//stop_timer(0);
     	//std::cerr<<"input layer fprop matrix is "<<input_layer_node.fProp_matrix<<endl;
@@ -229,7 +265,8 @@ public:
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
 		//std::cerr<<"c to i fprop"<<W_c_to_i_node.fProp_matrix<<std::endl;
-		i_t_input_matrix.noalias() = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
+		//i_t_input_matrix.noalias() = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
+		i_t_input_matrix.noalias() = input_node->W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
 		//cerr<<"i t input matrix"<<i_t_input_matrix<<endl;
 		i_t_node.param->fProp(i_t_input_matrix,
 							i_t_node.fProp_matrix);
@@ -242,7 +279,7 @@ public:
 		//std::cerr<<"W_h_to_f_node fprop is "<<W_h_to_f_node.fProp_matrix<<std::endl;
 		W_c_to_f_node.param->fProp(c_t_minus_one,W_c_to_f_node.fProp_matrix);
 		//std::cerr<<"W_c_to_f_node fprop is "<<W_c_to_f_node.fProp_matrix<<std::endl;
-		f_t_input_matrix.noalias() = W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix;
+		f_t_input_matrix.noalias() = input_node->W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix + W_c_to_f_node.fProp_matrix;
 		//std::cerr<<" f t node input matrix is "<<f_t_input_matrix<<std::endl;
 		f_t_node.param->fProp(f_t_input_matrix,
 							f_t_node.fProp_matrix);
@@ -250,7 +287,7 @@ public:
 		//computing c_prime_t
 		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
-		tanh_c_prime_t_input_matrix.noalias() = W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
+		tanh_c_prime_t_input_matrix.noalias() = input_node->W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
 										tanh_c_prime_t_node.fProp_matrix);
 		
@@ -266,7 +303,7 @@ public:
 		//W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_c_to_o_node.param->fProp(c_t,W_c_to_o_node.fProp_matrix);
-		o_t_input_matrix.noalias() = W_x_to_o_node.fProp_matrix +  
+		o_t_input_matrix.noalias() = input_node->W_x_to_o_node.fProp_matrix +  
 						   W_h_to_o_node.fProp_matrix + 
 						   W_c_to_o_node.fProp_matrix;
 		//std::cerr<<"o t input matrix is "<<o_t_input_matrix<<std::endl;
@@ -487,7 +524,12 @@ public:
 		
 		//updating gradient of input word embeddings input embeddings
 		//input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
-		//										data);											
+		//										data);		
+		input_node->bProp(data,
+				o_t_node.bProp_matrix,
+				i_t_node.bProp_matrix,
+				f_t_node.bProp_matrix,
+				tanh_c_prime_t_node.bProp_matrix);							
 	
 	}
 	//This takes the sequence continuation indices, the previous hidden and cell states and creates new ones for this LSTM block
@@ -539,37 +581,55 @@ public:
 	
 };
 
-class Standard_Input_node{
+
+
+class Standard_input_node{
 	int minibatch_size;
+public:
 	//Each LSTM node has a bunch of nodes and temporary data structures
-    Node<Input_word_embeddings> input_layer_node,W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+    Node<Input_word_embeddings> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
 	
-	Standard_Input_node(): 
+	Standard_input_node():
+		minibatch_size(0),
 		W_x_to_i_node(),
 		W_x_to_f_node(),
 		W_x_to_c_node(),
 		W_x_to_o_node() {}	
 		
-	Standard_Input_node(model &lstm, int minibatch_size): 
-		W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
-		W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
-		W_x_to_c_node(&lstm.W_x_to_c, minibatch_size),
-		W_x_to_o_node(&lstm.W_x_to_o, minibatch_size) {}
-	
+	Standard_input_node(standard_input_model &input, int minibatch_size): 
+		W_x_to_i_node(&input.W_x_to_i, minibatch_size),
+		W_x_to_f_node(&input.W_x_to_f, minibatch_size),
+		W_x_to_c_node(&input.W_x_to_c, minibatch_size),
+		W_x_to_o_node(&input.W_x_to_o, minibatch_size),
+		minibatch_size(minibatch_size) {
+			//cerr<<"The input embeddings are"<<*(W_x_to_i_node.param->get_W())<<endl;
+		}
+
+	//Resizing all the parameters
+	void resize(int minibatch_size){
+		//cerr<<"Resizing the input node"<<endl;
+		this->minibatch_size = minibatch_size;
+		W_x_to_i_node.resize(minibatch_size);
+		W_x_to_f_node.resize(minibatch_size);
+		W_x_to_c_node.resize(minibatch_size);
+		W_x_to_o_node.resize(minibatch_size);
+	}
+				
 	template <typename Derived>
 	void fProp(const MatrixBase<Derived> &data){
+		//cerr<<"Data is "<<data<<endl;
 		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
 		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
 		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
-		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);				
+		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);			
 	}	
 	
 	template<typename DerivedData, typename DerivedDIn>
 	void bProp(const MatrixBase<DerivedData> &data,
-				const MatrixBase<DerivedDIn> o_t_node_bProp_matrix,
-				const MatrixBase<DerivedDIn> i_t_node_bProp_matrix,
-				const MatrixBase<DerivedDIn> f_t_node_bProp_matrix,
-				const MatrixBase<DerivedDIn> tanh_c_prime_t_node_bProp_matrix){
+				const MatrixBase<DerivedDIn> &o_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &i_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &f_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &tanh_c_prime_t_node_bProp_matrix){
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
 		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
@@ -582,7 +642,162 @@ class Standard_Input_node{
 											data);	
 		//cerr<<"W_x_to_c_node"<<endl;									
 		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
-											data);					
+											data);			
+																	
+	}
+};
+
+class Google_input_node{
+	int minibatch_size;
+public:
+	//Each LSTM node has a bunch of nodes and temporary data structures
+    Node<Input_word_embeddings> input_layer_node;
+    Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
+		
+	Google_input_node():
+		minibatch_size(0),
+		input_layer_node(),
+		W_x_to_i_node(),
+		W_x_to_f_node(),
+		W_x_to_c_node(),
+		W_x_to_o_node() {}	
+		
+	Google_input_node(google_input_model &input, int minibatch_size): 
+		input_layer_node(&input.input_layer, minibatch_size),
+		W_x_to_i_node(&input.W_x_to_i, minibatch_size),
+		W_x_to_f_node(&input.W_x_to_f, minibatch_size),
+		W_x_to_c_node(&input.W_x_to_c, minibatch_size),
+		W_x_to_o_node(&input.W_x_to_o, minibatch_size),
+		minibatch_size(minibatch_size) {
+			//cerr<<"The input embeddings are"<<*(W_x_to_i_node.param->get_W())<<endl;
+		}
+
+	//Resizing all the parameters
+	void resize(int minibatch_size){
+		//cerr<<"Resizing the input node"<<endl;
+		this->minibatch_size = minibatch_size;
+		input_layer_node.resize(minibatch_size);
+		W_x_to_i_node.resize(minibatch_size);
+		W_x_to_f_node.resize(minibatch_size);
+		W_x_to_c_node.resize(minibatch_size);
+		W_x_to_o_node.resize(minibatch_size);
+		d_Err_t_to_n_d_x_t.resize(input_layer_node.param->n_outputs(),minibatch_size);
+	}
+				
+	template <typename Derived>
+	void fProp(const MatrixBase<Derived> &data){
+		//cerr<<"Data is "<<data<<endl;
+		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
+		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
+		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
+		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);				
+			
+	}	
+	
+	template<typename DerivedData, typename DerivedDIn>
+	void bProp(const MatrixBase<DerivedData> &data,
+				const MatrixBase<DerivedDIn> &o_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &i_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &f_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &tanh_c_prime_t_node_bProp_matrix){
+		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
+		//cerr<<"W_x_to_o_node"<<endl;
+		int current_minibatch_size = o_t_node_bProp_matrix.cols();
+		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_i_node"<<endl;									
+		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_f_node"<<endl;									
+		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix,
+											data);	
+		//cerr<<"W_x_to_c_node"<<endl;									
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
+											data);		
+											
+		d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size) = W_x_to_c_node.bProp_matrix + 
+							W_x_to_o_node.bProp_matrix +
+							W_x_to_f_node.bProp_matrix +
+							W_x_to_i_node.bProp_matrix;	
+			
+		input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
+									data);																								
+	}
+};
+
+class Hidden_to_hidden_input_node{
+	int minibatch_size;
+public:
+	//Each LSTM node has a bunch of nodes and temporary data structures
+    Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
+		
+	Hidden_to_hidden_input_node():
+		minibatch_size(0),
+		W_x_to_i_node(),
+		W_x_to_f_node(),
+		W_x_to_c_node(),
+		W_x_to_o_node() {}	
+		
+	Hidden_to_hidden_input_node(hidden_to_hidden_input_model &input, int minibatch_size): 
+		W_x_to_i_node(&input.W_x_to_i, minibatch_size),
+		W_x_to_f_node(&input.W_x_to_f, minibatch_size),
+		W_x_to_c_node(&input.W_x_to_c, minibatch_size),
+		W_x_to_o_node(&input.W_x_to_o, minibatch_size),
+		minibatch_size(minibatch_size) {
+			//cerr<<"The input embeddings are"<<*(W_x_to_i_node.param->get_W())<<endl;
+		}
+
+	//Resizing all the parameters
+	void resize(int minibatch_size){
+		//cerr<<"Resizing the input node"<<endl;
+		this->minibatch_size = minibatch_size;
+		W_x_to_i_node.resize(minibatch_size);
+		W_x_to_f_node.resize(minibatch_size);
+		W_x_to_c_node.resize(minibatch_size);
+		W_x_to_o_node.resize(minibatch_size);
+		d_Err_t_to_n_d_x_t.resize(W_x_to_o_node.param->n_inputs(),minibatch_size);
+	}
+				
+	template <typename Derived>
+	void fProp(const MatrixBase<Derived> &data){
+		//cerr<<"Data is "<<data<<endl;
+		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
+		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
+		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
+		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);				
+			
+	}	
+	
+	template<typename DerivedData, typename DerivedDIn>
+	void bProp(const MatrixBase<DerivedData> &data,
+				const MatrixBase<DerivedDIn> &o_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &i_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &f_t_node_bProp_matrix,
+				const MatrixBase<DerivedDIn> &tanh_c_prime_t_node_bProp_matrix){
+		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
+		//cerr<<"W_x_to_o_node"<<endl;
+		int current_minibatch_size = o_t_node_bProp_matrix.cols();
+		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_i_node"<<endl;									
+		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix,
+											data);
+		//cerr<<"W_x_to_f_node"<<endl;									
+		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix,
+											data);	
+		//cerr<<"W_x_to_c_node"<<endl;									
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
+											data);		
+											
+		d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size) = W_x_to_c_node.bProp_matrix + 
+							W_x_to_o_node.bProp_matrix +
+							W_x_to_f_node.bProp_matrix +
+							W_x_to_i_node.bProp_matrix;	
+			
+																						
 	}
 };
 

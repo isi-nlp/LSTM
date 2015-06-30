@@ -495,7 +495,22 @@ int main(int argc, char** argv)
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
     // LOAD THE NEURAL NETWORK MODEL
 
+	//Creating the input node
+	standard_input_model input(myParam.num_hidden, 
+						myParam.input_vocab_size,
+						myParam.input_embedding_dimension);
+	input.resize(myParam.input_vocab_size,
+	    myParam.input_embedding_dimension,
+	    myParam.num_hidden);
+	
+	input.initialize(rng,
+        myParam.init_normal,
+        myParam.init_range,
+        myParam.parameter_update,
+        myParam.adagrad_epsilon);
 		
+	nn.set_input(input);
+	
     if (myParam.model_file != ""){
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
@@ -506,11 +521,11 @@ int main(int argc, char** argv)
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator<LSTM_node> prop(nn, myParam.minibatch_size);
+    propagator<Standard_input_node> prop(nn, myParam.minibatch_size);
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
-    propagator<LSTM_node> prop_validation(nn, myParam.validation_minibatch_size);
+    propagator<Standard_input_node> prop_validation(nn, myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}
