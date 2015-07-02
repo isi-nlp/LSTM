@@ -492,9 +492,6 @@ int main(int argc, char** argv)
         myParam.init_forget,
         myParam.parameter_update,
         myParam.adagrad_epsilon);	
-    // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
-    // LOAD THE NEURAL NETWORK MODEL
-
 	//Creating the input node
 	standard_input_model input(myParam.num_hidden, 
 						myParam.input_vocab_size,
@@ -502,14 +499,49 @@ int main(int argc, char** argv)
 	input.resize(myParam.input_vocab_size,
 	    myParam.input_embedding_dimension,
 	    myParam.num_hidden);
-	
+
 	input.initialize(rng,
         myParam.init_normal,
         myParam.init_range,
         myParam.parameter_update,
         myParam.adagrad_epsilon);
-		
+	
 	nn.set_input(input);
+				
+	model nn_decoder;
+	    nn_decoder.resize(myParam.ngram_size,
+	        myParam.input_vocab_size,
+	        myParam.output_vocab_size,
+	        myParam.input_embedding_dimension,
+	        myParam.num_hidden,
+	        myParam.output_embedding_dimension);
+
+	    nn_decoder.initialize(rng,
+	        myParam.init_normal,
+	        myParam.init_range,
+			-log(myParam.output_vocab_size),
+	        myParam.init_forget,
+	        myParam.parameter_update,
+	        myParam.adagrad_epsilon);		
+		//Creating the input node
+		standard_input_model decoder_input(myParam.num_hidden, 
+							myParam.input_vocab_size,
+							myParam.input_embedding_dimension);
+		decoder_input.resize(myParam.input_vocab_size,
+		    myParam.input_embedding_dimension,
+		    myParam.num_hidden);
+
+		decoder_input.initialize(rng,
+	        myParam.init_normal,
+	        myParam.init_range,
+	        myParam.parameter_update,
+	        myParam.adagrad_epsilon);
+
+		nn_decoder.set_input(decoder_input);	
+    // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
+    // LOAD THE NEURAL NETWORK MODEL
+
+
 	
     if (myParam.model_file != ""){
       nn.read(myParam.model_file);
@@ -521,11 +553,11 @@ int main(int argc, char** argv)
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator<Standard_input_node> prop(nn, myParam.minibatch_size);
+    propagator<Standard_input_node, standard_input_model> prop(nn, nn_decoder, myParam.minibatch_size);
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
-    propagator<Standard_input_node> prop_validation(nn, myParam.validation_minibatch_size);
+    propagator<Standard_input_node, standard_input_model> prop_validation(nn, nn_decoder, myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}
@@ -719,6 +751,7 @@ int main(int argc, char** argv)
 			init_c = current_c;
 			init_h = current_h; 			
 			prop.fProp(training_input_sent_data,
+					training_output_sent_data,
 						0,
 						max_sent_len-1,
 						current_c,
@@ -749,6 +782,7 @@ int main(int argc, char** argv)
 					 softmax_nce_loss); //, 
 				//Calling backprop
 			    prop.bProp(training_input_sent_data,
+					training_output_sent_data,
 					 myParam.gradient_check,
 					 myParam.norm_clipping); //, 
 					 //init_c,
@@ -906,6 +940,7 @@ int main(int argc, char** argv)
 				//Calling fProp. Note that it should not matter for fProp if we're doing log 
 				//or NCE loss															
 				prop_validation.fProp(validation_input_sent_data,
+										validation_output_sent_data,
 										0,
 										max_sent_len-1, 
 										current_validation_c, 
