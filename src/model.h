@@ -43,7 +43,16 @@ public:
 							bool norm_clipping,
 							double norm_threshold) = 0;
 	virtual void resetGradient() = 0;	
-				
+	virtual void write(std::ofstream &file) {
+		cerr<<"write not implemented "<<endl;
+	};			
+	virtual void read(const string &filename) {
+		cerr<<"Read not implemented "<<endl;
+	}
+	virtual void readConfig(ifstream config_file) {
+		cerr<<"Write config not implemented"<<endl;
+	}
+
 };
 
 
@@ -240,6 +249,10 @@ public:
 							bool norm_clipping,
 							double norm_threshold);
 	void resetGradient();
+	
+	void write(ofstream &file);
+	void read(const string &filename);
+	void readConfig(ifstream &config_file);
 };
 
 class hidden_to_hidden_input_model : public input_model {

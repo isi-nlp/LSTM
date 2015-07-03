@@ -340,6 +340,7 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    output_words.clear();
 	    readWordsFile(file, output_words);
 	}
+	/*
 	else if (line == "\\W_x_to_c")
 	    W_x_to_c.read(file);	
 	else if (line == "\\W_x_to_i")
@@ -348,6 +349,7 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    W_x_to_f.read(file);
 	else if (line == "\\W_x_to_o")
 	    W_x_to_o.read(file);
+	*/
 	else if (line == "\\W_h_to_i")
 	    W_h_to_i.read_weights(file);
 	else if (line == "\\W_h_to_f")
@@ -406,6 +408,7 @@ void model::write(const string &filename)
 void model::write(const string &filename, const vector<string> *input_pwords, const vector<string> *output_pwords)
 {
     ofstream file(filename.c_str());
+
 	file << std::setprecision(15);
     if (!file) throw runtime_error("Could not open file " + filename);
     
@@ -433,7 +436,8 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
 	writeWordsFile(*output_pwords, file);
 	file << endl;
     }
-
+	
+	/*
     file << "\\W_x_to_i" << endl;
 	//cerr<<"Writing W_x_to_i"<<endl;
     W_x_to_i.write(file);
@@ -450,7 +454,10 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     file << "\\W_x_to_c" << endl;
     W_x_to_c.write(file);
     file << endl;
-	
+	*/
+	//First writing the input
+	input->write(file);
+		
     file << "\\W_h_to_i" << endl;
     W_h_to_i.write_weights(file);
     file << endl;
@@ -779,6 +786,106 @@ void google_input_model::resetGradient(){
 
 }	
 
+
+void google_input_model::write(std::ofstream &file)
+{
+	file <<"\\input_weights "<<endl;
+    input_layer.write(file);
+    file << endl;
+
+    file << "\\W_x_to_i" << endl;
+	//cerr<<"Writing W_x_to_i"<<endl;
+    W_x_to_i.write_weights(file);
+    file << endl;
+
+    file << "\\W_x_to_f" << endl;
+    W_x_to_f.write_weights(file);
+    file << endl;
+	    
+    file << "\\W_x_to_o" << endl;
+    W_x_to_o.write_weights(file);
+    file << endl;
+
+    file << "\\W_x_to_c" << endl;
+    W_x_to_c.write_weights(file);
+    file << endl;
+
+}
+
+
+void google_input_model::readConfig(ifstream &config_file)
+	{
+	    string line;
+	    vector<string> fields;
+	    int input_vocab_size, input_embedding_dimension, num_hidden;
+	    while (getline(config_file, line) && line != "")
+	    {
+	       splitBySpace(line, fields);
+
+		if (fields[0] == "input_vocab_size")
+		    input_vocab_size = lexical_cast<int>(fields[1]);
+		else if (fields[0] == "num_hidden") {
+		    num_hidden = lexical_cast<int>(fields[1]);
+			input_embedding_dimension = num_hidden;
+		}
+		else if (fields[0] == "version")
+		{
+		    int version = lexical_cast<int>(fields[1]);
+		    if (version != 1)
+		    {
+			cerr << "error: file format mismatch (expected 1, found " << version << ")" << endl;
+			exit(1);
+		    }
+		}
+		else
+		    cerr << "warning: unrecognized field in config: " << fields[0] << endl;
+	    }
+	    resize(input_vocab_size,
+		    input_embedding_dimension,
+		    num_hidden);	
+}
+
+
+void google_input_model::read(const string &filename)
+{
+    ifstream file(filename.c_str());
+    if (!file) throw runtime_error("Could not open file " + filename);
+    
+    param myParam;
+    string line;
+    
+    while (getline(file, line))
+    {	
+		//cerr<<" line is "<<line<<endl;
+	if (line == "\\config")
+	{
+	    readConfig(file);
+	}
+
+	else if (line == "\\W_x_to_c")
+	    W_x_to_c.read_weights(file);	
+	else if (line == "\\W_x_to_i")
+	    W_x_to_i.read_weights(file);
+	else if (line == "\\W_x_to_f")
+	    W_x_to_f.read_weights(file);
+	else if (line == "\\W_x_to_o")
+	    W_x_to_o.read_weights(file);
+	else if (line == "\\input_weights")
+	    input_layer.read(file);
+	else if (line == "\\end")
+	    break;
+	else if (line == "")
+	    continue;
+	else
+	{
+	    cerr << "warning: unrecognized section: " << line << endl;
+	    // skip over section
+	    while (getline(file, line) && line != "") { }
+	}
+    }
+    file.close();
+}
+
 void hidden_to_hidden_input_model::resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden)
@@ -795,6 +902,8 @@ void hidden_to_hidden_input_model::resize(int input_vocab_size,
 	
 
 }
+
+
   
 void hidden_to_hidden_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
