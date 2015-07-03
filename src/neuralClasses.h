@@ -761,6 +761,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	
     W_gradient += bProp_input * predicted_embeddings.transpose();
     b_gradient += bProp_input.rowwise().sum();
+	//cerr<<"W_gradient in output layer is "<<W_gradient<<endl
 	
     /*
     //GRADIENT CLIPPING

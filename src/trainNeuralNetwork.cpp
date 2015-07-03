@@ -493,7 +493,7 @@ int main(int argc, char** argv)
         myParam.parameter_update,
         myParam.adagrad_epsilon);	
 	//Creating the input node
-	standard_input_model input(myParam.num_hidden, 
+	google_input_model input(myParam.num_hidden, 
 						myParam.input_vocab_size,
 						myParam.input_embedding_dimension);
 	input.resize(myParam.input_vocab_size,
@@ -524,7 +524,7 @@ int main(int argc, char** argv)
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);		
 		//Creating the input node
-		standard_input_model decoder_input(myParam.num_hidden, 
+		google_input_model decoder_input(myParam.num_hidden, 
 							myParam.input_vocab_size,
 							myParam.input_embedding_dimension);
 		decoder_input.resize(myParam.input_vocab_size,
@@ -553,11 +553,11 @@ int main(int argc, char** argv)
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator<Standard_input_node, standard_input_model> prop(nn, nn_decoder, myParam.minibatch_size);
+    propagator<Google_input_node, google_input_model> prop(nn, nn_decoder, myParam.minibatch_size);
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
-    propagator<Standard_input_node, standard_input_model> prop_validation(nn, nn_decoder, myParam.validation_minibatch_size);
+    propagator<Google_input_node, google_input_model> prop_validation(nn, nn_decoder, myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}
@@ -648,6 +648,8 @@ int main(int argc, char** argv)
 	
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
+			current_c.setZero(myParam.num_hidden, minibatch_size);
+			current_h.setZero(myParam.num_hidden, minibatch_size);			
             if (batch > 0 && batch % 100 == 0)
             {
 	        cerr << batch <<"...";
@@ -883,7 +885,8 @@ int main(int argc, char** argv)
 			
             for (int validation_batch =0;validation_batch < num_validation_batches;validation_batch++)
             {
-
+				current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
+				current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
 				double minibatch_log_likelihood = 0.;
 	            data_size_t minibatch_start_index = validation_minibatch_size * validation_batch;
 				data_size_t minibatch_end_index = min(validation_data_size-1, static_cast<data_size_t> (minibatch_start_index+validation_minibatch_size-1));

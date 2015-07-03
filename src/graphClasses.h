@@ -543,13 +543,14 @@ public:
 							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
 				
 							//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
-							if (sequence_cont_indices(index) == 0) {
+							if (0) { // sequence_cont_indices(index) == 0) {
 								this->h_t_minus_one.col(index).setZero(); 			
 								this->c_t_minus_one.col(index).setZero();
 								//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
 								//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
 								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 							} else {
+								//cerr<<"copying"<<endl;
 								this->h_t_minus_one.col(index) = h_t_minus_one.col(index);
 								this->c_t_minus_one.col(index) = c_t_minus_one.col(index);
 								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
@@ -632,16 +633,17 @@ public:
 				const MatrixBase<DerivedDIn> &tanh_c_prime_t_node_bProp_matrix){
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
-		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
+		int current_minibatch_size = data.cols();
+		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix.leftCols(current_minibatch_size),
 											data);
 		//cerr<<"W_x_to_i_node"<<endl;									
-		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix,
+		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix.leftCols(current_minibatch_size),
 											data);
 		//cerr<<"W_x_to_f_node"<<endl;									
-		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix,
+		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix.leftCols(current_minibatch_size),
 											data);	
 		//cerr<<"W_x_to_c_node"<<endl;									
-		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix.leftCols(current_minibatch_size),
 											data);			
 																	
 	}
@@ -704,20 +706,30 @@ public:
 				const MatrixBase<DerivedDIn> &tanh_c_prime_t_node_bProp_matrix){
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
-		int current_minibatch_size = o_t_node_bProp_matrix.cols();
-		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix,
-											data);
+		int current_minibatch_size = data.cols();
+		W_x_to_c_node.param->bProp(tanh_c_prime_t_node_bProp_matrix,
+								W_x_to_c_node.bProp_matrix);
+		W_x_to_o_node.param->bProp(o_t_node_bProp_matrix,
+								W_x_to_o_node.bProp_matrix);
+		W_x_to_f_node.param->bProp(f_t_node_bProp_matrix,
+								W_x_to_f_node.bProp_matrix);
+		W_x_to_i_node.param->bProp(i_t_node_bProp_matrix,
+								W_x_to_i_node.bProp_matrix);
+
+				
+		W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
 		//cerr<<"W_x_to_i_node"<<endl;									
-		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix,
-											data);
+		W_x_to_i_node.param->updateGradient(i_t_node_bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
 		//cerr<<"W_x_to_f_node"<<endl;									
-		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix,
-											data);	
+		W_x_to_f_node.param->updateGradient(f_t_node_bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));	
 		//cerr<<"W_x_to_c_node"<<endl;									
-		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix,
-											data);		
+		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node_bProp_matrix.leftCols(current_minibatch_size),
+											input_layer_node.fProp_matrix.leftCols(current_minibatch_size));		
 											
-		d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size) = W_x_to_c_node.bProp_matrix + 
+		d_Err_t_to_n_d_x_t = W_x_to_c_node.bProp_matrix + 
 							W_x_to_o_node.bProp_matrix +
 							W_x_to_f_node.bProp_matrix +
 							W_x_to_i_node.bProp_matrix;	

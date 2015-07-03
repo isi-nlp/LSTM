@@ -33,6 +33,7 @@ namespace nplm
 	public:
 	    propagator() : minibatch_size(0), 
 					encoder_plstm(0), 
+					decoder_plstm(0),
 					encoder_lstm_nodes(100,LSTM_node<input_node_type>()),
 					decoder_lstm_nodes(100,LSTM_node<input_node_type>()),
 					encoder_input_nodes(100,input_node_type()),
@@ -45,7 +46,7 @@ namespace nplm
 					model &decoder_lstm,
 					int minibatch_size)
 	      : encoder_plstm(&encoder_lstm),
-			decoder_plstm(&encoder_lstm),
+			decoder_plstm(&decoder_lstm),
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&decoder_lstm.output_layer,minibatch_size),
 			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(100,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
@@ -133,6 +134,7 @@ namespace nplm
 			//Going over the input sentence to generate the hidden states
 			for (int i=0; i<=end_pos; i++){
 				//cerr<<"i is"<<i<<endl;
+				//cerr<<"input is "<<input_data.row(i)<<endl;
 				if (i==0) {
 					//cerr<<"Current c is "<<current_c<<endl;
 					encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c,sequence_cont_indices.row(i));
@@ -146,27 +148,16 @@ namespace nplm
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
-					/*					
-					//If the sentences end, indicated by -1, then should should reset the cells and states to 0. This is wrong
-					for(int index=0; index<current_minibatch_size; index++){
-						if (sequence_cont_indices(i,index) == -1){
-							encoder_lstm_nodes[i].c_t.col(index).setZero();
-							encoder_lstm_nodes[i].h_t.col(index).setZero();
-						}
-					}
-					*/										
-					/*					
-					encoder_lstm_nodes[i].fProp(data.row(i),
-										c_1,
-										encoder_lstm_nodes[i-1].h_t);	
-					*/
 				}
 				//encoder_lstm_nodes.fProp();
 			}
 			//Copying the cell and hidden states if the sequence continuation vectors say so	
+			//cerr<<"end pos is"<<end_pos<<endl;
 			current_c = encoder_lstm_nodes[end_pos].c_t;
 			current_h = encoder_lstm_nodes[end_pos].h_t;
-						
+			//cerr<<"current c is "<<current_c<<endl;
+			//cerr<<"current h is "<<current_h<<endl;
+			//cerr<<"End pos is "<<end_pos<<endl;
 			//Going over the output sentence to generate the hidden states
 			for (int i=0; i<output_sent_len-1; i++){
 				//cerr<<"i is"<<i<<endl;
@@ -175,6 +166,7 @@ namespace nplm
 					//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
 					decoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c,sequence_cont_indices.row(i));
 					decoder_lstm_nodes[i].fProp(output_data.row(i));//,	
+					//cerr<<"output data is "<<output_data.row(i)<<endl;
 										//current_c,
 										//current_h);
 				} else {
@@ -184,20 +176,6 @@ namespace nplm
 					decoder_lstm_nodes[i].fProp(output_data.row(i));//,
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
-					/*					
-					//If the sentences end, indicated by -1, then should should reset the cells and states to 0. This is wrong
-					for(int index=0; index<current_minibatch_size; index++){
-						if (sequence_cont_indices(i,index) == -1){
-							encoder_lstm_nodes[i].c_t.col(index).setZero();
-							encoder_lstm_nodes[i].h_t.col(index).setZero();
-						}
-					}
-					*/										
-					/*					
-					encoder_lstm_nodes[i].fProp(data.row(i),
-										c_1,
-										encoder_lstm_nodes[i-1].h_t);	
-					*/
 				}
 				//encoder_lstm_nodes.fProp();
 			}			
@@ -232,6 +210,7 @@ namespace nplm
 	 				if (loss_function == LogLoss) {
 	 					//First doing fProp for the output layer
 	 					//The number of columns in scores will be the current minibatch size
+						//cerr<<"ht going into loss"<<decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size)<<endl;
 	 					output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), scores);
 	 					//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
 	 					//then compute the log loss of the objective
@@ -267,7 +246,7 @@ namespace nplm
 	 					//Now computing the derivative of the output layer
 	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
 	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+										losses[i-1].d_Err_t_d_h_t.leftCols(current_minibatch_size));
 									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
 	 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
 	 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
@@ -278,81 +257,8 @@ namespace nplm
 	 					//cerr<<" i is "<<i<<endl;
 	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
 	 				} else if (loss_function == NCELoss){
-	 			  	      ///// Noise-contrastive estimation
-
-	 			  	      // Generate noise samples. Gather positive and negative samples into matrix.
-
-	 			  	      start_timer(3);
-
-	 			          minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
-	     				  /*
-	 			          for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++)
-	 					  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
-	 			                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
-	 							  cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
-	 						}
-	       				  */
-					  
-	 					  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
-	 							//No need to generate samples if the output word is -1
-	 							//if (minibatch_samples(0, train_id) == -1) 
-	 							//	continue;
-	 							for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++) {
-	 			                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
-	 							  minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
-	 							  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
-	 						  }
-	 						}	
-	 						//cerr<<"Minibatch samples are"<<minibatch_samples<<endl;
-	 						//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
-	 						//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
-	 						//nce layer will make sure that the gradient is 0. Therefore, it doesnt matter what the embeddings are. 
-	 						for (int train_id = 0; train_id < current_minibatch_size; train_id++) {
-	 							if (minibatch_samples(0, train_id) == -1)
-	 								minibatch_samples_no_negative(0, train_id) = 0;
-	 							else
-	 								minibatch_samples_no_negative(0, train_id) = minibatch_samples(0, train_id);
-	 						}
-	 			          stop_timer(3);
-	 					  scores.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT
-	 			          // Final forward propagation step (sparse)
-	 			          start_timer(4);
-	 			          output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size),
-	 			                      minibatch_samples_no_negative.leftCols(current_minibatch_size), 
-	 								  scores.leftCols(current_minibatch_size));
-	 			          stop_timer(4);
-
-	 					  //Adding a constant amount to scores for stability
-	 					  scores.array() += this->fixed_partition_function;
-	 			          double minibatch_log_likelihood;
-	 			          start_timer(5);
-	 			          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
-	 			                 minibatch_samples,
-	 			                 probs, 
-	 							 minibatch_log_likelihood);
-	 			          stop_timer(5);
-	 			          log_likelihood += minibatch_log_likelihood;
-
-	 			          ///// Backward propagation
-	 					  minibatch_weights.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT	
-	 			          start_timer(6);
-	 			          softmax_nce_loss.bProp(probs, minibatch_weights);
-	 			          stop_timer(6);
-	 					  // Now doing sparse backprop for the output layer
-	 			          output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
-	 			              minibatch_weights.leftCols(current_minibatch_size), 
-	 			  			  losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-							  //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
-						  
-	 					  //Updating the gradient for the output layer
-	 				      output_layer_node.param->updateGradient(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size),
-	 				                 minibatch_samples_no_negative.leftCols(current_minibatch_size),
-	 				                 minibatch_weights.leftCols(current_minibatch_size));	
-	 					  //cerr<<"minibatch_weights "<<minibatch_weights.leftCols(current_minibatch_size)<<endl;
-	 					  //cerr<<"probs "<<probs.leftCols(current_minibatch_size)<<endl;	
-	 					  //cerr<<" output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
-	 					  //cerr<<" output layer node cols and rows"<<output_layer_node.bProp_matrix.rows()<<" "<<output_layer_node.bProp_matrix.cols()<<endl;
-	 					  //getchar();			  			  
+						cerr<<"NOT IMPLEMENTED"<<endl;
+						exit(1);
 	 				}
 
 		   
@@ -389,9 +295,10 @@ namespace nplm
 			
 			//first getting decoder loss
 			for (int i=output_sent_len-2; i>=0; i--) {
+				//cerr<<"i in output loss is "<<i<<endl;
 				//getchar();
 				// Now calling backprop for the LSTM nodes
-				if (i==0) {
+				if (i==0 && output_sent_len-2 > 0) {
 					
 				    decoder_lstm_nodes[i].bProp(output_data.row(i),
 							   //init_h,
@@ -404,7 +311,8 @@ namespace nplm
 							   norm_clipping);	
 				} else if (i == output_sent_len-2) {	
 
-					//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
+					//cerr<<"previous ht is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+					//cerr<<"previous ct is "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
 					
 				    decoder_lstm_nodes[i].bProp(output_data.row(i),
 							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
@@ -438,6 +346,7 @@ namespace nplm
 			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 			//first getting decoder loss
+			//cerr<<"dummy zero is "<<dummy_zero<<endl;
 			for (int i=input_sent_len-1; i>=0; i--) {
 				//getchar();
 				// Now calling backprop for the LSTM nodes
@@ -464,13 +373,13 @@ namespace nplm
 							   dummy_zero,
 							   //output_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
+				   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
 							   norm_clipping);
 		
 				} else if (i > 0) {
 					
-				    encoder_lstm_nodes[i].bProp(output_data.row(i),
+				    encoder_lstm_nodes[i].bProp(input_data.row(i),
 							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 							   dummy_zero,
@@ -495,19 +404,15 @@ namespace nplm
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
 		if (loss_function == LogLoss){
-			encoder_plstm->output_layer.updateParams(learning_rate,
+			decoder_plstm->output_layer.updateParams(learning_rate,
 							current_minibatch_size,
 		  					momentum,
 		  					L2_reg,
 							norm_clipping,
 							norm_threshold);			
 		} else if (loss_function == NCELoss){
-			encoder_plstm->output_layer.updateParamsNCE(learning_rate,
-							current_minibatch_size,
-		  					momentum,
-		  					L2_reg,
-							norm_clipping,
-							norm_threshold);				
+			cerr<<"NOT IMPLEMENTED"<<endl;
+			exit(1);
 		} else {
 			cerr<<loss_function<<" is an invalid loss function type"<<endl;
 			exit(0);
@@ -528,7 +433,13 @@ namespace nplm
 											momentum,
 											L2_reg,
 											norm_clipping,
-											norm_threshold);	
+											norm_threshold);
+		decoder_plstm->updateParams(learning_rate,
+										current_minibatch_size,
+										momentum,
+										L2_reg,
+										norm_clipping,
+										norm_threshold);												
 	  }
 	  
 	  template <typename DerivedOut, typename data_type>
@@ -552,11 +463,11 @@ namespace nplm
 			int sent_len = output.rows(); 
 			//double log_likelihood = 0.;
 
-			for (int i=sent_len-1; i>=0; i--) {
+			for (int i=sent_len-1; i>=1; i--) {
 				//cerr<<"i in gradient check is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
-					output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+					output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), scores);
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
@@ -572,54 +483,8 @@ namespace nplm
 			        stop_timer(5);
 			        log_likelihood += minibatch_log_likelihood;		
 				} else if (loss_function == NCELoss) {
-	  		          minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
-	  				  /*
-	  		          for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++)
-	  				  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
-	  		                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
-	  						  cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
-	  					}
-	  					  */
-			  
-	  				  	for (int train_id = 0; train_id < current_minibatch_size; train_id++) { 
-	  						//No need to generate samples if the output word is -1
-	  						//if (minibatch_samples(0, train_id) == -1) 
-	  						//	continue;
-	  						for (int sample_id = 1; sample_id < num_noise_samples+1; sample_id++) {
-	  		                  minibatch_samples(sample_id, train_id) = unigram.sample(rng);
-	  						  minibatch_samples_no_negative(sample_id, train_id) = minibatch_samples(sample_id, train_id);
-	  						  //cerr<<"sample id "<<sample_id<<"train id"<<train_id<<" "<<minibatch_samples(sample_id, train_id)<<endl;
-	  					  }
-	  					}	
-	  					//cerr<<"Minibatch samples are"<<minibatch_samples<<endl;
-	  					//For the output layer, we make sure that there are no negative indices. We Do this by replacing -1 by 0. 
-	  					//For the -1 output labeles (which means there is no word at that position), the fprop function of the softmax
-	  					//nce layer will make sure that the gradient is 0. Therefore, it doesnt matter what the embeddings are. 
-	  					for (int train_id = 0; train_id < current_minibatch_size; train_id++) {
-	  						if (minibatch_samples(0, train_id) == -1)
-	  							minibatch_samples_no_negative(0, train_id) = 0;
-	  						else
-	  							minibatch_samples_no_negative(0, train_id) = minibatch_samples(0, train_id);
-	  					}
-	  		          stop_timer(3);
-	  				  scores.setZero(); //NEED TO MAKE SURE IF SETTING TO 0 IS CORRECT
-	  		          // Final forward propagation step (sparse)
-	  		          start_timer(4);
-	  		          output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	  		                      minibatch_samples_no_negative.leftCols(current_minibatch_size), 
-	  							  scores.leftCols(current_minibatch_size));
-	  		          stop_timer(4);
-
-	  				  //Adding a constant amount to scores for stability
-	  				  scores.array() += this->fixed_partition_function;
-	  		          double minibatch_log_likelihood;
-	  		          start_timer(5);
-	  		          softmax_nce_loss.fProp(scores.leftCols(current_minibatch_size), 
-	  		                 minibatch_samples,
-	  		                 probs, 
-	  						 minibatch_log_likelihood);
-	  		          stop_timer(5);
-	  		          log_likelihood += minibatch_log_likelihood;
+					cerr<<"NOT IMPLEMENTED"<<endl;
+					exit(1);
 				}
 			}
 			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
@@ -645,10 +510,10 @@ namespace nplm
 			int sent_len = output.rows(); 
 			//double log_likelihood = 0.;
 
-			for (int i=sent_len-1; i>=0; i--) {
+			for (int i=sent_len-1; i>=1; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
-				output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
@@ -674,6 +539,7 @@ namespace nplm
 
   	void resetGradient(){
 		encoder_plstm->resetGradient();	
+		decoder_plstm->resetGradient();	
 								
 		//The gradients of the input layer are being reset in update params sinc the gradient is sparse
 		//Derivatives of the input embeddings							
@@ -697,8 +563,8 @@ namespace nplm
 		Matrix<double,Dynamic,Dynamic> init_c = const_init_c;
 		Matrix<double,Dynamic,Dynamic> init_h = const_init_h;
 		//boost::random::mt19937 init_rng = rng;
-		//cerr<<"init c is "<<init_c<<endl;
-		//cerr<<"init h is "<<init_h<<endl;
+		cerr<<"init c is "<<init_c<<endl;
+		cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
 		//cerr<<"In gradient check"<<endl;
 		/*
@@ -726,8 +592,8 @@ namespace nplm
 		*/
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
-
-		paramGradientCheck(input,output,encoder_plstm->output_layer,"output_layer", 
+		
+		paramGradientCheck(input,output,decoder_plstm->output_layer,"output_layer", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -735,7 +601,8 @@ namespace nplm
 				   			 rng,
 				   			 loss_function,
 							 softmax_nce_loss,
-							 sequence_cont_indices);		
+							 sequence_cont_indices);	
+							 
 		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -1028,7 +895,8 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-		 	    param.changeRandomParam(1e-4, 
+				double perturbation = 1e-5;
+		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);
 		 		//then do an fprop
@@ -1043,7 +911,7 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
-		 	    param.changeRandomParam(-2e-4, 
+		 	    param.changeRandomParam(-2*perturbation, 
 		 								rand_row,
 		 								rand_col);		
 				init_c = const_init_c;
@@ -1059,21 +927,21 @@ namespace nplm
 							 softmax_nce_loss,
 		 			  		 after_log_likelihood);		
 		 		//returning the parameter back to its own value
-		 	    param.changeRandomParam(1e-4 , 
+		 	    param.changeRandomParam(perturbation , 
 		 								rand_row,
 		 								rand_col);			
 
-				
+				double threshold = 1e-02;
 				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
 		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/2e-4;	
+				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/(2*perturbation);	
 				double graves_threshold = pow(10.0, (double) max(0.0, (double) ceil(log10(min(fabs(param.getGradient(rand_row,
 		 								rand_col)), fabs(symmetric_finite_diff_grad)))))-6);
 				double gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
 		 								rand_col);
 				double relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
-				if (gradient_diff > graves_threshold) {
+				if (gradient_diff > threshold|| relative_error > threshold) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
 					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
@@ -1087,6 +955,8 @@ namespace nplm
 				} else {
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
 						<<" and col: "<<rand_col<<" is "<<gradient_diff<<" and relative error is "<<relative_error<<endl;
+					cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
+					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;
 					//cerr<<"Relative error is "<<relative error<<endl
 				}
 		 	
@@ -1094,58 +964,7 @@ namespace nplm
 	
 	
 	
-	template <typename DerivedIn, typename DerivedOut, typename testParam, typename data_type>
-    void getFiniteDiff(const MatrixBase<DerivedIn> &input,
-			 const MatrixBase<DerivedOut> &output,
-			 const MatrixBase<testParam> & const_test_param,
-			 const string param_name,
-			 multinomial<data_type> &unigram,
-			 int num_noise_samples,
-			 boost::random::mt19937 &rng,
-			 loss_function_type loss_function) {
-				 
-				 UNCONST(testParam,const_test_param,test_param);
-		 		int rand_row;
-		 		int rand_col;
-		 		//First checking the gradient of the output word embeddings
-		 		cerr<<"Checking the gradient of "<<param_name<<endl;
-		 		rand_row = 0;
-				rand_col= 0;
-		 	    test_param(rand_row,rand_col) += 1e-5;
-		 		//then do an fprop
-		 		double before_log_likelihood = 0;	
-				cerr<<"input cols is "<<input.cols()<<endl;					
-		 		fProp(input, 0, input.rows()-1);
-		 		computeProbs(output,
-				   			 unigram,
-				   			 num_noise_samples,
-				   			 rng,
-				   			 loss_function,				
-		 			  		 before_log_likelihood);
-		 		//err<<"before log likelihood is "<<
-				/*
-		 	    param.changeRandomParam(-2e-5, 
-		 								rand_row,
-		 								rand_col);		
-		
-		 		double after_log_likelihood = 0;						
-		 		fProp(input,0, input.rows()-1);	
-		 		computeProbs(output,
-		 			  		after_log_likelihood);		
-		
-		 		cerr<<"Gradient diff is "<<	(before_log_likelihood-after_log_likelihood)/2e-5<<endl;
-				
-				cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
-		 								rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-		 	    cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" is "<<
-						(before_log_likelihood-after_log_likelihood)/2e-5 - param.getGradient(rand_row,
-		 								rand_col)<<endl;	
-		 		//returning the parameter back to its own value
-		 	    param.changeRandomParam(1e-5 , 
-		 								rand_row,
-		 								rand_col);			 
-				*/	
-	}	
+
  };		
  
  
