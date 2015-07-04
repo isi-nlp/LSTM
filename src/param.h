@@ -12,6 +12,8 @@ struct param
     std::string test_file;
 
     std::string model_file;
+	std::string encoder_model_file;
+	std::string decoder_model_file;
 
     std::string unigram_probs_file;
     std::string words_file;
