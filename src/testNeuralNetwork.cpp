@@ -377,10 +377,12 @@ int main(int argc, char** argv)
 	//init_h.setZero(myParam.num_hidden,minibatch_size);
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
-	encoder_nn.write(temp_encoder_file);
-	decoder_nn.write(temp_decoder_file);
+	//encoder_nn.write(temp_encoder_file);
+	//decoder_nn.write(temp_decoder_file);
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
+			current_c.setZero(myParam.num_hidden, minibatch_size);
+			current_h.setZero(myParam.num_hidden, minibatch_size);
 			double minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
             {
@@ -458,7 +460,8 @@ int main(int argc, char** argv)
 			prop.computeProbsLog(testing_output_sent_data,
 								minibatch_log_likelihood);	
 			data_log_likelihood += 	minibatch_log_likelihood;
-
+			current_c.setZero(myParam.num_hidden, minibatch_size);
+			current_h.setZero(myParam.num_hidden, minibatch_size);
 		  
 	 }
 	 cerr << "done." << endl;

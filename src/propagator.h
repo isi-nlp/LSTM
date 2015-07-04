@@ -137,14 +137,14 @@ namespace nplm
 				//cerr<<"input is "<<input_data.row(i)<<endl;
 				if (i==0) {
 					//cerr<<"Current c is "<<current_c<<endl;
-					encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c,sequence_cont_indices.row(i));
+					encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,	
 										//current_c,
 										//current_h);
 				} else {
 					//cerr<<"Data is "<<data.row(i)<<endl;
 					//cerr<<"index is "<<i<<endl;
-					encoder_lstm_nodes[i].copyToHiddenStates(encoder_lstm_nodes[i-1].h_t,encoder_lstm_nodes[i-1].c_t,sequence_cont_indices.row(i));
+					encoder_lstm_nodes[i].copyToHiddenStates(encoder_lstm_nodes[i-1].h_t,encoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
@@ -164,7 +164,7 @@ namespace nplm
 				if (i==0) {
 					//cerr<<"Current c is "<<current_c<<endl;
 					//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-					decoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c,sequence_cont_indices.row(i));
+					decoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
 					decoder_lstm_nodes[i].fProp(output_data.row(i));//,	
 					//cerr<<"output data is "<<output_data.row(i)<<endl;
 										//current_c,
@@ -172,7 +172,7 @@ namespace nplm
 				} else {
 					//cerr<<"Data is "<<data.row(i)<<endl;
 					//cerr<<"index is "<<i<<endl;
-					decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,decoder_lstm_nodes[i-1].c_t,sequence_cont_indices.row(i));
+					decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
 					decoder_lstm_nodes[i].fProp(output_data.row(i));//,
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
@@ -182,6 +182,63 @@ namespace nplm
 
 	    }
 
+		template <typename DerivedInput, typename DerivedH, typename DerivedC, typename DerivedS>
+	    void fPropInput(const MatrixBase<DerivedInput> &input_data,
+				const int start_pos,
+				const int end_pos,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h,
+				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
+	    {
+			UNCONST(DerivedC, const_current_c, current_c);
+			UNCONST(DerivedH, const_current_h, current_h);
+
+			//The data is just an eigen matrix. Now I have to go over each column and do fProp
+			int sent_len = input_data.rows();
+			int output_sent_len = output_data.rows();
+			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			int current_minibatch_size = input_data.cols();
+
+			//Going over the input sentence to generate the hidden states
+			for (int i=0; i<=end_pos; i++){
+				//cerr<<"i is"<<i<<endl;
+				//cerr<<"input is "<<input_data.row(i)<<endl;
+				if (i==0) {
+					//cerr<<"Current c is "<<current_c<<endl;
+					encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
+					encoder_lstm_nodes[i].fProp(input_data.row(i));//,	
+										//current_c,
+										//current_h);
+				} else {
+
+					encoder_lstm_nodes[i].copyToHiddenStates(encoder_lstm_nodes[i-1].h_t,encoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
+					encoder_lstm_nodes[i].fProp(input_data.row(i));//,
+
+				}
+				//encoder_lstm_nodes.fProp();
+			}
+			//Copying the cell and hidden states if the sequence continuation vectors say so	
+			//cerr<<"end pos is"<<end_pos<<endl;
+			current_c = encoder_lstm_nodes[end_pos].c_t;
+			current_h = encoder_lstm_nodes[end_pos].h_t;
+
+
+	    }
+		template <typename DerivedInput>
+		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
+				const int end_pos,
+				vector<int> predicted_sequence,
+				int output_start_symbol) {
+					Matrix<int,Dynamic,1> predicted_output;
+					predicted_output.resize(100); // I can produce at most 100 output symbols
+					predicted_output(0) = output_start_symbol;
+				for (int i=0; i<100; i++){
+					
+				}
+			
+		}
+
+		
 		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
 		//losses from the next layer
 	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
@@ -513,7 +570,7 @@ namespace nplm
 			for (int i=sent_len-1; i>=1; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
-				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), scores);
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
