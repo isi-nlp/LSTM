@@ -789,7 +789,7 @@ void google_input_model::resetGradient(){
 
 void google_input_model::write(std::ofstream &file)
 {
-	file <<"\\input_weights "<<endl;
+	file <<"\\input_weights"<<endl;
     input_layer.write(file);
     file << endl;
 
@@ -848,6 +848,7 @@ void google_input_model::readConfig(ifstream &config_file)
 
 void google_input_model::read(const string &filename)
 {
+	cerr<<"Reading google input model"<<endl;
     ifstream file(filename.c_str());
     if (!file) throw runtime_error("Could not open file " + filename);
     
@@ -856,22 +857,23 @@ void google_input_model::read(const string &filename)
     
     while (getline(file, line))
     {	
-		//cerr<<" line is "<<line<<endl;
+	//cerr<<" line is "<<line<<endl;
+	//getchar();
 	if (line == "\\config")
 	{
 	    readConfig(file);
+		//cerr<<"About to read the weights in google input model"<<endl;
 	}
-
-	else if (line == "\\W_x_to_c")
-	    W_x_to_c.read_weights(file);	
+	else if (line == "\\W_x_to_c") 
+		W_x_to_c.read_weights(file);	
 	else if (line == "\\W_x_to_i")
 	    W_x_to_i.read_weights(file);
 	else if (line == "\\W_x_to_f")
 	    W_x_to_f.read_weights(file);
 	else if (line == "\\W_x_to_o")
 	    W_x_to_o.read_weights(file);
-	else if (line == "\\input_weights")
-	    input_layer.read(file);
+	else if (line == "\\input_weights") 
+		input_layer.read(file);
 	else if (line == "\\end")
 	    break;
 	else if (line == "")
@@ -883,6 +885,7 @@ void google_input_model::read(const string &filename)
 	    while (getline(file, line) && line != "") { }
 	}
     }
+	cerr<<"Just finished reading the google input model"<<endl;
     file.close();
 }
 

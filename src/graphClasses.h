@@ -533,11 +533,12 @@ public:
 	
 	}
 	//This takes the sequence continuation indices, the previous hidden and cell states and creates new ones for this LSTM block
-	template <typename DerivedH, typename DerivedC, typename DerivedS>
+	template <typename DerivedH, typename DerivedC>//, typename DerivedS>
 	void copyToHiddenStates(const MatrixBase<DerivedH> &h_t_minus_one,
-							const MatrixBase<DerivedC> &c_t_minus_one,
-							const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
-						int current_minibatch_size = sequence_cont_indices.cols();		
+							const MatrixBase<DerivedC> &c_t_minus_one) {
+							//const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
+						//int current_minibatch_size = sequence_cont_indices.cols();	
+						int current_minibatch_size = h_t_minus_one.cols();	
 						#pragma omp parallel for 
 						for (int index=0; index<current_minibatch_size; index++){ 
 							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
