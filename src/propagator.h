@@ -195,7 +195,7 @@ namespace nplm
 
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = input_data.rows();
-			int output_sent_len = output_data.rows();
+			//int output_sent_len = output_data.rows();
 			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
 
@@ -224,18 +224,69 @@ namespace nplm
 
 
 	    }
-		template <typename DerivedInput>
+		template <typename DerivedInput,typename DerivedH, typename DerivedC>
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h,		
 				const int end_pos,
-				vector<int> predicted_sequence,
-				int output_start_symbol) {
-					Matrix<int,Dynamic,1> predicted_output;
-					predicted_output.resize(100); // I can produce at most 100 output symbols
+				vector<int> &predicted_sequence,
+				int output_start_symbol,
+				int output_end_symbol) {
+					Matrix<int,Dynamic,Dynamic> predicted_output;
+					predicted_output.resize(100,1); // I can produce at most 100 output symbols
 					predicted_output(0) = output_start_symbol;
 				for (int i=0; i<100; i++){
 					
+					if (i==0) {
+						//cerr<<"Current c is "<<current_c<<endl;
+						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
+						decoder_lstm_nodes[i].copyToHiddenStates(const_current_h,const_current_c);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output(i));//,	
+						//cerr<<"output data is "<<output_data.row(i)<<endl;
+											//current_c,
+											//current_h);
+					} else {
+						//cerr<<"Data is "<<data.row(i)<<endl;
+						//cerr<<"index is "<<i<<endl;
+						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i].h_t,decoder_lstm_nodes[i].c_t);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output(i));//,
+											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
+											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
+					}
+					
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t, scores);
+					//then compute the log loss of the objective
+					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+					//cerr<<"Score is"<<endl;
+					//cerr<<scores<<endl;
+	
+			        double minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores, 
+			                   predicted_output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);	
+					int max_index = 0;
+					double max_value = -9999999;
+					for (int index=0; index<probs.rows(); index++){
+						if (probs(index) > max_value){
+							max_value = probs(index);
+							max_index = index;
+						}
+						
+					}
+					
+			        //Matrix<double,1,Dynamic>::Index max_index;
+			        //probs.maxCoeff(&max_index);	
+					//if max index equals the end symbol
+					predicted_sequence.push_back(max_index);
+					if (max_index == output_end_symbol)
+						break;
+					else{
+						predicted_output(i+1) = max_index;
+					}		   				
 				}
-			
+
 		}
 
 		
