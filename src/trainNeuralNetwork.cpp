@@ -526,9 +526,9 @@ int main(int argc, char** argv)
 	        myParam.adagrad_epsilon);		
 		//Creating the input node
 		google_input_model decoder_input(myParam.num_hidden, 
-							myParam.input_vocab_size,
+							myParam.output_vocab_size,
 							myParam.input_embedding_dimension);
-		decoder_input.resize(myParam.input_vocab_size,
+		decoder_input.resize(myParam.output_vocab_size,
 		    myParam.input_embedding_dimension,
 		    myParam.num_hidden);
 
