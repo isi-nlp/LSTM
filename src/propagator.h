@@ -268,6 +268,8 @@ namespace nplm
 			                   minibatch_log_likelihood);	
 					int max_index = 0;
 					double max_value = -9999999;
+					Matrix<double,1,Dynamic>::Index max_index;
+					probs.maxCoeff(&max_index); 
 					for (int index=0; index<probs.rows(); index++){
 						if (probs(index) > max_value){
 							max_value = probs(index);
