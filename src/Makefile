@@ -141,7 +141,7 @@ RANLIB=ranlib
 
 # Rules
 
-BINS=trainNeuralNetwork testNeuralNetwork
+BINS=trainNeuralNetwork testNeuralNetwork generateFromNetwork
 OBJS=util.o model.o
 
 all: $(BINS) 
@@ -165,7 +165,12 @@ trainNeuralNetwork: trainNeuralNetwork.o $(OBJS)
 	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
 	
 testNeuralNetwork: testNeuralNetwork.o $(OBJS)
-	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@	
+	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@
+
+generateFromNetwork: generateFromNetwork.o $(OBJS)
+	$(CXX) $(ALL_LDFLAGS) $^ $(ALL_LDLIBS) -o $@		
+	
+	
 
 
 

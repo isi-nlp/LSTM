@@ -61,6 +61,9 @@ int main(int argc, char** argv)
     ios::sync_with_stdio(false);
     bool use_mmap_file, randomize, tagging_mode;
     param myParam;
+	int arg_output_start_symbol;
+	int arg_output_end_symbol;
+	string arg_predicted_sequence_file;
     try {
       // program options //
       CmdLine cmd("Trains a LSTM.", ' ' , "0.3\n","");
@@ -80,6 +83,8 @@ int main(int argc, char** argv)
       ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
 
       ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
+	  ValueArg<int> output_start_symbol("", "output_start_symbol", "The integer id of the output start symbol. Default: 0.", false, 0, "int", cmd);
+	  ValueArg<int> output_end_symbol("", "output_end_symbol", "The integer id of the output end symbol Default: 1.", false, 1, "int", cmd);
       ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
@@ -98,6 +103,7 @@ int main(int argc, char** argv)
       ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file.", false, "", "string", cmd);
 	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file.", false, "", "string", cmd);
 	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
+	  ValueArg<string> predicted_sequence_file("", "predicted_sequence_file", "Predicted sequences file." , false, "", "string", cmd);
 
       cmd.parse(argc, argv);
 
@@ -110,7 +116,10 @@ int main(int argc, char** argv)
       myParam.output_words_file = output_words_file.getValue();
 	  myParam.input_sent_file = input_sent_file.getValue();
 	  myParam.output_sent_file = output_sent_file.getValue();
-
+	  arg_output_start_symbol = output_start_symbol.getValue();
+	  arg_output_end_symbol = output_end_symbol.getValue();
+	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
+	  
 	  myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
 	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	  /*
@@ -238,7 +247,7 @@ int main(int argc, char** argv)
 	//data_size_t total_input_tokens = 0;
 	//data_size
 	readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
-	readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
+	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
     //readSentFile(myParam.testing_sequence_cont_file, testing_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
 	testing_data_size = testing_input_sent.size();
@@ -379,8 +388,17 @@ int main(int argc, char** argv)
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
 	encoder_nn.write(temp_encoder_file);
 	decoder_nn.write(temp_decoder_file);
+	
+	
+    ofstream file(arg_predicted_sequence_file.c_str());
+
+	file << std::setprecision(15);
+    if (!file) throw runtime_error("Could not open file " + arg_predicted_sequence_file);
+
+
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
+			vector<int> predicted_sequence;
 			double minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
             {
@@ -416,6 +434,7 @@ int main(int argc, char** argv)
 							max_input_sent_len,
 							1,
 							minibatch_input_tokens);
+			/*				
 			miniBatchify(testing_output_sent, 
 							minibatch_output_sentences,
 							minibatch_start_index,
@@ -423,6 +442,8 @@ int main(int argc, char** argv)
 							max_output_sent_len,
 							0,
 							minibatch_output_tokens);		
+			*/
+							
 			/*							
 			miniBatchify(testing_sequence_cont_sent, 
 							minibatch_sequence_cont_sentences,
@@ -437,9 +458,9 @@ int main(int argc, char** argv)
 											max_input_sent_len,
 											current_minibatch_size);
 							
-			testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-																			max_output_sent_len,
-																			current_minibatch_size);
+			//testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
+			//																max_output_sent_len,
+			//																current_minibatch_size);
 			//testing_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 			//																max_sent_len,
 			//																current_minibatch_size);
@@ -447,17 +468,30 @@ int main(int argc, char** argv)
 			testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
 			init_h = current_h; 			
-			prop.fProp(testing_input_sent_data,
-						testing_output_sent_data,
+			prop.fPropInput(testing_input_sent_data,
 						0,
 						max_input_sent_len-1,
 						current_c,
 						current_h,
 						testing_sequence_cont_sent_data);	
 			
-			prop.computeProbsLog(testing_output_sent_data,
-								minibatch_log_likelihood);	
-			data_log_likelihood += 	minibatch_log_likelihood;
+			//prop.computeProbsLog(testing_output_sent_data,
+			// 					minibatch_log_likelihood);	
+			cerr<<"output start symbol "<<arg_output_start_symbol<<endl;
+			cerr<<"output end symbol "<<arg_output_end_symbol<<endl;
+			prop.generateGreedyOutput(testing_input_sent_data,
+							current_c,
+							current_h,		
+							predicted_sequence,
+							arg_output_start_symbol,
+							arg_output_end_symbol);
+			cerr<<"predicted sequence size is "<<predicted_sequence.size()<<endl;
+			//data_log_likelihood += 	minibatch_log_likelihood;
+			//writing the predicted sequence
+			for (int seq_id=0; seq_id<predicted_sequence.size(); seq_id++){
+				file << predicted_sequence[seq_id]<<" ";	
+			}
+			file<<endl;
 
 		  
 	 }
@@ -469,10 +503,10 @@ int main(int argc, char** argv)
 		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
-	    cerr << "Testing log-likelihood base e:      " << data_log_likelihood << endl;
-		cerr << "Testing log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
-		cerr << "Testing cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
-		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
+	    //cerr << "Testing log-likelihood base e:      " << data_log_likelihood << endl;
+		//cerr << "Testing log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
+		//cerr << "Testing cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
+		//cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	//}
 	//else if (loss_function == NCELoss)
 	//   cerr << "Testing NCE log-likelihood: " << log_likelihood << endl;

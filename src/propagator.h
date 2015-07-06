@@ -224,36 +224,41 @@ namespace nplm
 
 
 	    }
+		//currently only generate one output at a time
 		template <typename DerivedInput,typename DerivedH, typename DerivedC>
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
 				const MatrixBase<DerivedC> &const_current_c,
-				const MatrixBase<DerivedH> &const_current_h,		
-				const int end_pos,
+				const MatrixBase<DerivedH> &const_current_h,
 				vector<int> &predicted_sequence,
 				int output_start_symbol,
 				int output_end_symbol) {
 					Matrix<int,Dynamic,Dynamic> predicted_output;
 					predicted_output.resize(100,1); // I can produce at most 100 output symbols
-					predicted_output(0) = output_start_symbol;
-				for (int i=0; i<100; i++){
-					
+					predicted_output(0,0) = output_start_symbol;
+					UNCONST(DerivedC, const_current_c, current_c);
+					UNCONST(DerivedH, const_current_h, current_h);	
+				//cerr<<"predicted_output	is "<<predicted_output<<endl;
+				for (int i=0; i<99; i++){
+					//cerr<<"i is "<<i<<endl;
+					//cerr<<"predicted output is "<<predicted_output.row(i);
 					if (i==0) {
 						//cerr<<"Current c is "<<current_c<<endl;
 						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-						decoder_lstm_nodes[i].copyToHiddenStates(const_current_h,const_current_c);//,sequence_cont_indices.row(i));
-						decoder_lstm_nodes[i].fProp(predicted_output(i));//,	
+						decoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,	
 						//cerr<<"output data is "<<output_data.row(i)<<endl;
 											//current_c,
 											//current_h);
 					} else {
 						//cerr<<"Data is "<<data.row(i)<<endl;
 						//cerr<<"index is "<<i<<endl;
-						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i].h_t,decoder_lstm_nodes[i].c_t);//,sequence_cont_indices.row(i));
-						decoder_lstm_nodes[i].fProp(predicted_output(i));//,
+						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
 											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
 					}
-					
+					//cerr<<"ht is "<<decoder_lstm_nodes[i].h_t<<endl;
+					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t, scores);
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
@@ -268,16 +273,19 @@ namespace nplm
 			                   minibatch_log_likelihood);	
 					int max_index = 0;
 					double max_value = -9999999;
-					Matrix<double,1,Dynamic>::Index max_index;
-					probs.maxCoeff(&max_index); 
+					//Matrix<double,1,Dynamic>::Index max_index;
+					//probs.maxCoeff(&max_index); 
+					//int minibatch_size = 0;
+					//THIS HAS TO CHANGE
 					for (int index=0; index<probs.rows(); index++){
-						if (probs(index) > max_value){
-							max_value = probs(index);
+						//cerr<<"prob is "<<probs(index,0)<<endl;
+						if (probs(index,0) > max_value){
+							max_value = probs(index,0);
 							max_index = index;
 						}
 						
 					}
-					
+					//getchar();
 			        //Matrix<double,1,Dynamic>::Index max_index;
 			        //probs.maxCoeff(&max_index);	
 					//if max index equals the end symbol
@@ -285,7 +293,8 @@ namespace nplm
 					if (max_index == output_end_symbol)
 						break;
 					else{
-						predicted_output(i+1) = max_index;
+						predicted_output(i+1,0) = max_index;
+						//cerr<<"new predicted output is "<<predicted_output(i+1,0)<<endl;
 					}		   				
 				}
 
