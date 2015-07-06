@@ -348,7 +348,7 @@ int main(int argc, char** argv)
 	//data_size
 	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
 	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
-    readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
+    //readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
 	training_data_size = training_input_sent.size();
 
@@ -421,10 +421,10 @@ int main(int argc, char** argv)
 		myParam.validation_minibatch_size, 
 		total_validation_output_tokens);
 		
-		readSentFile(myParam.validation_sequence_cont_file, 
-			validation_sequence_cont_sent,
-			myParam.validation_minibatch_size, 
-			total_validation_sequence_tokens);			
+		//readSentFile(myParam.validation_sequence_cont_file, 
+		//	validation_sequence_cont_sent,
+		//	myParam.validation_minibatch_size, 
+		//	total_validation_sequence_tokens);			
 	}
 	
 	cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;
@@ -663,27 +663,7 @@ int main(int argc, char** argv)
       	  int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), training_data_size - minibatch_start_index);
 	  	  //cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 	  
-		  /*
-	      //ALTERNATIVE OPTION IF YOU'RE NOT USING eigen map interface on the mmapped file
-		    Matrix<int,Dynamic,Dynamic> minibatch;// = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-			//cerr<<"Minibatch start index "<<minibatch_start_index<<endl;
-			//cerr<<"Minibatch size "<<current_minibatch_size<<endl;
-	            if (use_mmap_file == true) {
-	            minibatch.setZero(ngram_size,current_minibatch_size);
-	            //now reading the ngrams from the mmaped file
-	              for (int k=0; k<ngram_size; k++){
-	                for (data_size_t index = 0 ; index<current_minibatch_size; index++) {
-					  data_size_t current_index = index + minibatch_start_index;
-					  //cerr<<"the value in the mmap file "<<index<<" "<<k<<" is "<<training_data_flat_mmap->at(current_index*ngram_size+k)<<endl;
-	                  minibatch(k,index) = training_data_flat_mmap->at(current_index*ngram_size+k);
-	                }
-	              }
-	            } else {
-	              minibatch = training_data.middleCols(minibatch_start_index, current_minibatch_size);
-	            }
-		  	*/
-	  
-	  
+
 
 		  	//double adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
