@@ -398,6 +398,8 @@ int main(int argc, char** argv)
 
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
+			current_c.setZero(myParam.num_hidden, minibatch_size);
+			current_h.setZero(myParam.num_hidden, minibatch_size);		
 			vector<int> predicted_sequence;
 			double minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
