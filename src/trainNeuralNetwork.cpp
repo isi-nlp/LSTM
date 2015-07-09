@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize;
+    bool use_mmap_file, randomize=0;
     param myParam;
     try {
       // program options //
@@ -67,32 +67,32 @@ int main(int argc, char** argv)
 
       // The options are printed in reverse order
 
-      ValueArg<string> unigram_probs_file("", "unigram_probs_file", "Unigram model (deprecated and ignored)." , false, "", "string", cmd);
+      //ValueArg<string> unigram_probs_file("", "unigram_probs_file", "Unigram model (deprecated and ignored)." , false, "", "string", cmd);
 
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
 
-      ValueArg<double> final_momentum("", "final_momentum", "Final value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
-      ValueArg<double> initial_momentum("", "initial_momentum", "Initial value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
-      ValueArg<bool> use_momentum("", "use_momentum", "Use momentum (hidden layer weights only). 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
+      //ValueArg<double> final_momentum("", "final_momentum", "Final value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
+      //ValueArg<double> initial_momentum("", "initial_momentum", "Initial value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
+      //ValueArg<bool> use_momentum("", "use_momentum", "Use momentum (hidden layer weights only). 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
 
-      ValueArg<double> normalization_init("", "normalization_init", "Initial normalization parameter. Default: 0.", false, 0.0, "double", cmd);
-      ValueArg<bool> normalization("", "normalization", "Learn individual normalization factors during training. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
+      //ValueArg<double> normalization_init("", "normalization_init", "Initial normalization parameter. Default: 0.", false, 0.0, "double", cmd);
+      //ValueArg<bool> normalization("", "normalization", "Learn individual normalization factors during training. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
 
-      ValueArg<bool> mmap_file("", "mmap_file", "Use memory mapped files. This is useful if the entire data cannot fit in memory. prepareNeuralLM can generate memory mapped files", false, 0, "bool", cmd);
+      //ValueArg<bool> mmap_file("", "mmap_file", "Use memory mapped files. This is useful if the entire data cannot fit in memory. prepareNeuralLM can generate memory mapped files", false, 0, "bool", cmd);
 
-      ValueArg<bool> arg_randomize("", "randomize", "Randomize training instances for better training. 1 = yes, 0 = no. Default: 1.", false, true, "bool", cmd);
+      //ValueArg<bool> arg_randomize("", "randomize", "Randomize training instances for better training. 1 = yes, 0 = no. Default: 1.", false, true, "bool", cmd);
 
-      ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
+      //ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
 
       ValueArg<double> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
 
       ValueArg<double> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "double", cmd);
-	  ValueArg<double> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "double", cmd);
+	  //ValueArg<double> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "double", cmd);
 
-      ValueArg<double> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "double", cmd);
+      //ValueArg<double> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "double", cmd);
 
-      ValueArg<double> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "double", cmd);
-      ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
+      //ValueArg<double> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "double", cmd);
+      //ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
           Default: 10E-3", false, 10E-3, "double", cmd);
       ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 1000, "int", cmd);
@@ -104,22 +104,22 @@ int main(int argc, char** argv)
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
-      ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
+      //ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
-      ValueArg<bool> share_embeddings("", "share_embeddings", "Share input and output embeddings. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
-      ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
+      //ValueArg<bool> share_embeddings("", "share_embeddings", "Share input and output embeddings. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
+      //ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
+      //ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
+      //ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
 
-      ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
 
       ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , false, "", "string", cmd);
-      ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
-      ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
+      //ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
+      //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
           ADAGRAD(ADA)\n \
           ADADELTA(ADAD)" , false, "SGD", "string", cmd);
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
@@ -144,8 +144,8 @@ int main(int argc, char** argv)
       cmd.parse(argc, argv);
 
       // define program parameters //
-      use_mmap_file = mmap_file.getValue();
-      randomize = arg_randomize.getValue();
+     // use_mmap_file = mmap_file.getValue();
+      //randomize = arg_randomize.getValue();
       myParam.model_file = model_file.getValue();
       //myParam.train_file = train_file.getValue();
       myParam.validation_file = validation_file.getValue();
@@ -157,53 +157,59 @@ int main(int argc, char** argv)
 	  myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
 	  myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
 	  myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
-	  
+	 /* 
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
-
+	  */
       myParam.model_prefix = model_prefix.getValue();
 
-      myParam.ngram_size = ngram_size.getValue();
-      myParam.vocab_size = vocab_size.getValue();
+      //myParam.ngram_size = ngram_size.getValue();
+      //myParam.vocab_size = vocab_size.getValue();
       myParam.input_vocab_size = input_vocab_size.getValue();
       myParam.output_vocab_size = output_vocab_size.getValue();
+	  /*
       if (vocab_size.getValue() >= 0) {
 	      myParam.input_vocab_size = myParam.output_vocab_size = vocab_size.getValue();
       }
+	  */
       myParam.num_hidden = num_hidden.getValue();
-      myParam.activation_function = activation_function.getValue();
+      //myParam.activation_function = activation_function.getValue();
       myParam.loss_function = loss_function.getValue();
 
       myParam.num_threads = num_threads.getValue();
 
-      myParam.num_noise_samples = num_noise_samples.getValue();
+      //myParam.num_noise_samples = num_noise_samples.getValue();
 
-      myParam.input_embedding_dimension = input_embedding_dimension.getValue();
-      myParam.output_embedding_dimension = output_embedding_dimension.getValue();
-      if (embedding_dimension.getValue() >= 0) {
-	      myParam.input_embedding_dimension = myParam.output_embedding_dimension = embedding_dimension.getValue();
-      }
+      //myParam.input_embedding_dimension = input_embedding_dimension.getValue();
+      //myParam.output_embedding_dimension = output_embedding_dimension.getValue();
+      //if (embedding_dimension.getValue() >= 0) {
+	  //    myParam.input_embedding_dimension = myParam.output_embedding_dimension = embedding_dimension.getValue();
+      //}
 
       myParam.minibatch_size = minibatch_size.getValue();
 	  myParam.minibatch_size = 1;
       myParam.validation_minibatch_size = validation_minibatch_size.getValue();
+	  myParam.validation_minibatch_size =1;
       myParam.num_epochs= num_epochs.getValue();
       myParam.learning_rate = learning_rate.getValue();
-      myParam.conditioning_constant = conditioning_constant.getValue();
-      myParam.decay = decay.getValue();
-      myParam.adagrad_epsilon = adagrad_epsilon.getValue();
-	  myParam.fixed_partition_function = fixed_partition_function.getValue();
-      myParam.use_momentum = use_momentum.getValue();
-      myParam.share_embeddings = share_embeddings.getValue();
-      myParam.normalization = normalization.getValue();
-      myParam.initial_momentum = initial_momentum.getValue();
-      myParam.final_momentum = final_momentum.getValue();
+      //myParam.conditioning_constant = conditioning_constant.getValue();
+      //myParam.decay = decay.getValue();
+      //myParam.adagrad_epsilon = adagrad_epsilon.getValue();
+	  myParam.adagrad_epsilon = 0;
+	  //myParam.fixed_partition_function = fixed_partition_function.getValue();
+      //myParam.use_momentum = use_momentum.getValue();
+	  myParam.use_momentum = 0;
+      //myParam.share_embeddings = share_embeddings.getValue();
+      //myParam.normalization = normalization.getValue();
+      //myParam.initial_momentum = initial_momentum.getValue();
+      //myParam.final_momentum = final_momentum.getValue();
       myParam.L2_reg = L2_reg.getValue();
       myParam.init_normal= init_normal.getValue();
       myParam.init_range = init_range.getValue();
 	  myParam.init_forget = init_forget.getValue();
-      myParam.normalization_init = normalization_init.getValue();
-      myParam.parameter_update = parameter_update.getValue();
+      //myParam.normalization_init = normalization_init.getValue();
+      //myParam.parameter_update = parameter_update.getValue();
+	  myParam.parameter_update = "SGD";
 	  myParam.gradient_check = gradient_check.getValue();
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
@@ -219,17 +225,17 @@ int main(int argc, char** argv)
       cerr << output_words_file.getDescription() << sep << output_words_file.getValue() << endl;
       cerr << model_prefix.getDescription() << sep << model_prefix.getValue() << endl;
 
-      cerr << ngram_size.getDescription() << sep << ngram_size.getValue() << endl;
+      //cerr << ngram_size.getDescription() << sep << ngram_size.getValue() << endl;
       cerr << input_vocab_size.getDescription() << sep << input_vocab_size.getValue() << endl;
       cerr << output_vocab_size.getDescription() << sep << output_vocab_size.getValue() << endl;
-      cerr << mmap_file.getDescription() << sep << mmap_file.getValue() << endl;
+     // cerr << mmap_file.getDescription() << sep << mmap_file.getValue() << endl;
 	  cerr << norm_clipping.getDescription() << sep << norm_clipping.getValue() <<endl;
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
-	  cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
+	  //cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
 	  
-
+	  /*
       if (embedding_dimension.getValue() >= 0)
       {
 	      cerr << embedding_dimension.getDescription() << sep << embedding_dimension.getValue() << endl;
@@ -239,22 +245,26 @@ int main(int argc, char** argv)
 	      cerr << input_embedding_dimension.getDescription() << sep << input_embedding_dimension.getValue() << endl;
 	      cerr << output_embedding_dimension.getDescription() << sep << output_embedding_dimension.getValue() << endl;
       }
-      cerr << share_embeddings.getDescription() << sep << share_embeddings.getValue() << endl;
+	  */
+      //cerr << share_embeddings.getDescription() << sep << share_embeddings.getValue() << endl;
+	  /*
       if (share_embeddings.getValue() && input_embedding_dimension.getValue() != output_embedding_dimension.getValue())
       {
 	      cerr << "error: sharing input and output embeddings requires that input and output embeddings have same dimension" << endl;
 	      exit(1);
       }
-
+	  */
       cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
-
+	  /*
       if (string_to_activation_function(activation_function.getValue()) == InvalidFunction)
       {
 	      cerr << "error: invalid activation function: " << activation_function.getValue() << endl;
 	      exit(1);
       }
+	  
       cerr << activation_function.getDescription() << sep << activation_function.getValue() << endl;
-
+	  */
+	  
       if (string_to_loss_function(loss_function.getValue()) == InvalidLoss)
       {
 	      cerr << "error: invalid loss function: " << loss_function.getValue() << endl;
@@ -273,26 +283,32 @@ int main(int argc, char** argv)
       cerr << learning_rate.getDescription() << sep << learning_rate.getValue() << endl;
       cerr << L2_reg.getDescription() << sep << L2_reg.getValue() << endl;
 
-      cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
-
-      cerr << normalization.getDescription() << sep << normalization.getValue() << endl;
+      //cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
+	  
+	  /*
+      //cerr << normalization.getDescription() << sep << normalization.getValue() << endl;
       if (myParam.normalization){
 	      cerr << normalization_init.getDescription() << sep << normalization_init.getValue() << endl;
       }
-
-      cerr << use_momentum.getDescription() << sep << use_momentum.getValue() << endl;
+	  */
+	  
+	  /*
+      //cerr << use_momentum.getDescription() << sep << use_momentum.getValue() << endl;
       if (myParam.use_momentum)
       {
         cerr << initial_momentum.getDescription() << sep << initial_momentum.getValue() << endl;
         cerr << final_momentum.getDescription() << sep << final_momentum.getValue() << endl;
       }
-
+	  */
+	  
       cerr << num_threads.getDescription() << sep << num_threads.getValue() << endl;
-
+	  
+	  /*
       if (unigram_probs_file.getValue() != "")
       {
 	      cerr << "Note: --unigram_probs_file is deprecated and ignored." << endl;
       }
+	  */
     }
     catch (TCLAP::ArgException &e)
     {
@@ -548,7 +564,7 @@ int main(int argc, char** argv)
       nn.read(myParam.model_file);
       cerr<<"reading the model"<<endl;
     } else {
-      nn.set_activation_function(string_to_activation_function(myParam.activation_function));
+      //nn.set_activation_function(string_to_activation_function(myParam.activation_function));
 	  rng_grad_check = rng; //The range for gradient check should have exactly the same state as rng for the NCE gradient checking to work
 	  
     }
@@ -772,6 +788,9 @@ int main(int argc, char** argv)
 					training_output_sent_data,
 					 myParam.gradient_check,
 					 myParam.norm_clipping); //, 
+ 			    prop.bPropEncoder(training_input_sent_data,
+ 					 myParam.gradient_check,
+ 					 myParam.norm_clipping); 					 
 					 //init_c,
 					 //init_h,
 					 //training_sequence_cont_sent_data); 	
