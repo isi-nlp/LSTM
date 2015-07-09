@@ -56,6 +56,13 @@ typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocato
 
 int main(int argc, char** argv)
 { 
+	/*
+	if (!argc>=2)
+	{
+	    cerr << "ERROR. You need to supply necessary files. Please type trainNeuralNetwork --help."<<endl;
+	    return 1;
+	}	
+	*/
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
@@ -99,7 +106,7 @@ int main(int argc, char** argv)
 
       ValueArg<int> num_epochs("", "num_epochs", "Number of epochs. Default: 10.", false, 10, "int", cmd);
 
-      ValueArg<double> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.01", false, 0.01, "double", cmd);
+      ValueArg<double> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.1", false, 0.1, "double", cmd);
 	  ValueArg<double> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "double", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
@@ -122,15 +129,15 @@ int main(int argc, char** argv)
       //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
           ADAGRAD(ADA)\n \
           ADADELTA(ADAD)" , false, "SGD", "string", cmd);
-      ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
-      ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
-	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+      ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , true, "", "string", cmd);
+      ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , true, "", "string", cmd);
+	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
+	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
 	  ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
-	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , false, "", "string", cmd);	  
-      ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
+	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , true, "", "string", cmd);
+	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , true, "", "string", cmd);	  
+      //ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
 	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
@@ -148,7 +155,7 @@ int main(int argc, char** argv)
       //randomize = arg_randomize.getValue();
       myParam.model_file = model_file.getValue();
       //myParam.train_file = train_file.getValue();
-      myParam.validation_file = validation_file.getValue();
+      //myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
 	  myParam.input_sent_file = input_sent_file.getValue();
@@ -220,7 +227,7 @@ int main(int argc, char** argv)
 
       const string sep(" Value: ");
       //cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
-      cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
+      //cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
       cerr << input_words_file.getDescription() << sep << input_words_file.getValue() << endl;
       cerr << output_words_file.getDescription() << sep << output_words_file.getValue() << endl;
       cerr << model_prefix.getDescription() << sep << model_prefix.getValue() << endl;
