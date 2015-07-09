@@ -182,6 +182,7 @@ namespace nplm
 
 	    }
 
+
 		template <typename DerivedInput, typename DerivedH, typename DerivedC, typename DerivedS>
 	    void fPropInput(const MatrixBase<DerivedInput> &input_data,
 				const int start_pos,
@@ -458,61 +459,85 @@ namespace nplm
 				} 		   
 		   
 			}
-			//Now backpropping through the encoder
 
-			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
-			//first getting decoder loss
-			//cerr<<"dummy zero is "<<dummy_zero<<endl;
-			for (int i=input_sent_len-1; i>=0; i--) {
-				//getchar();
-				// Now calling backprop for the LSTM nodes
-				if (i==0) {
-					
-				    encoder_lstm_nodes[i].bProp(input_data.row(i),
-							   //init_h,
-				   			   //init_c,
-								dummy_zero,
-							   //output_layer_node.bProp_matrix,
-				   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);	
-					
-
-				} else if (i == input_sent_len-1) {	
-
-					//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
-					
-				    encoder_lstm_nodes[i].bProp(input_data.row(i),
-							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-							   dummy_zero,
-							   //output_layer_node.bProp_matrix,
-				   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);
-		
-				} else if (i > 0) {
-					
-				    encoder_lstm_nodes[i].bProp(input_data.row(i),
-							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-							   dummy_zero,
-							   //output_layer_node.bProp_matrix,
-				   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);		
-					   						
-				} 		   
-		   
-			}
 	  }
-	  
+
+    // Dense version (for standard log-likelihood)
+    template <typename DerivedIn> //, typename DerivedC, typename DerivedH, typename DerivedS>
+    void bPropEncoder(const MatrixBase<DerivedIn> &input_data,
+		 bool gradient_check,
+		 bool norm_clipping)//,
+		 //const MatrixBase<DerivedC> &init_c,
+		 //const MatrixBase<DerivedH> &init_h,
+		 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
+    {	
+	
+		//cerr<<"In backprop..."<<endl;
+		int current_minibatch_size = input_data.cols();
+		//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+		Matrix<double,Dynamic,Dynamic> dummy_zero,dummy_ones;
+		//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+		//same dimension in and LSTM. this might not be a good idea
+		dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+		//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+		
+		int input_sent_len = input_data.rows();
+
+		//Now backpropping through the encoder
+
+		//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+		//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+		//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
+		//first getting decoder loss
+		//cerr<<"dummy zero is "<<dummy_zero<<endl;
+		for (int i=input_sent_len-1; i>=0; i--) {
+			//getchar();
+			// Now calling backprop for the LSTM nodes
+			if (i==0) {
+				
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+						   //init_h,
+			   			   //init_c,
+							dummy_zero,
+						   //output_layer_node.bProp_matrix,
+			   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);	
+				
+
+			} else if (i == input_sent_len-1) {	
+
+				//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
+				
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+						   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
+			   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
+						   dummy_zero,
+						   //output_layer_node.bProp_matrix,
+			   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+			   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);
+	
+			} else if (i > 0) {
+				
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+						   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
+			   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
+						   dummy_zero,
+						   //output_layer_node.bProp_matrix,
+			   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);		
+				   						
+			} 		   
+	   
+		}
+  }
+  	  
 	 void updateParams(double learning_rate,
 	 					int current_minibatch_size,
 				  		double momentum,

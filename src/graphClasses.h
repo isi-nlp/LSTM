@@ -572,6 +572,7 @@ public:
 						*/
 		
 	}
+	
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 	//nonlinearities 
 	void clipGradient(){}
