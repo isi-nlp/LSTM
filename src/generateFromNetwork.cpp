@@ -83,8 +83,8 @@ int main(int argc, char** argv)
       ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
 
       ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-	  ValueArg<int> output_start_symbol("", "output_start_symbol", "The integer id of the output start symbol. Default: 0.", false, 0, "int", cmd);
-	  ValueArg<int> output_end_symbol("", "output_end_symbol", "The integer id of the output end symbol Default: 1.", false, 1, "int", cmd);
+	  //ValueArg<int> output_start_symbol("", "output_start_symbol", "The integer id of the output start symbol. Default: 0.", false, 0, "int", cmd);
+	  //ValueArg<int> output_end_symbol("", "output_end_symbol", "The integer id of the output end symbol Default: 1.", false, 1, "int", cmd);
       ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
@@ -116,8 +116,8 @@ int main(int argc, char** argv)
       myParam.output_words_file = output_words_file.getValue();
 	  myParam.input_sent_file = input_sent_file.getValue();
 	  myParam.output_sent_file = output_sent_file.getValue();
-	  arg_output_start_symbol = output_start_symbol.getValue();
-	  arg_output_end_symbol = output_end_symbol.getValue();
+	  //arg_output_start_symbol = output_start_symbol.getValue();
+	  //arg_output_end_symbol = output_end_symbol.getValue();
 	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
 	  
 	  myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
@@ -295,8 +295,9 @@ int main(int argc, char** argv)
     ///// Create and initialize the neural network and associated propagators.
     model encoder_nn,decoder_nn;
 	encoder_nn.read(myParam.encoder_model_file);
-	decoder_nn.read(myParam.decoder_model_file);
-	
+	decoder_nn.read(myParam.decoder_model_file, arg_output_start_symbol, arg_output_end_symbol);
+	cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
+	cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
 	google_input_model encoder_input, decoder_input;
 	encoder_input.read(myParam.encoder_model_file);
 	decoder_input.read(myParam.decoder_model_file);
@@ -319,8 +320,8 @@ int main(int argc, char** argv)
     ///////////////////////TESTING THE NEURAL NETWORK////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////
 
-	string temp_encoder_file = "temp.encoder";
-	string temp_decoder_file = "temp.decoder";
+	//string temp_encoder_file = "temp.encoder";
+	//string temp_decoder_file = "temp.decoder";
     cerr<<"Number of testing minibatches: "<<num_batches<<endl;
 	
 	/*
@@ -386,8 +387,8 @@ int main(int argc, char** argv)
 	//init_h.setZero(myParam.num_hidden,minibatch_size);
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
-	encoder_nn.write(temp_encoder_file);
-	decoder_nn.write(temp_decoder_file);
+	//encoder_nn.write(temp_encoder_file);
+	//decoder_nn.write(temp_decoder_file);
 	
 	
     ofstream file(arg_predicted_sequence_file.c_str());
@@ -479,8 +480,8 @@ int main(int argc, char** argv)
 			
 			//prop.computeProbsLog(testing_output_sent_data,
 			// 					minibatch_log_likelihood);	
-			cerr<<"output start symbol "<<arg_output_start_symbol<<endl;
-			cerr<<"output end symbol "<<arg_output_end_symbol<<endl;
+			//cerr<<"output start symbol "<<arg_output_start_symbol<<endl;
+			//cerr<<"output end symbol "<<arg_output_end_symbol<<endl;
 			prop.generateGreedyOutput(testing_input_sent_data,
 							current_c,
 							current_h,		

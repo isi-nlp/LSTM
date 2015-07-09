@@ -300,6 +300,20 @@ void model::read(const string &filename)
     read(filename, input_words, output_words);
 }
 
+void model::read(const string &filename, int &start_word, int &end_word)
+{
+    vector<string> input_words;
+    vector<string> output_words;
+    read(filename, input_words, output_words);
+	//Search for the start word and end word in output words
+	for (int i=0; i<output_words.size(); i++){
+		if (output_words[i] == "<s>")
+			start_word = i;
+		if (output_words[i] == "</s>")
+			end_word = i;
+	}
+}
+
 void model::read(const string &filename, vector<string> &words)
 {
     vector<string> output_words;
@@ -880,7 +894,7 @@ void google_input_model::read(const string &filename)
 	    continue;
 	else
 	{
-	    cerr << "warning: unrecognized section: " << line << endl;
+	    //cerr << "warning: unrecognized section: " << line << endl;
 	    // skip over section
 	    while (getline(file, line) && line != "") { }
 	}

@@ -186,6 +186,8 @@ public:
     // a better solution is needed
 
     void read(const std::string &filename);
+	//function for getting the start and end words
+	void read(const string &filename, int &start_word, int &end_word);
     void read(const std::string &filename, std::vector<std::string> &words);
     void read(const std::string &filename, std::vector<std::string> &input_words, std::vector<std::string> &output_words);
     void write(const std::string &filename);

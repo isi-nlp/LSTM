@@ -17,17 +17,17 @@ def writeWords(words_file,v):
     for w in v.words:
       outfile.write("%s\n" % (w,))
 
-def insertInVocab(v,c,n_vocab,vocab_type):
+def insertInVocab(v,c,vocab_size,vocab_type):
     #v.insert_word(null)
     inserted = v.from_counts(c, vocab_size)
     if inserted == len(c):
-        sys.stderr.write("warning: only %d words types in training data; set --n_%svocab lower to learn unknown word\n"%vocab_type);
+        sys.stderr.write("warning: only %d words types in training data; set --n_%s_vocab lower to learn unknown word\n"%(len(c),vocab_type));
 
 def writeData(data,filename,v):
-    outfile = open(args.train_file, 'w')
+    outfile = open(filename, 'w')
     for words in data:
         #for ngram in ngrams(words, n):
-        outfile.write(" ".join(str(v.lookup_word(w)) for w in ngram) + "\n")
+        outfile.write(" ".join(str(v.lookup_word(w)) for w in words) + "\n")
 
 
 if __name__ == "__main__":
@@ -46,8 +46,8 @@ if __name__ == "__main__":
     parser.add_argument('--output_words_file', metavar='file', dest='output_words_file', help='make output vocabulary')
     parser.add_argument('--input_train_file', metavar='file', dest='input_train_file', default='-', help='make input training file')
     parser.add_argument('--output_train_file', metavar='file', dest='output_train_file', default='-', help='make input training file')
-    parser.add_argument('--input_validation_file', metavar='file', dest='validation_file', help='make input validation file')
-    parser.add_argument('--output_validation_file', metavar='file', dest='validation_file', help='make output validation file')
+    parser.add_argument('--input_validation_file', metavar='file', dest='input_validation_file', help='make input validation file')
+    parser.add_argument('--output_validation_file', metavar='file', dest='output_validation_file', help='make output validation file')
     parser.add_argument('--validation_size', metavar='m', dest='validation_size', type=int, default=0, help="select m lines for validation. Selects the last m lines")
     args = parser.parse_args()
 
@@ -81,8 +81,8 @@ if __name__ == "__main__":
         for li, line in enumerate(file(args.output_validation_text)):
             words = line.split()
             #words = [start] * (n-1) + words + [stop]
-            words = [start] + words + [end]
-            outupt_validation_data.append(words)
+            words = [start] + words + [stop]
+            output_validation_data.append(words)
     else:
         if args.validation_size > 0:
             output_validation_data = output_train_data[-args.validation_size:]
@@ -92,11 +92,11 @@ if __name__ == "__main__":
 
     input_c = collections.Counter()
     for words in input_train_data:
-        input_c.update(words[n-1:])
+        input_c.update(words[:])
 
     output_c = collections.Counter()
     for words in output_train_data:
-        output_c.update(words[n-1:])
+        output_c.update(words[:])
 
     lengths = [len(input_words) + len(output_words) for input_words,output_words in zip(input_train_data,output_train_data)]
 
