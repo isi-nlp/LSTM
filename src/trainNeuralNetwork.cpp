@@ -628,7 +628,8 @@ int main(int argc, char** argv)
       }
     }
 	*/
-	
+	double best_perplexity = 999999999;
+	int best_model = 0;	
 	//Resetting the gradient in the beginning
 	prop.resetGradient();
     for (int epoch=0; epoch<myParam.num_epochs; epoch++)
@@ -669,6 +670,7 @@ int main(int argc, char** argv)
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
 	
+
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
 			current_c.setZero(myParam.num_hidden, minibatch_size);
@@ -977,13 +979,17 @@ int main(int argc, char** argv)
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-		    cerr << "		Validation log-likelihood base e:      " << log_likelihood << endl;
-			cerr << "		Validation log-likelihood base 2:     " << log_likelihood/log(2.) << endl;
-			cerr<<  "		Validation cross entropy in base 2 is "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
-			cerr << "         		perplexity:                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
+		    cerr << "		Validation log-likelihood base e in epoch "<<epoch<<":      	" << log_likelihood << endl;
+			cerr << "		Validation log-likelihood base 2 in epoch "<<epoch<<":     	" << log_likelihood/log(2.) << endl;
+			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":  	"<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
+			cerr << "         		perplexity in epoch"<<epoch<<":                    	"<< exp(-log_likelihood/total_validation_output_tokens) << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+			if (exp(-log_likelihood/total_validation_output_tokens) < best_perplexity){
+				best_perplexity = exp(-log_likelihood/total_validation_output_tokens);
+				best_model = epoch+1;
+			}
 			if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 	        { 
 	            current_learning_rate /= 2;
@@ -993,6 +999,8 @@ int main(int argc, char** argv)
 		}
 	
     }
+	cerr<<" The best validation perplexity was "<<best_perplexity<<" and the best model is "
+			<<myParam.model_prefix<<".encoder."<<best_model<<", "<<myParam.model_prefix<<".decoder."<<best_model<<endl;
     return 0;
 }
 
