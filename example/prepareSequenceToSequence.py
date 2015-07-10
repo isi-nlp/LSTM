@@ -34,8 +34,11 @@ if __name__ == "__main__":
     import sys
     import fileinput
     import argparse
-
     parser = argparse.ArgumentParser(description='Preprocess training data for n-gram language model.')
+    if (len(sys.argv) < 2):
+      parser.print_help()
+      sys.exit()
+
     parser.add_argument('--input_train_text', metavar='file', dest='input_train_text', help='input training text file')
     parser.add_argument('--output_train_text', metavar='file', dest='output_train_text', help='output training text file')
     parser.add_argument('--input_validation_text', metavar='file', dest='input_validation_text', help='validation input text file (overrides --validation_size)')
