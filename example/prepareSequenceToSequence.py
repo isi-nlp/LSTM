@@ -129,10 +129,12 @@ if __name__ == "__main__":
     #writing the training and validation data
    
     writeData(input_train_data,args.input_train_file,input_v)
-    writeData(input_validation_data,args.input_validation_file,input_v)
+    if (args.input_validation_text):
+        writeData(input_validation_data,args.input_validation_file,input_v)
 
     writeData(output_train_data,args.output_train_file,output_v)
-    writeData(output_validation_data,args.output_validation_file,output_v)
+    if (args.output_validation_text):
+      writeData(output_validation_data,args.output_validation_file,output_v)
     
     '''
     for words in input_train_data:
