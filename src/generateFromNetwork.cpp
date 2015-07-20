@@ -471,7 +471,7 @@ int main(int argc, char** argv)
 			testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
 			init_h = current_h; 			
-			prop.fPropInput(testing_input_sent_data,
+			prop.fPropEncoder(testing_input_sent_data,
 						0,
 						max_input_sent_len-1,
 						current_c,
