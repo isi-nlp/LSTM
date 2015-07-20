@@ -572,7 +572,51 @@ public:
 						*/
 		
 	}
-	
+
+	//This takes the sequence continuation indices, the previous hidden and cell states and creates new ones for this LSTM block
+	template <typename DerivedH, typename DerivedC , typename DerivedS>
+	static void filterStatesAndErrors(const MatrixBase<DerivedH> &from_h_matrix,
+							const MatrixBase<DerivedC> &from_c_matrix,
+							const MatrixBase<DerivedH> &const_to_h_matrix,
+							const MatrixBase<DerivedC> &const_to_c_matrix,
+							const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) {
+						int current_minibatch_size = sequence_cont_indices.cols();	
+						UNCONST(DerivedC, const_to_c_matrix, to_c_matrix);
+						UNCONST(DerivedH, const_to_h_matrix, to_h_matrix);
+						//int current_minibatch_size = h_t_minus_one.cols();	
+						#pragma omp parallel for 
+						for (int index=0; index<current_minibatch_size; index++){ 
+							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+							//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
+							if (sequence_cont_indices(index) == 0) {
+								to_h_matrix.col(index).setZero(); 			
+								to_c_matrix.col(index).setZero();
+								//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
+								//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
+								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
+							} else {
+								//cerr<<"copying"<<endl;
+								to_h_matrix.col(index) = from_h_matrix.col(index);
+								to_c_matrix.col(index) = from_c_matrix.col(index);
+								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
+							}
+						}	
+												
+						/*
+						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+						int current_minibatch_size = sequence_cont_indices.cols();
+						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
+						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
+							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
+							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
+						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
+						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
+						*/
+		
+	}
+		
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 	//nonlinearities 
 	void clipGradient(){}

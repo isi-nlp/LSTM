@@ -51,7 +51,11 @@ typedef ip::allocator<int, ip::managed_mapped_file::segment_manager> intAllocato
 typedef ip::vector<int, intAllocator> vec;
 typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocator;
 
-
+#ifdef FLOAT
+#define precision_type float;
+#else
+#define precision_type double;
+#endif
 //typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 int main(int argc, char** argv)
@@ -194,7 +198,7 @@ int main(int argc, char** argv)
       //}
 
       myParam.minibatch_size = minibatch_size.getValue();
-	  myParam.minibatch_size = 1;
+	  //myParam.minibatch_size = 1;
       myParam.validation_minibatch_size = validation_minibatch_size.getValue();
 	  myParam.validation_minibatch_size =1;
       myParam.num_epochs= num_epochs.getValue();
@@ -388,7 +392,8 @@ int main(int argc, char** argv)
     Matrix<int,Dynamic,Dynamic> training_data;
 	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
 	Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
-	Array<int,Dynamic,Dynamic> validation_sequence_cont_sent_data, training_sequence_cont_sent_data;
+	Array<int,Dynamic,Dynamic> validation_input_sequence_cont_sent_data, training_input_sequence_cont_sent_data;
+	Array<int,Dynamic,Dynamic> validation_output_sequence_cont_sent_data, training_output_sequence_cont_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
 	
@@ -701,9 +706,12 @@ int main(int argc, char** argv)
 			//Taking the input and output sentence and setting the training data to it.
 			//Getting a minibatch of sentences
 			vector<int> minibatch_input_sentences, minibatch_output_sentences, minibatch_sequence_cont_sentences;
-			unsigned int max_input_sent_len,max_output_sent_len;
+			vector<int> minibatch_input_sequence_cont_sentences, minibatch_output_sequence_cont_sentences;
+			unsigned int max_input_sent_len, max_output_sent_len;
 			unsigned int minibatch_output_tokens,minibatch_input_tokens, minibatch_sequence_cont_tokens;
 			minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;
+			//cerr<<"reading data"<<endl;
+			/*
 			miniBatchify(training_input_sent, 
 							minibatch_input_sentences,
 							minibatch_start_index,
@@ -711,13 +719,40 @@ int main(int argc, char** argv)
 							max_input_sent_len,
 							1,
 							minibatch_input_tokens);
-			miniBatchify(training_output_sent, 
+			*/
+			miniBatchifyEncoder(training_input_sent, 
+							minibatch_input_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_input_sent_len,
+							minibatch_input_tokens,
+							1);	
+			minibatch_input_tokens = 0;
+			miniBatchifyEncoder(training_input_sent, 
+							minibatch_input_sequence_cont_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_input_sent_len,
+							minibatch_input_tokens,
+							0);		
+																			
+			miniBatchifyDecoder(training_output_sent, 
 							minibatch_output_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
 							max_output_sent_len,
-							0,
-							minibatch_output_tokens);	
+							minibatch_output_tokens,
+							1);
+							
+			minibatch_output_tokens =0;
+			miniBatchifyDecoder(training_output_sent, 
+							minibatch_output_sequence_cont_sentences,
+							minibatch_start_index,
+							minibatch_end_index,
+							max_output_sent_len,
+							minibatch_output_tokens,
+							0);	
+							
 			//cerr<<"Max output sent len is "<<max_output_sent_len<<endl;
 			//getchar();
 							/*				
@@ -729,6 +764,8 @@ int main(int argc, char** argv)
 							1,
 							minibatch_sequence_cont_tokens);	
 							*/	
+							
+						
 			/*
 			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(training_input_sent[batch].data(), 
 											training_input_sent[batch].size(),
@@ -745,10 +782,24 @@ int main(int argc, char** argv)
 			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																			max_output_sent_len,
 																			current_minibatch_size);
+																			
+			training_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																			max_input_sent_len,
+																			current_minibatch_size);	
+			training_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
+																		max_output_sent_len,
+																		current_minibatch_size);																
 			//training_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 			//																max_sent_len,
 			//																current_minibatch_size);
-			training_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	();
+																		/*
+			cerr<<"training input sent data is "<<training_input_sent_data<<endl;
+			cerr<<"training output sent data is "<<training_output_sent_data<<endl;
+			cerr<<"training input sequence cont data is "<<training_input_sequence_cont_sent_data<<endl;
+			cerr<<"training output sequence cont data is "<<training_output_sequence_cont_sent_data<<endl;
+			exit(0);
+			*/
+			//training_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	();
 			//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
 			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
 			//exit(0);
@@ -761,15 +812,28 @@ int main(int argc, char** argv)
 				cerr<<"current_h_for_gradCheck "<<current_h_for_gradCheck<<endl;
 			}													
 			init_c = current_c;
-			init_h = current_h; 			
+			init_h = current_h; 	
+			/*
 			prop.fProp(training_input_sent_data,
 					training_output_sent_data,
 						0,
 						max_input_sent_len-1,
 						current_c,
-						current_h,
+						current_h,	
 						training_sequence_cont_sent_data);	
-						
+			*/
+			
+			prop.fPropEncoder(training_input_sent_data,
+						0,
+						max_input_sent_len-1,
+						current_c,
+						current_h,
+						training_input_sequence_cont_sent_data);						
+		    prop.fPropDecoder(training_output_sent_data,
+					current_c,
+					current_h,
+					training_output_sequence_cont_sent_data);
+					
 		  	double adjusted_learning_rate = current_learning_rate;
 			if (!myParam.norm_clipping){
 				adjusted_learning_rate /= current_minibatch_size;			
@@ -793,13 +857,14 @@ int main(int argc, char** argv)
 					 rng,
 					 softmax_nce_loss); //, 
 				//Calling backprop
-			    prop.bProp(training_input_sent_data,
+			    prop.bPropDecoder(training_input_sent_data,
 					training_output_sent_data,
 					 myParam.gradient_check,
 					 myParam.norm_clipping); //, 
  			    prop.bPropEncoder(training_input_sent_data,
  					 myParam.gradient_check,
- 					 myParam.norm_clipping); 					 
+ 					 myParam.norm_clipping,
+					 training_input_sequence_cont_sent_data); 					 
 					 //init_c,
 					 //init_h,
 					 //training_sequence_cont_sent_data); 	
@@ -820,7 +885,8 @@ int main(int argc, char** argv)
 					   			 rng_grad_check,
 					   			 loss_function,
 								 softmax_nce_loss,
-								 training_sequence_cont_sent_data);
+								 training_input_sequence_cont_sent_data,
+								 training_output_sequence_cont_sent_data);
 					//for the next minibatch, we want the range to be updated as well
 					rng_grad_check = rng;
 				}
@@ -915,10 +981,14 @@ int main(int argc, char** argv)
   
 				//Taking the input and output sentence and setting the validation data to it.
 				//Getting a minibatch of sentences
-				vector<int> minibatch_input_sentences, minibatch_output_sentences, minibatch_sequence_cont_sentences;
+				vector<int> minibatch_input_sentences, 
+					minibatch_output_sentences, 
+					minibatch_input_sequence_cont_sentences,
+					minibatch_output_sequence_cont_sentences;
 				unsigned int max_input_sent_len,max_output_sent_len;
 				unsigned int minibatch_output_tokens,minibatch_input_tokens,minibatch_sequence_cont_tokens;
-				minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;				
+				minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;	
+				/*			
 				miniBatchify(validation_input_sent, 
 								minibatch_input_sentences,
 								minibatch_start_index,
@@ -926,13 +996,50 @@ int main(int argc, char** argv)
 								max_input_sent_len,
 								1,
 								minibatch_input_tokens);
+			
+				
 				miniBatchify(validation_output_sent, 
 								minibatch_output_sentences,
 								minibatch_start_index,
 								minibatch_end_index,
 								max_output_sent_len,
 								0,
-								minibatch_output_tokens);	
+								minibatch_output_tokens);
+									
+				*/
+				
+				miniBatchifyEncoder(validation_input_sent, 
+								minibatch_input_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								1);	
+				minibatch_input_tokens = 0;
+				miniBatchifyEncoder(validation_input_sent, 
+								minibatch_input_sequence_cont_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								0);		
+								
+				miniBatchifyDecoder(validation_output_sent, 
+								minibatch_output_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_output_sent_len,
+								minibatch_output_tokens,
+								1);
+			
+				minibatch_output_tokens =0;
+				miniBatchifyDecoder(validation_output_sent, 
+								minibatch_output_sequence_cont_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_output_sent_len,
+								minibatch_output_tokens,
+								0);																									
 			/*											
 				miniBatchify(validation_sequence_cont_sent, 
 								minibatch_sequence_cont_sentences,
@@ -949,10 +1056,16 @@ int main(int argc, char** argv)
 				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																				max_output_sent_len,
 																				current_minibatch_size);
+				validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																				max_input_sent_len,
+																				current_minibatch_size);	
+				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
+																			max_output_sent_len,
+																			current_minibatch_size);																				
 				//validation_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 				//																	max_sent_len,
 				//																	current_minibatch_size);
-			    validation_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	()	;																
+			    //validation_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	()	;																
 				//cerr<<"Validation input sent data "<<validation_input_sent_data<<endl;
 				//cerr<<"Validation output sent data "<<validation_output_sent_data<<endl;
 																			
@@ -960,17 +1073,29 @@ int main(int argc, char** argv)
 				//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
 				//exit(0);
 				//Calling fProp. Note that it should not matter for fProp if we're doing log 
-				//or NCE loss															
+				//or NCE loss		
+				/*																												
 				prop_validation.fProp(validation_input_sent_data,
 										validation_output_sent_data,
 										0,
 										max_input_sent_len-1, 
 										current_validation_c, 
 										current_validation_h,
-										validation_sequence_cont_sent_data);	
-		
+										validation_input_sequence_cont_sent_data);	
+				*/															
 	
-						 
+				prop_validation.fPropEncoder(validation_input_sent_data,
+							0,
+							max_input_sent_len-1,
+							current_validation_c,
+							current_validation_h,
+							validation_input_sequence_cont_sent_data);	
+												
+			    prop_validation.fPropDecoder(validation_output_sent_data,
+						current_validation_c,
+						current_validation_h,
+						validation_output_sequence_cont_sent_data);	
+											 
 		 		prop_validation.computeProbsLog(validation_output_sent_data,
 		 		 			  	minibatch_log_likelihood);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;

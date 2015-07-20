@@ -244,6 +244,110 @@ void miniBatchify(const std::vector<std::vector <int> > &sentences,
 	}
 }
 
+// The same function will be used to create the sentence continuation vectors for the encoder
+// and the minibatch . The sentence continuation vectors contain only 0 or 1. The 
+// data_or_sentence_vector flag indicate if its data or sentence continuation. data_or_sentence_vector = 1
+// indicates it's data
+void miniBatchifyEncoder(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				unsigned int &minibatch_tokens,
+				bool data_or_sentence_vector){
+	//cerr<<"minibatch start index is "<<minibatch_start_index<<endl;
+	//cerr<<"minibatch end index is "<<minibatch_end_index<<endl;
+	//First go over all the sentences and get the longest sentence
+	max_sent_len = 0;
+	//cerr<<"max sent len boefore is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//cerr<<"sent len "<<sentences[index].size()<<endl;
+		//cerr<<"max sent len in loop is "<<max_sent_len<<endl;
+		//cerr<<max_sent_len < sentences[index].size()<<endl;
+		if (max_sent_len < sentences[index].size()) {
+			//cerr<<"Ths is true"<<endl;
+			max_sent_len = sentences[index].size();
+			//cerr<<"max_sent_len is now"<<max_sent_len<<endl;
+		}
+	}
+	//Now createing the vector of vectors which is the minibatch size
+	//Note that I could do this already with the training data. 
+	//for ()
+	//cerr<<"max sent len is "<<max_sent_len<<endl;
+	//getchar();
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//cerr<<"creating data "<<endl;
+		//First padding the input with zeros
+		int sent_index=0;
+		for (;sent_index<max_sent_len-sentences[index].size(); sent_index++){
+			//If its the output sentence, then set the output label to -1
+			minibatch_sentences.push_back(0);
+			//cerr<<"pushing 0"<<endl;
+		}
+		//vector<int> extended_sent(max_sent_len,-1);
+		for (int j=0;sent_index<max_sent_len; j++,sent_index++){
+			
+			minibatch_sentences.push_back(
+				(data_or_sentence_vector) ? 
+						sentences[index][j] :
+						1);
+			minibatch_tokens++;
+		}
+		assert (sent_index == max_sent_len);
+		//Making sure that the sentence length has become equal to the encoder decoder pair
+	}
+}
+
+// The same function will be used to create the sentence continuation vectors for the decoder
+// and the minibatch . The sentence continuation vectors contain only 0 or 1. The 
+// data_or_sentence_vector flag indicate if its data or sentence continuation. data_or_sentence_vector = 1
+// indicates it's data
+void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				unsigned int &minibatch_tokens,
+				bool data_or_sentence_vector){
+	//cerr<<"minibatch start index is "<<minibatch_start_index<<endl;
+	//cerr<<"minibatch end index is "<<minibatch_end_index<<endl;
+	//First go over all the sentences and get the longest sentence
+	max_sent_len = 0;
+	//cerr<<"max sent len boefore is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//cerr<<"sent len "<<sentences[index].size()<<endl;
+		//cerr<<"max sent len in loop is "<<max_sent_len<<endl;
+		//cerr<<max_sent_len < sentences[index].size()<<endl;
+		if (max_sent_len < sentences[index].size()) {
+			//cerr<<"Ths is true"<<endl;
+			max_sent_len = sentences[index].size();
+			//cerr<<"max_sent_len is now"<<max_sent_len<<endl;
+		}
+	}
+	//Now createing the vector of vectors which is the minibatch size
+	//Note that I could do this already with the training data. 
+	//for ()
+	//cerr<<"max sent len is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//vector<int> extended_sent(max_sent_len,-1);
+		int sent_index=0;
+		for (;sent_index<sentences[index].size(); sent_index++){
+			//minibatch_sentences.push_back(sentences[index][sent_index]);
+			minibatch_sentences.push_back(
+				(data_or_sentence_vector) ? 
+						sentences[index][sent_index] :
+						1);
+			minibatch_tokens++;
+		}
+		//Now padding the rest with -1
+		for (;sent_index<max_sent_len; sent_index++){
+			//If its the output sentence, then set the output label to -1
+			minibatch_sentences.push_back(0);
+		}
+	}
+}
+
+
 double logadd(double x, double y)
 {
     if (x > y)
