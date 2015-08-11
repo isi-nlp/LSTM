@@ -1,3 +1,4 @@
+//#define EIGEN_NO_MALLOC
 #include <ctime>
 #include <cmath>
 
@@ -31,10 +32,12 @@
 #include "graphClasses.h"
 #include "util.h"
 #include "multinomial.h"
+#include "vocabulary.h"
 
 //#include "gradientCheck.h"
 
 //#define EIGEN_DONT_PARALLELIZE
+
 
 using namespace std;
 using namespace TCLAP;
@@ -105,8 +108,8 @@ int main(int argc, char** argv)
       //ValueArg<double> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "double", cmd);
       //ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
           Default: 10E-3", false, 10E-3, "double", cmd);
-      ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
-      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 1000, "int", cmd);
+      ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 128.", false, 128, "int", cmd);
+      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 128.", false, 128, "int", cmd);
 
       ValueArg<int> num_epochs("", "num_epochs", "Number of epochs. Default: 10.", false, 10, "int", cmd);
 
@@ -133,8 +136,8 @@ int main(int argc, char** argv)
       //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
           ADAGRAD(ADA)\n \
           ADADELTA(ADAD)" , false, "SGD", "string", cmd);
-      ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , true, "", "string", cmd);
-      ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , true, "", "string", cmd);
+      ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
+      ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
@@ -143,6 +146,7 @@ int main(int argc, char** argv)
 	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , true, "", "string", cmd);	  
       //ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
 	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
+	  
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);
@@ -200,7 +204,7 @@ int main(int argc, char** argv)
       myParam.minibatch_size = minibatch_size.getValue();
 	  //myParam.minibatch_size = 1;
       myParam.validation_minibatch_size = validation_minibatch_size.getValue();
-	  myParam.validation_minibatch_size =1;
+	  //myParam.validation_minibatch_size =1;
       myParam.num_epochs= num_epochs.getValue();
       myParam.learning_rate = learning_rate.getValue();
       //myParam.conditioning_constant = conditioning_constant.getValue();
@@ -342,7 +346,18 @@ int main(int argc, char** argv)
     vector<int> training_data_flat;
 	vector< vector<int> > training_input_sent, validation_input_sent, training_sequence_cont_sent;
 	vector< vector<int> > training_output_sent, validation_output_sent, validation_sequence_cont_sent;
+	vector< vector<string> > word_training_input_sent, word_validation_input_sent;
+	vector< vector<string> > word_training_output_sent, word_validation_output_sent;
+
+    // Construct vocabulary
+    vocabulary input_vocab, output_vocab;
+    int start, stop;
 	
+
+ 
+
+	
+
     vec * training_data_flat_mmap;
     data_size_t training_data_size, validation_data_size; //num_tokens;
     ip::managed_mapped_file mmap_file;
@@ -373,8 +388,34 @@ int main(int argc, char** argv)
 						total_validation_sequence_tokens = 0;
 	//data_size_t total_input_tokens = 0;
 	//data_size
-	readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
-	readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
+	//readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
+	//readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
+	
+	readSentFile(myParam.input_sent_file, word_training_input_sent, total_input_tokens,1,0);
+	readSentFile(myParam.output_sent_file, word_training_output_sent, total_output_tokens,1,1);
+	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
+	if (myParam.input_words_file == "") {
+	   	input_vocab.insert_word("<s>");
+		createVocabulary(word_training_input_sent, input_vocab);
+		myParam.input_vocab_size = input_vocab.size();
+	}
+	if (myParam.output_words_file == ""){
+		output_vocab.insert_word("<s>");
+		output_vocab.insert_word("</s>");			
+		createVocabulary(word_training_output_sent, output_vocab);	
+		myParam.output_vocab_size = output_vocab.size();
+	}
+		
+
+	
+	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
+	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
+	integerize(word_training_input_sent, 
+					training_input_sent, 
+					input_vocab);
+	integerize(word_training_output_sent, 
+					training_output_sent, 
+					output_vocab);					
     //readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
 	training_data_size = training_input_sent.size();
@@ -396,11 +437,11 @@ int main(int argc, char** argv)
 	Array<int,Dynamic,Dynamic> validation_output_sequence_cont_sent_data, training_output_sequence_cont_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
-	
+	/*
     if (use_mmap_file == false) {
       training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
     }
-
+	*/
     // If neither --input_vocab_size nor --input_words_file is given, set input_vocab_size to the maximum word index
     if (myParam.input_vocab_size == 0 and myParam.input_words_file == "")
     {
@@ -437,18 +478,44 @@ int main(int argc, char** argv)
       cerr << "Number of validation instances: " << validation_data_size << endl;
     }
 	*/
+	//cerr<<"printing input vocabulary"<<endl;
+	//input_vocab.print_vocabulary();
+	//cerr<<"printing output vocabulary"<<endl;
+	//output_vocab.print_vocabulary();
+	//getchar();
 	
 	if (myParam.input_validation_sent_file != ""){
+		
+
+		
+		readSentFile(myParam.input_validation_sent_file, 
+					word_validation_input_sent, 
+					total_validation_input_tokens,
+					1,
+					0);
+		readSentFile(myParam.output_validation_sent_file, 
+					word_validation_output_sent, 
+					total_validation_output_tokens,
+					1,
+					1);
+		//integerizing the validation data
+		integerize(word_validation_input_sent, 
+						validation_input_sent, 
+						input_vocab);
+		integerize(word_validation_output_sent, 
+						validation_output_sent, 
+						output_vocab);				
+		/*			
 		readSentFile(myParam.input_validation_sent_file, 
 		validation_input_sent,
 		myParam.validation_minibatch_size, 
-		total_validation_input_tokens);
-		
+		total_validation_input_tokens);				
 		readSentFile(myParam.output_validation_sent_file, 
 		validation_output_sent,
 		myParam.validation_minibatch_size, 
 		total_validation_output_tokens);
-		
+		*/
+					
 		//readSentFile(myParam.validation_sequence_cont_file, 
 		//	validation_sequence_cont_sent,
 		//	myParam.validation_minibatch_size, 
@@ -478,8 +545,8 @@ int main(int argc, char** argv)
 	if (myParam.output_vocab_size == 0)
 	    myParam.output_vocab_size = output_words.size();
     }
-	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
-	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
+	//cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
+	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
 	
     ///// Construct unigram model and sampler that will be used for NCE
 
@@ -624,7 +691,7 @@ int main(int argc, char** argv)
     if (myParam.normalization)
     {
       for (data_size_t i=0;i<training_data_size;i++)
-      {
+      { 	
           Matrix<int,Dynamic,1> context = training_data.block(0,i,ngram_size-1,1);
           if (c_h.find(context) == c_h.end())
           {
@@ -675,9 +742,10 @@ int main(int argc, char** argv)
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
 	
-
+	cerr<<"About to start training "<<endl;
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
+			//err<<"batch is "<<batch<<endl;
 			current_c.setZero(myParam.num_hidden, minibatch_size);
 			current_h.setZero(myParam.num_hidden, minibatch_size);			
             if (batch > 0 && batch % 100 == 0)
@@ -792,13 +860,13 @@ int main(int argc, char** argv)
 			//training_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 			//																max_sent_len,
 			//																current_minibatch_size);
-																		/*
-			cerr<<"training input sent data is "<<training_input_sent_data<<endl;
-			cerr<<"training output sent data is "<<training_output_sent_data<<endl;
-			cerr<<"training input sequence cont data is "<<training_input_sequence_cont_sent_data<<endl;
-			cerr<<"training output sequence cont data is "<<training_output_sequence_cont_sent_data<<endl;
-			exit(0);
-			*/
+																	
+			//cerr<<"training input sent data is "<<training_input_sent_data<<endl;
+			//cerr<<"training output sent data is "<<training_output_sent_data<<endl;
+			//cerr<<"training input sequence cont data is "<<training_input_sequence_cont_sent_data<<endl;
+			//cerr<<"training output sequence cont data is "<<training_output_sequence_cont_sent_data<<endl;
+			//exit(0);
+			
 			//training_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	();
 			//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
 			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
@@ -941,8 +1009,8 @@ int main(int argc, char** argv)
 	{
 	    cerr << "Writing model" << endl;
 	    if (myParam.input_words_file != "") {
-	        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_words, output_words);
-			nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_words, output_words);	
+	        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
+			nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());	
 		}
 	    else
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));

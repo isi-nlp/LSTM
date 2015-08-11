@@ -225,8 +225,9 @@ void model::premultiply()
     Matrix<double,Dynamic,Dynamic> U = first_hidden_linear.U;
     first_hidden_linear.U.resize(num_hidden, input_vocab_size * context_size);
     for (int i=0; i<context_size; i++)
-        first_hidden_linear.U.middleCols(i*input_vocab_size, input_vocab_size) = U.middleCols(i*input_embedding_dimension, input_embedding_dimension) * input_layer.W->transpose();
-    input_layer.W->resize(1,1); // try to save some memory
+        first_hidden_linear.U.middleCols(i*input_vocab_size, input_vocab_size) = 
+			U.middleCols(i*input_embedding_dimension, input_embedding_dimension) * input_layer.W.transpose();
+    input_layer.W.resize(1,1); // try to save some memory
     premultiplied = true;
 }
 

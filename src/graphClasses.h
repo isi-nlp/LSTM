@@ -493,7 +493,7 @@ public:
 											c_t_minus_one.leftCols(current_minibatch_size));		
  
 		//Derivatives of weights out of x_t
-
+		/*
 		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
 		//cerr<<"W_x_to_o_node"<<endl;
 		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
@@ -506,7 +506,8 @@ public:
 											data);	
 		//cerr<<"W_x_to_c_node"<<endl;									
 		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											data);			
+											data);	
+		*/		
 		
 		/*
 		//Derivatives of the input embeddings. I THINK THIS IS WRONG!							

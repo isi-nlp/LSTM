@@ -64,6 +64,8 @@ int main(int argc, char** argv)
 	int arg_output_start_symbol;
 	int arg_output_end_symbol;
 	string arg_predicted_sequence_file;
+	bool arg_greedy;
+	bool arg_stochastic;
     try {
       // program options //
       CmdLine cmd("Trains a LSTM.", ' ' , "0.3\n","");
@@ -71,8 +73,8 @@ int main(int argc, char** argv)
       // The options are printed in reverse order
 
 
-      ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
-      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 1000, "int", cmd);
+      //ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
+      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 100, "int", cmd);
 
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
@@ -97,14 +99,18 @@ int main(int argc, char** argv)
 	  ValueArg<string> testing_sequence_cont_file("", "testing_sequence_cont_file", "Testing sequence continuation file" , false, "", "string", cmd);
 
 
-	  ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
-		  Default: 1 = yes, \n \
-		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
+	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
+		//  Default: 1 = yes, \n \
+		 // 			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file.", false, "", "string", cmd);
 	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file.", false, "", "string", cmd);
 	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
 	  ValueArg<string> predicted_sequence_file("", "predicted_sequence_file", "Predicted sequences file." , false, "", "string", cmd);
-
+	  ValueArg<bool> greedy("", "greedy", "If yes, then the output will be generated greedily \n \
+		  Default: 0 = yes. \n", false, 0, "bool", cmd);	
+	  ValueArg<bool> stochastic("", "stochastic", "If yes, then the output will be generated stochastically \n \
+		  Default: 0 = yes. \n", false, 0, "bool", cmd);		  
+	  
       cmd.parse(argc, argv);
 
 
@@ -119,7 +125,22 @@ int main(int argc, char** argv)
 	  //arg_output_start_symbol = output_start_symbol.getValue();
 	  //arg_output_end_symbol = output_end_symbol.getValue();
 	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
-	  
+	  arg_greedy = greedy.getValue();
+	  arg_stochastic = stochastic.getValue();
+	  if (arg_greedy == 0 && arg_stochastic == 0){
+		  cerr<<"You have to choose either stocastic or greedy generation"<<endl;
+		  exit(0);
+	  }
+	  if (arg_greedy == 1 && arg_stochastic == 1){
+	  	cerr<<"You have to choose either stocastic or greedy generation, not both"<<endl;
+		exit(1);
+	  }
+	  if (arg_greedy == 1){
+		  arg_stochastic = 0;
+	  }
+	  if (arg_stochastic == 1){
+		  arg_greedy = 0;
+	  }
 	  myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
 	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	  /*
@@ -146,11 +167,11 @@ int main(int argc, char** argv)
       }
 
       myParam.minibatch_size = minibatch_size.getValue();
-	  myParam.minibatch_size = 1; //hard coding this for now
+	  //myParam.minibatch_size = 1; //hard coding this for now
 	  
-      myParam.validation_minibatch_size = validation_minibatch_size.getValue();
+      //myParam.validation_minibatch_size = validation_minibatch_size.getValue();
 
-	  myParam.restart_states = norm_threshold.getValue();
+	  //myParam.restart_states = norm_threshold.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -166,7 +187,7 @@ int main(int argc, char** argv)
       cerr << input_vocab_size.getDescription() << sep << input_vocab_size.getValue() << endl;
       cerr << output_vocab_size.getDescription() << sep << output_vocab_size.getValue() << endl;
 
-	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
+	  //cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 
       if (embedding_dimension.getValue() >= 0)
       {
@@ -189,9 +210,9 @@ int main(int argc, char** argv)
 
 
       cerr << minibatch_size.getDescription() << sep << minibatch_size.getValue() << endl;
-      if (myParam.validation_file != "") {
-	     cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
-      }
+      //if (myParam.validation_file != "") {
+	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
+     // }
 
     }
     catch (TCLAP::ArgException &e)
@@ -204,8 +225,8 @@ int main(int argc, char** argv)
     int save_threads;
 
     //unsigned seed = std::time(0);
-    unsigned seed = 1234; //for testing only
-    mt19937 rng(seed);
+    //unsigned seed = 1234; //for testing only
+    mt19937 rng(time(NULL));
 
     /////////////////////////READING IN THE TRAINING AND VALIDATION DATA///////////////////
     /////////////////////////////////////////////////////////////////////////////////////
@@ -401,7 +422,6 @@ int main(int argc, char** argv)
     {
 			current_c.setZero(myParam.num_hidden, minibatch_size);
 			current_h.setZero(myParam.num_hidden, minibatch_size);		
-			vector<int> predicted_sequence;
 			double minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
             {
@@ -414,7 +434,8 @@ int main(int argc, char** argv)
 			//cerr<<"Minibatch end index is "<<minibatch_end_index<<endl;
 
       	  int current_minibatch_size = min(static_cast<data_size_t>(minibatch_size), testing_data_size - minibatch_start_index);
-	  	  //cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+		  vector<vector<int> > predicted_sequence(current_minibatch_size);
+	  	  cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 
 	  
 
@@ -430,37 +451,39 @@ int main(int argc, char** argv)
 			unsigned int max_input_sent_len, max_output_sent_len;
 			unsigned int minibatch_output_tokens,minibatch_input_tokens, minibatch_sequence_cont_tokens;
 			minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;
-			miniBatchify(testing_input_sent, 
+			/*
+			miniBatchifyEncoder(testing_input_sent, 
 							minibatch_input_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
 							max_input_sent_len,
 							1,
 							minibatch_input_tokens);
-			/*				
-			miniBatchify(testing_output_sent, 
-							minibatch_output_sentences,
+			*/
+			miniBatchifyEncoder(testing_input_sent, 
+							minibatch_input_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
-							max_output_sent_len,
-							0,
-							minibatch_output_tokens);		
-			*/
-							
-			/*							
-			miniBatchify(testing_sequence_cont_sent, 
+							max_input_sent_len,
+							minibatch_input_tokens,
+							1);	
+			minibatch_input_tokens = 0;
+			miniBatchifyEncoder(testing_input_sent, 
 							minibatch_sequence_cont_sentences,
 							minibatch_start_index,
 							minibatch_end_index,
-							max_sent_len,
-							1,
-							minibatch_sequence_cont_tokens);	
-			*/	
+							max_input_sent_len,
+							minibatch_input_tokens,
+							0);		
+
 
 			testing_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
 											max_input_sent_len,
 											current_minibatch_size);
-							
+			testing_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
+																			max_input_sent_len,
+																			current_minibatch_size);
+			//cerr<<"sequence cont data is "<<testing_sequence_cont_sent_data<<endl;
 			//testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 			//																max_output_sent_len,
 			//																current_minibatch_size);
@@ -468,7 +491,7 @@ int main(int argc, char** argv)
 			//																max_sent_len,
 			//																current_minibatch_size);
 																											
-			testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
+			//testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
 			init_h = current_h; 			
 			prop.fPropEncoder(testing_input_sent_data,
@@ -482,19 +505,33 @@ int main(int argc, char** argv)
 			// 					minibatch_log_likelihood);	
 			//cerr<<"output start symbol "<<arg_output_start_symbol<<endl;
 			//cerr<<"output end symbol "<<arg_output_end_symbol<<endl;
-			prop.generateGreedyOutput(testing_input_sent_data,
-							current_c,
-							current_h,		
-							predicted_sequence,
-							arg_output_start_symbol,
-							arg_output_end_symbol);
+			if (arg_greedy) {
+				prop.generateGreedyOutput(testing_input_sent_data,
+								current_c,
+								current_h,		
+								predicted_sequence,
+								arg_output_start_symbol,
+								arg_output_end_symbol);				
+			}
+			if (arg_stochastic){
+				prop.generateStochasticOutput(testing_input_sent_data,
+								current_c,
+								current_h,		
+								predicted_sequence,
+								arg_output_start_symbol,
+								arg_output_end_symbol,
+								rng);
+			}
 			cerr<<"predicted sequence size is "<<predicted_sequence.size()<<endl;
 			//data_log_likelihood += 	minibatch_log_likelihood;
 			//writing the predicted sequence
-			for (int seq_id=0; seq_id<predicted_sequence.size(); seq_id++){
-				file << predicted_sequence[seq_id]<<" ";	
+			for (int sent_id = 0; sent_id<predicted_sequence.size(); sent_id++) {
+				for (int seq_id=0; seq_id<predicted_sequence[sent_id].size(); seq_id++){
+					file << predicted_sequence[sent_id][seq_id]<<" ";	
+				}
+				file<<endl;
 			}
-			file<<endl;
+			
 
 		  
 	 }

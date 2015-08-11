@@ -65,6 +65,8 @@ public:
     Linear_layer second_hidden_linear;
     Activation_function second_hidden_activation;
     Output_word_embeddings output_layer;
+	//output_model *output;	
+	/*
     Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
       input_embedding_matrix,
       input_and_output_embedding_matrix,
@@ -72,6 +74,7 @@ public:
 	  W_x_to_f_embedding_matrix, 
 	  W_x_to_c_embedding_matrix, 
 	  W_x_to_o_embedding_matrix; 
+	*/
     //Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
   	Linear_layer W_h_to_i, W_h_to_f, W_h_to_c, W_h_to_o;
   	Linear_diagonal_layer W_c_to_i, W_c_to_f, W_c_to_o;
@@ -92,6 +95,7 @@ public:
         int output_embedding_dimension,
         bool share_embeddings) 
     {
+		/*
         if (share_embeddings){
           input_and_output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
           input_layer.set_W(&input_and_output_embedding_matrix);
@@ -111,7 +115,7 @@ public:
 		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
 		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);
         }
-		
+		*/
         resize(ngram_size,
             input_vocab_size,
             output_vocab_size,
@@ -126,21 +130,23 @@ public:
     model() : input(NULL),
 			ngram_size(1), 
             premultiplied(false),
-            activation_function(Rectifier),
-            output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+            activation_function(Rectifier)//,
+            //output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+            //input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
 			//input_model(NULL)
         {
+			/*
           output_layer.set_W(&output_embedding_matrix);
           input_layer.set_W(&input_embedding_matrix);
 		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
 		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
 		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
-		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);		  
+		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);		
+			*/  
         }
 		
 
@@ -214,7 +220,7 @@ class google_input_model : public input_model {
 
 public:
     Input_word_embeddings input_layer;
-    Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> input_embedding_matrix;
+    //Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> input_embedding_matrix;
 	Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
  
     int num_hidden, input_vocab_size, input_embedding_dimension;
@@ -223,15 +229,15 @@ public:
 		int input_vocab_size,
         int input_embedding_dimension):input_model(num_hidden,input_vocab_size,input_embedding_dimension)  
     {
-          input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-          input_layer.set_W(&input_embedding_matrix);
+          //input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+          //input_layer.set_W(&input_embedding_matrix);
     }
 	
     google_input_model() : 
-			input_model(),
-            input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+			input_model() //,
+            //input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
         {
-          input_layer.set_W(&input_embedding_matrix);  
+          //input_layer.set_W(&input_embedding_matrix);  
         }
 
     void resize(int input_vocab_size,
@@ -313,6 +319,7 @@ public:
 		int input_vocab_size,
         int input_embedding_dimension) :input_model(num_hidden,input_vocab_size,input_embedding_dimension) 
     {
+		/*
 	  W_x_to_i_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
 	  W_x_to_f_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
 	  W_x_to_o_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
@@ -321,19 +328,24 @@ public:
 	  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
 	  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
 	  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);
+		*/
     }
 	
     standard_input_model() : 
-		input_model(),
+		input_model()//,
+		/*
 		W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
 		W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
 		W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
 		W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+		*/
         {
+			/*
   		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
   		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
   		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
-  		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);	 
+  		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);	
+			*/ 
         }
 
     void resize(int input_vocab_size,

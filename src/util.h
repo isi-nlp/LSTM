@@ -7,6 +7,7 @@
 #include <string>
 #include <math.h>
 
+
 #include <boost/unordered_map.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
@@ -20,6 +21,7 @@
 #include <Eigen/Dense>
 
 #include "maybe_omp.h"
+#include "vocabulary.h"
 
 // Make matrices hashable
 
@@ -81,32 +83,56 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 				const int minibatch_end_index,
 				unsigned int &max_sent_len,
 				unsigned int &minibatch_tokens,
-				bool data_or_sentence_vector);				
+				bool data_or_sentence_vector);	
+				
+void createVocabulary(std::vector<std::vector<std::string> > &sentences, vocabulary &vocab);
+
+void integerize(std::vector<std::vector<std::string> > &word_sentences, 
+				std::vector<std::vector<int> > &int_sentences, 
+				vocabulary &vocab);
+
+//for creating memory								
+template<typename dType>
+void allocate_Matrix_CPU(dType **h_matrix,int rows,int cols) {
+	*h_matrix = (dType *)malloc(rows*cols*sizeof(dType));
+}						
+	
 //template <typename T> readSentFile(const std::string &file, T &sentences);
 
-
+//Populates the sentences into a vector of vectors.
 template <typename T>
-void readSentFile(const std::string &file, T &sentences)
+void readSentFile(const std::string &file, 
+				std::vector<std::vector<T> > &sentences,
+				data_size_t &tokens,
+				const bool add_start_stop,
+				const bool is_output)
 {
-  std::cerr << "Reading sentences from: " << file << std::endl;
+	  std::cerr << "Reading sentences from: " << file << std::endl;
 
-  std::ifstream TRAININ;
-  TRAININ.open(file.c_str());
-  if (! TRAININ)
-  {
-    std::cerr << "Error: can't read from file " << file<< std::endl;
-    exit(-1);
-  }
+	  std::ifstream TRAININ;
+	  TRAININ.open(file.c_str());
+	  if (! TRAININ)
+	  {
+	    std::cerr << "Error: can't read from file " << file<< std::endl;
+	    exit(-1);
+	  }
 
-  std::string line;
-  while (getline(TRAININ, line))
-  {
-    std::vector<std::string> words;
-    splitBySpace(line, words);
-    sentences.push_back(words);
-  }
-
-  TRAININ.close();
+	  std::string line;
+	  while (getline(TRAININ, line))
+	  {
+	    std::vector<T> words;
+	    splitBySpace(line, words);
+		if (add_start_stop) {
+			words.insert(words.begin(),"<s>");
+			if (is_output){
+				words.push_back("</s>");
+			}
+		}
+	    sentences.push_back(words);
+		tokens += words.size();
+	  }
+	  
+	  TRAININ.close();
 }
 
 inline void intgerize(std::vector<std::string> &ngram,std::vector<int> &int_ngram){

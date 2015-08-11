@@ -195,8 +195,8 @@ class Linear_layer
       }
       if (momentum > 0.0)
       {
-          U_velocity = momentum*U_velocity + U_gradient;
-          U += learning_rate * U_velocity;
+          U_velocity.noalias() = momentum*U_velocity + U_gradient;
+          U.noalias() += learning_rate * U_velocity;
           //b_velocity = momentum*b_velocity + b_gradient;
           //b += learning_rate * b_velocity;
       }
@@ -590,7 +590,7 @@ class Output_word_embeddings
         //Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W;
         // Having W be a pointer to a matrix allows ease of sharing
         // input and output word embeddings
-        Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *W;
+        Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W;
         std::vector<double> W_data;
         Matrix<double,Dynamic,1> b;
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_running_gradient;
@@ -607,14 +607,16 @@ class Output_word_embeddings
 
         void resize(int rows, int cols)
         {
-          W->setZero(rows, cols);
+          W.setZero(rows, cols);
           b.setZero(rows);
         }
+		/*
     void set_W(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *input_W) {
       W = input_W;
     }
-    void read_weights(std::ifstream &W_file) { readMatrix(W_file, *W); }
-    void write_weights(std::ofstream &W_file) { writeMatrix(*W, W_file); }
+		*/
+    void read_weights(std::ifstream &W_file) { readMatrix(W_file, W); }
+    void write_weights(std::ofstream &W_file) { writeMatrix(W, W_file); }
     void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
     void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
 
@@ -627,40 +629,40 @@ class Output_word_embeddings
         double adagrad_epsilon)
     {
 
-        W_gradient.setZero(W->rows(),W->cols());
+        W_gradient.setZero(W.rows(),W.cols());
         b_gradient.setZero(b.size());
         if (parameter_update == "ADA") {
-          W_running_gradient = Matrix<double,Dynamic,Dynamic>::Ones(W->rows(),W->cols())*adagrad_epsilon;
+          W_running_gradient = Matrix<double,Dynamic,Dynamic>::Ones(W.rows(),W.cols())*adagrad_epsilon;
           b_running_gradient = Matrix<double,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
-          //W_gradient.setZero(W->rows(),W->cols());
+          //W_gradient.setZero(W.rows(),W.cols());
           //b_gradient.setZero(b.size());
         }
         if (parameter_update == "ADAD") {
-          W_running_gradient.setZero(W->rows(),W->cols());
+          W_running_gradient.setZero(W.rows(),W.cols());
           b_running_gradient.setZero(b.size());
-          W_gradient.setZero(W->rows(),W->cols());
+          W_gradient.setZero(W.rows(),W.cols());
           //b_gradient.setZero(b.size());
-          //W_running_parameter_update.setZero(W->rows(),W->cols());
+          //W_running_parameter_update.setZero(W.rows(),W.cols());
           b_running_parameter_update.setZero(b.size());
         }
 
-        initMatrix(engine, *W, init_normal, init_range);
+        initMatrix(engine, W, init_normal, init_range);
 		//std::cerr<<*W<<std::endl;e
         b.fill(init_bias);
     }
 
-    int n_inputs () const { return W->cols(); }
-    int n_outputs () const { return W->rows(); }
+    int n_inputs () const { return W.cols(); }
+    int n_outputs () const { return W.rows(); }
 
-	int rows() const {return W->rows(); }
-	int cols() const {return W->cols(); }
+	int rows() const {return W.rows(); }
+	int cols() const {return W.cols(); }
 	
     template <typename DerivedIn, typename DerivedOut>
     void fProp(const MatrixBase<DerivedIn> &input,
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-        my_output = ((*W) * input).colwise() + b; //No bias for output words
+        my_output = (W * input).colwise() + b; //No bias for output words
 		//my_output = (*W) * input ; //No bias for output words
 
 	  }
@@ -689,8 +691,8 @@ class Output_word_embeddings
         }
 		
 		//THE ISSUE HERE IS THAT BECAUSE THE OUTPUT LABEL MIGHT BE GREATER THAN THE VOCABULARY
-        USCMatrix<double> sparse_output(W->rows(), samples, my_output);
-        uscgemm_masked(1.0, *W, input, sparse_output);
+        USCMatrix<double> sparse_output(W.rows(), samples, my_output);
+        uscgemm_masked(1.0, W, input, sparse_output);
         my_output = sparse_output.values; // too bad, so much copying
 	  }
 
@@ -700,8 +702,8 @@ class Output_word_embeddings
            int word,
            int instance) const 
     {
-        return W->row(word).dot(input.col(instance)) + b(word);
-		//return W->row(word).dot(input.col(instance));// + b(word); //No bias for output words
+        return W.row(word).dot(input.col(instance)) + b(word);
+		//return W.row(word).dot(input.col(instance));// + b(word); //No bias for output words
     }
 
     // Dense versions (for log-likelihood loss)
@@ -715,7 +717,7 @@ class Output_word_embeddings
 	    // bProp_matrix is output_embedding_dimension x minibatch_size
 	    UNCONST(DerivedGIn, bProp_matrix, my_bProp_matrix);
 	    my_bProp_matrix.leftCols(input_bProp_matrix.cols()).noalias() =
-        W->transpose() * input_bProp_matrix;
+        W.transpose() * input_bProp_matrix;
 	  }
 
     template <typename DerivedIn, typename DerivedGOut>
@@ -729,17 +731,17 @@ class Output_word_embeddings
         // predicted_embeddings is output_embedding_dimension x minibatch_size
         // bProp_input is vocab_size x minibatch_size
 		/*
-        W->noalias() += learning_rate * bProp_input * predicted_embeddings.transpose();
+        W.noalias() += learning_rate * bProp_input * predicted_embeddings.transpose();
         b += learning_rate * bProp_input.rowwise().sum();
 		*/
         /*
         //GRADIENT CLIPPING
-        W->noalias() += learning_rate * 
+        W.noalias() += learning_rate * 
           ((bProp_input * predicted_embeddings.transpose()).array().unaryExpr(Clipper())).matrix();
         b += learning_rate * (bProp_input.rowwise().sum().array().unaryExpr(Clipper())).matrix();
 		*/
         //UPDATE CLIPPING
-        W->noalias() += (learning_rate * 
+        W.noalias() += (learning_rate * 
         (bProp_input * predicted_embeddings.transpose())).array().unaryExpr(Clipper()).matrix();
         b += (learning_rate * (bProp_input.rowwise().sum())).array().unaryExpr(Clipper()).matrix();
         
@@ -765,13 +767,13 @@ template <typename DerivedIn, typename DerivedGOut>
 	
     /*
     //GRADIENT CLIPPING
-    W->noalias() += learning_rate * 
+    W.noalias() += learning_rate * 
       ((bProp_input * predicted_embeddings.transpose()).array().unaryExpr(Clipper())).matrix();
     b += learning_rate * (bProp_input.rowwise().sum().array().unaryExpr(Clipper())).matrix();
 	*/
 	/*
     //UPDATE CLIPPING
-    W->noalias() += (learning_rate * 
+    W.noalias() += (learning_rate * 
     (bProp_input * predicted_embeddings.transpose())).array().unaryExpr(Clipper()).matrix();
     b += (learning_rate * (bProp_input.rowwise().sum())).array().unaryExpr(Clipper()).matrix();
     */
@@ -784,7 +786,7 @@ template <typename DerivedIn, typename DerivedGOut>
 		bool norm_clipping,
 		double norm_threshold){
 	  if (L2_reg > 0){
-	  	W_gradient -= 2*L2_reg*(*W);
+	  	W_gradient -= 2*L2_reg*W;
 	  } 
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
@@ -796,7 +798,7 @@ template <typename DerivedIn, typename DerivedGOut>
 		  				   current_minibatch_size,
 		  				   norm_threshold);						   
 	  }	  
-	  *W += learning_rate*W_gradient;
+	  W += learning_rate*W_gradient;
 	  b += learning_rate*b_gradient;
   }
   
@@ -808,7 +810,7 @@ template <typename DerivedIn, typename DerivedGOut>
   void changeRandomParam(double offset, 
 						int &rand_row,
 						int &rand_col){
-  	changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+  	changeRandomParamInMatrix(W, offset, rand_row, rand_col);
   } 
   
     template <typename DerivedIn, typename DerivedGOut>
@@ -821,13 +823,13 @@ template <typename DerivedIn, typename DerivedGOut>
         // b is vocab_size x 1
         // predicted_embeddings is output_embedding_dimension x minibatch_size
         // bProp_input is vocab_size x minibatch_sizea
-        W_gradient.setZero(W->rows(), W->cols());
+        W_gradient.setZero(W.rows(), W.cols());
         b_gradient.setZero(b.size());
         W_gradient.noalias() = bProp_input * predicted_embeddings.transpose();
         b_gradient.noalias() = bProp_input.rowwise().sum();
         W_running_gradient += W_gradient.array().square().matrix();
         b_running_gradient += b_gradient.array().square().matrix();
-        W->noalias() += learning_rate * (W_gradient.array()/W_running_gradient.array().sqrt()).matrix();
+        W.noalias() += learning_rate * (W_gradient.array()/W_running_gradient.array().sqrt()).matrix();
         b += learning_rate * (b_gradient.array()/b_running_gradient.array().sqrt()).matrix();
         /*
         //UPDATE CLIPPING
@@ -849,7 +851,7 @@ template <typename DerivedIn, typename DerivedGOut>
         // bProp_input is vocab_size x minibatch_size
         Array<double,Dynamic,Dynamic> W_current_parameter_update;
         Array<double,Dynamic,1> b_current_parameter_update;
-        W_gradient.setZero(W->rows(), W->cols());
+        W_gradient.setZero(W.rows(), W.cols());
         b_gradient.setZero(b.size());
         W_gradient.noalias() = bProp_input * predicted_embeddings.transpose();
         b_gradient.noalias() = bProp_input.rowwise().sum();
@@ -868,7 +870,7 @@ template <typename DerivedIn, typename DerivedGOut>
         b_running_parameter_update = decay*b_running_parameter_update +
                                     (1.-decay)*b_current_parameter_update.square().matrix();
 
-        *W += learning_rate*W_current_parameter_update.matrix();
+        W += learning_rate*W_current_parameter_update.matrix();
         b += learning_rate*b_current_parameter_update.matrix();
 	  }
 
@@ -882,8 +884,8 @@ template <typename DerivedIn, typename DerivedGOut>
         UNCONST(DerivedGIn, bProp_matrix, my_bProp_matrix);
         my_bProp_matrix.setZero();
         uscgemm(1.0,
-            W->transpose(), 
-            USCMatrix<double>(W->rows(), samples, weights),
+            W.transpose(), 
+            USCMatrix<double>(W.rows(), samples, weights),
             my_bProp_matrix.leftCols(samples.cols())); // narrow bProp_matrix for possible short minibatch
     }
 	
@@ -895,7 +897,7 @@ template <typename DerivedIn, typename DerivedGOut>
 		
 		//ACCUMULATING gradient
 	
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
 	      gradient_output,
 	      predicted_embeddings.leftCols(samples.cols()).transpose(),
@@ -946,7 +948,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	          int update_item = update_items[item_id];
 			//cerr<<"the update item is "<<update_item<<endl;
 	          //UPDATE CLIPPING
-	          //W->row(update_item).array() += learning_rate*
+	          //W.row(update_item).array() += learning_rate*
 	          //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
 			  /*
 	  		if (norm_clipping){
@@ -955,11 +957,11 @@ template <typename DerivedIn, typename DerivedGOut>
 	  			  				 norm_threshold);
 	  		}
 			  */
-	          W->row(update_item) += learning_rate*
+	          W.row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
 			  b(update_item) += learning_rate*b_gradient(update_item);
 	          //GRADIENT CLIPPING
-	          //W->row(update_item) += learning_rate*
+	          //W.row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
 	          //SETTING THE GRADIENT TO ZERO
 	          W_gradient.row(update_item).setZero();
@@ -978,7 +980,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	{
       //cerr<<"in gradient"<<endl;
 		/*
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(learning_rate,
           gradient_output,
           predicted_embeddings.leftCols(gradient_output.cols()).transpose(),
@@ -991,7 +993,7 @@ template <typename DerivedIn, typename DerivedGOut>
       
       //IN ORDER TO IMPLEMENT CLIPPING, WE HAVE TO COMPUTE THE GRADIENT
       //FIRST
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
           gradient_output,
           predicted_embeddings.leftCols(samples.cols()).transpose(),
@@ -1016,10 +1018,10 @@ template <typename DerivedIn, typename DerivedGOut>
         for (int item_id=0; item_id<num_items; item_id++)
         {
             int update_item = update_items[item_id];
-            //W->row(update_item) += learning_rate * W_gradient.row(update_item);
+            //W.row(update_item) += learning_rate * W_gradient.row(update_item);
             //b(update_item) += learning_rate * b_gradient(update_item);
             //UPDATE CLIPPING
-            W->row(update_item) += (learning_rate * W_gradient.row(update_item)).array().unaryExpr(Clipper()).matrix();
+            W.row(update_item) += (learning_rate * W_gradient.row(update_item)).array().unaryExpr(Clipper()).matrix();
             double update = learning_rate * b_gradient(update_item);
             b(update_item) += std::min(0.5, std::max(double(update),-0.5));
             //GRADIENT CLIPPING
@@ -1036,10 +1038,10 @@ template <typename DerivedIn, typename DerivedGOut>
 				    const MatrixBase<DerivedGOutV> &weights,
 				    double learning_rate) //not sure if we want to use momentum here
         {
-	    //W_gradient.setZero(W->rows(), W->cols());
+	    //W_gradient.setZero(W.rows(), W.cols());
 	    //b_gradient.setZero(b.size());
       //FOR CLIPPING, WE DO NOT MULTIPLY THE GRADIENT WITH THE LEARNING RATE
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
           gradient_output,
           predicted_embeddings.leftCols(samples.cols()).transpose(),
@@ -1066,11 +1068,11 @@ template <typename DerivedIn, typename DerivedGOut>
             int update_item = update_items[item_id];
             W_running_gradient.row(update_item) += W_gradient.row(update_item).array().square().matrix();
             b_running_gradient(update_item) += b_gradient(update_item) * b_gradient(update_item);
-            W->row(update_item) += learning_rate * (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt()).matrix();
+            W.row(update_item) += learning_rate * (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt()).matrix();
             b(update_item) += learning_rate * b_gradient(update_item) / sqrt(b_running_gradient(update_item));
             /*
             //UPDATE CLIPPING
-            W->row(update_item) += (learning_rate * (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt())).unaryExpr(Clipper()).matrix();
+            W.row(update_item) += (learning_rate * (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt())).unaryExpr(Clipper()).matrix();
             double update = learning_rate * b_gradient(update_item) / sqrt(b_running_gradient(update_item));
             b(update_item) += Clipper(update);//std::min(0.5, std::max(update,-0.5));
             */
@@ -1088,10 +1090,10 @@ template <typename DerivedIn, typename DerivedGOut>
             double decay) //not sure if we want to use momentum here
         {
           //cerr<<"decay is "<<decay<<" and constant is "<<conditioning_constant<<endl;
-	    //W_gradient.setZero(W->rows(), W->cols());
+	    //W_gradient.setZero(W.rows(), W.cols());
 	    //b_gradient.setZero(b.size());
 
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
           gradient_output,
           predicted_embeddings.leftCols(samples.cols()).transpose(),
@@ -1145,7 +1147,7 @@ template <typename DerivedIn, typename DerivedGOut>
                                                       (1.-decay)*b_current_parameter_update*b_current_parameter_update;
             //cerr<<"Output: W running parameter update is "<<W_running_parameter_update.row(update_item)<<endl;
             //getchar();
-            W->row(update_item) += learning_rate*W_current_parameter_update.matrix();
+            W.row(update_item) += learning_rate*W_current_parameter_update.matrix();
             b(update_item) += learning_rate*b_current_parameter_update;
             W_gradient.row(update_item).setZero();
             b_gradient(update_item) = 0.;
@@ -1164,7 +1166,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	    UNCONST(DerivedGb, gradient_b, my_gradient_b);
 	    my_gradient_W.setZero();
 	    my_gradient_b.setZero();
-	    USCMatrix<double> gradient_output(W->rows(), samples, weights);
+	    USCMatrix<double> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
           gradient_output,
           predicted_embeddings.leftCols(samples.cols()).transpose(),
@@ -1177,7 +1179,7 @@ template <typename DerivedIn, typename DerivedGOut>
 class Input_word_embeddings
 {
     private:
-        Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *W;
+        Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W;
         int context_size, vocab_size;
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_running_gradient;
         Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> W_running_parameter_update;
@@ -1191,21 +1193,21 @@ class Input_word_embeddings
         Input_word_embeddings() : context_size(0), vocab_size(0) { }
         Input_word_embeddings(int rows, int cols, int context) { resize(rows, cols, context); }
  
-      Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>* get_W() {
-        return(W);
-      }
-      void set_W(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *input_W) {
-        W = input_W;
-      }
+      //Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>* get_W() {
+      //  return(W);
+      //}
+      ///void set_W(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> *input_W) {
+      //  W = input_W;
+      //}
       void resize(int rows, int cols, int context)
       {
         context_size = context;
         vocab_size = rows;
-        W->setZero(rows, cols);
+        W.setZero(rows, cols);
       }
 
-        void read(std::ifstream &W_file) { readMatrix(W_file, *W); }
-        void write(std::ofstream &W_file) { writeMatrix(*W, W_file); }
+        void read(std::ifstream &W_file) { readMatrix(W_file, W); }
+        void write(std::ofstream &W_file) { writeMatrix(W, W_file); }
 
       template <typename Engine>
       void initialize(Engine &engine,
@@ -1214,45 +1216,45 @@ class Input_word_embeddings
           string &parameter_update,
           double adagrad_epsilon)
       {
-          W_gradient.setZero(W->rows(),W->cols());
+          W_gradient.setZero(W.rows(),W.cols());
 
           if (parameter_update == "ADA") {
-            W_running_gradient =  Matrix<double,Dynamic,Dynamic>::Ones(W->rows(),W->cols())*adagrad_epsilon;
-            //W_gradient.setZero(W->rows(),W->cols());
+            W_running_gradient =  Matrix<double,Dynamic,Dynamic>::Ones(W.rows(),W.cols())*adagrad_epsilon;
+            //W_gradient.setZero(W.rows(),W.cols());
           } 
         if (parameter_update == "ADAD") {
-          W_running_gradient.setZero(W->rows(),W->cols());
-          //W_gradient.setZero(W->rows(),W->cols());
-          W_running_parameter_update.setZero(W->rows(),W->cols());
+          W_running_gradient.setZero(W.rows(),W.cols());
+          //W_gradient.setZero(W.rows(),W.cols());
+          W_running_parameter_update.setZero(W.rows(),W.cols());
         }
         initMatrix(engine,
-            *W,
+            W,
             init_normal,
             init_range);
 		//std::cerr<<*W<<std::endl;
       }
 
 	int n_inputs() const { return -1; }
-	int n_outputs() const { return W->cols() * context_size; }
+	int n_outputs() const { return W.cols() * context_size; }
 
-	int rows() const {return W->rows(); }
-	int cols() const {return W->cols(); }
+	int rows() const {return W.rows(); }
+	int cols() const {return W.cols(); }
 	
 	// set output_id's embedding to the weighted average of all embeddings
 	template <typename Dist>
 	void average(const Dist &dist, int output_id)
 	{
-	    W->row(output_id).setZero();
-	    for (int i=0; i < W->rows(); i++)
+	    W.row(output_id).setZero();
+	    for (int i=0; i < W.rows(); i++)
 	        if (i != output_id)
-		    W->row(output_id) += dist.prob(i) * W->row(i);
+		    W.row(output_id) += dist.prob(i) * W.row(i);
 	}
 
 	template <typename DerivedIn, typename DerivedOut>
         void fProp(const MatrixBase<DerivedIn> &input,
 		   const MatrixBase<DerivedOut> &output) const
         {
-            int embedding_dimension = W->cols();
+            int embedding_dimension = W.cols();
 
 	    // W      is vocab_size                        x embedding_dimension
 	    // input  is ngram_size*vocab_size             x minibatch_size
@@ -1270,9 +1272,11 @@ class Input_word_embeddings
 	    {
 	        // input might be narrower than expected due to a short minibatch,
 	        // so narrow output to match
+			//cerr<<"W is "
+			//cerr<<"W rows is "<<W.rows()<<endl;
 	        uscgemm(1.0,
-            W->transpose(), 
-            USCMatrix<double>(W->rows(),input.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input.cols())),
+            W.transpose(), 
+            USCMatrix<double>(W.rows(),input.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input.cols())),
             my_output.block(ngram*embedding_dimension, 0, embedding_dimension, input.cols()));
 	    }
         }
@@ -1294,7 +1298,7 @@ class Input_word_embeddings
      const MatrixBase<DerivedIn> &input_words,
      double learning_rate, double momentum, double L2_reg)
   {
-      int embedding_dimension = W->cols();
+      int embedding_dimension = W.cols();
 
 	    // W           is vocab_size                        x embedding_dimension
 	    // input       is ngram_size*vocab_size             x minibatch_size
@@ -1309,7 +1313,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(learning_rate, 
-			USCMatrix<double>(W->rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			USCMatrix<double>(W.rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
       	  	*W);
 	    }
@@ -1321,7 +1325,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	      uscgemm(1.0, 
-          USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+          USCMatrix<double>(W.rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
           bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
           W_gradient);
 	    }
@@ -1347,10 +1351,10 @@ class Input_word_embeddings
         {
             int update_item = update_items[item_id];
             //UPDATE CLIPPING
-            W->row(update_item) += (learning_rate*
+            W.row(update_item) += (learning_rate*
                 W_gradient.row(update_item).array().unaryExpr(Clipper())).matrix();
             //GRADIENT CLIPPING
-            //W->row(update_item) += learning_rate*
+            //W.row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
             //SETTING THE GRADIENT TO ZERO
             W_gradient.row(update_item).setZero();
@@ -1362,7 +1366,7 @@ class Input_word_embeddings
   void updateGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words)
   {
-      int embedding_dimension = W->cols();
+      int embedding_dimension = W.cols();
 
 	    // W           is vocab_size                        x embedding_dimension
 	    // input       is ngram_size*vocab_size             x minibatch_size
@@ -1377,7 +1381,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(learning_rate, 
-			USCMatrix<double>(W->rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			USCMatrix<double>(W.rows(), input_words.middleRows(ngram, 1), Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
       	  	*W);
 	    }
@@ -1389,7 +1393,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	      uscgemm(1.0, 
-          USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+          USCMatrix<double>(W.rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
           bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
           W_gradient);
 	    }
@@ -1433,7 +1437,7 @@ class Input_word_embeddings
             int update_item = update_items[item_id];
 			//cerr<<"the update item is "<<update_item<<endl;
             //UPDATE CLIPPING
-            //W->row(update_item).array() += learning_rate*
+            //W.row(update_item).array() += learning_rate*
             //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
 			/*
 	  		if (norm_clipping){
@@ -1442,10 +1446,10 @@ class Input_word_embeddings
 	  			  				 norm_threshold);
 	  		}
 			*/
-            W->row(update_item) += learning_rate*
+            W.row(update_item) += learning_rate*
                 W_gradient.row(update_item);
             //GRADIENT CLIPPING
-            //W->row(update_item) += learning_rate*
+            //W.row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
             //SETTING THE GRADIENT TO ZERO
             W_gradient.row(update_item).setZero();
@@ -1459,16 +1463,16 @@ class Input_word_embeddings
 				    double learning_rate,
             double L2_reg)
     {
-            int embedding_dimension = W->cols();
-	    //W_gradient.setZero(W->rows(), W->cols());
+            int embedding_dimension = W.cols();
+	    //W_gradient.setZero(W.rows(), W.cols());
       /*
-      if (W_running_gradient.rows() != W->rows() || W_running_gradient.cols() != W->cols())
-        W_running_gradient = Ones(W->rows(), W->cols())*adagrad_epsilon;
+      if (W_running_gradient.rows() != W.rows() || W_running_gradient.cols() != W.cols())
+        W_running_gradient = Ones(W.rows(), W.cols())*adagrad_epsilon;
       */
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(1.0, 
-			USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			USCMatrix<double>(W.rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
       W_gradient);
 	    }
@@ -1494,11 +1498,11 @@ class Input_word_embeddings
         {
             int update_item = update_items[item_id];
             W_running_gradient.row(update_item) += W_gradient.row(update_item).array().square().matrix();
-            W->row(update_item) += learning_rate * 
+            W.row(update_item) += learning_rate * 
               (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt()).matrix();
             /*
             //UPDATE CLIPPING
-            W->row(update_item) += (learning_rate * 
+            W.row(update_item) += (learning_rate * 
               (W_gradient.row(update_item).array() / W_running_gradient.row(update_item).array().sqrt()))
                       .unaryExpr(Clipper()).matrix();
             */
@@ -1509,7 +1513,7 @@ class Input_word_embeddings
     void changeRandomParam(double offset, 
 							int &rand_row,
 							int &rand_col){
-    	changeRandomParamInMatrix(*W, offset, rand_row, rand_col);
+    	changeRandomParamInMatrix(W, offset, rand_row, rand_col);
     }
 
   	double getGradient(int row,
@@ -1522,17 +1526,17 @@ class Input_word_embeddings
             double conditioning_constant,
             double decay)
     {
-      int embedding_dimension = W->cols();
+      int embedding_dimension = W.cols();
 
-	    //W_gradient.setZero(W->rows(), W->cols());
+	    //W_gradient.setZero(W.rows(), W.cols());
       /*
-      if (W_running_gradient.rows() != W->rows() || W_running_gradient.cols() != W->cols())
-        W_running_gradient = Ones(W->rows(), W->cols())*adagrad_epsilon;
+      if (W_running_gradient.rows() != W.rows() || W_running_gradient.cols() != W.cols())
+        W_running_gradient = Ones(W.rows(), W.cols())*adagrad_epsilon;
       */
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    {
 	        uscgemm(1.0, 
-			USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			USCMatrix<double>(W.rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
       W_gradient);
 	    }
@@ -1571,8 +1575,8 @@ class Input_word_embeddings
             W_running_parameter_update.row(update_item) = decay*W_running_parameter_update.row(update_item)+
                                                          (1.-decay)*W_current_parameter_update.square().matrix();
 
-            W->row(update_item) += learning_rate*W_current_parameter_update.matrix();
-            //cerr<<"Input: After update, W is  "<<W->row(update_item)<<endl;
+            W.row(update_item) += learning_rate*W_current_parameter_update.matrix();
+            //cerr<<"Input: After update, W is  "<<W.row(update_item)<<endl;
             //getchar();
             W_gradient.row(update_item).setZero();
         }
@@ -1586,11 +1590,11 @@ class Input_word_embeddings
       const MatrixBase<DerivedGW> &gradient) const //not sure if we want to use momentum here
     {
 	    UNCONST(DerivedGW, gradient, my_gradient);
-            int embedding_dimension = W->cols();
+            int embedding_dimension = W.cols();
 	    my_gradient.setZero();
 	    for (int ngram=0; ngram<context_size; ngram++)
 	    uscgemm(1.0, 
-			  USCMatrix<double>(W->rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
+			  USCMatrix<double>(W.rows(),input_words.middleRows(ngram, 1),Matrix<double,1,Dynamic>::Ones(input_words.cols())),
 			  bProp_input.block(ngram*embedding_dimension, 0, embedding_dimension, input_words.cols()).transpose(),
         my_gradient);
     }

@@ -88,6 +88,11 @@ public:
     }
 
     const std::vector<std::string> &words() const { return m_words; }
+	void print_vocabulary(){
+		for (int i=0; i<m_words.size(); i++){
+			std::cerr<<"Vocab item is "<<m_words.at(i)<<std::endl;
+		}
+	}
 };
 
 } // namespace nplm

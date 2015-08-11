@@ -107,7 +107,7 @@ void writeWordsFile(const vector<string> &words, const string &filename)
 
 // Read a data file of unknown size into a flat vector<int>.
 // If this takes too much memory, we should create a vector of minibatches.
-void readDataFile(const string &filename, int &ngram_size, vector<int> &data, int minibatch_size)
+void readDataFile(const string &filename, int &ngram_size, vector<int> &data, data_size_t minibatch_size)
 {
   cerr << "Reading minibatches from file " << filename << ": ";
 
@@ -298,6 +298,30 @@ void miniBatchifyEncoder(const std::vector<std::vector <int> > &sentences,
 	}
 }
 
+void createVocabulary(vector<vector<string> > &sentences, vocabulary &vocab){
+
+	//Go over all the sentences and create the vocabulary and then integerize it.
+	for (int sent_id=0; sent_id<sentences.size(); sent_id++){
+		for (int word_id=0; word_id<sentences[sent_id].size(); word_id++){
+			vocab.insert_word(sentences[sent_id][word_id]);
+		}
+	}
+			
+}
+
+void integerize(vector<vector<string> > &word_sentences, 
+				vector<vector<int> > &int_sentences, 
+				vocabulary &vocab){
+	//Go over all the string sentences and then integerize them.
+	for (int sent_id=0; sent_id<word_sentences.size(); sent_id++){
+		vector<int> int_sent;
+		for (int word_id=0; word_id<word_sentences[sent_id].size(); word_id++){
+			//vocab.insert_word(word_sentences[sent_id][word_id]);
+			int_sent.push_back(vocab.lookup_word(word_sentences[sent_id][word_id]));
+		}
+		int_sentences.push_back(int_sent);
+	}
+}
 // The same function will be used to create the sentence continuation vectors for the decoder
 // and the minibatch . The sentence continuation vectors contain only 0 or 1. The 
 // data_or_sentence_vector flag indicate if its data or sentence continuation. data_or_sentence_vector = 1
@@ -379,6 +403,8 @@ Timer timer(20);
 
 int setup_threads(int n_threads)
 {
+	//OpenMP compilation adds the preprocessor definition "_OPENMP", so you can do:
+	//http://stackoverflow.com/questions/1300180/ignore-openmp-on-machine-that-doesnt-have-it
     #ifdef _OPENMP
     if (n_threads)
         omp_set_num_threads(n_threads);

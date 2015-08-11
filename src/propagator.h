@@ -27,6 +27,7 @@ namespace nplm
 		Matrix<double,Dynamic,Dynamic> probs;	
 		int num_hidden;
 		double fixed_partition_function; 
+		boost::random::uniform_real_distribution<> unif_real;
 		//vector<Matrix<double,Dynamic,Dynamic> > losses;
 		vector<Output_loss_node> losses;
 
@@ -40,7 +41,8 @@ namespace nplm
 					decoder_input_nodes(100,input_node_type()),
 					num_hidden(0), 
 					fixed_partition_function(0), 
-					losses(vector<Output_loss_node>(100,Output_loss_node())){ }
+					losses(vector<Output_loss_node>(100,Output_loss_node())),
+					unif_real(0.0,1.0){ }
 
 	    propagator (model &encoder_lstm, 
 					model &decoder_lstm,
@@ -54,7 +56,8 @@ namespace nplm
 			encoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
 			decoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
 			//losses(vector<Matrix<double,Dynamic,Dynamic> >(100,Matrix<double,Dynamic,Dynamic>()))
-			losses(vector<Output_loss_node>(100,Output_loss_node()))
+			losses(vector<Output_loss_node>(100,Output_loss_node())),
+			unif_real(0.0,1.0)
 			{
 				resize(minibatch_size);
 			}
@@ -268,7 +271,8 @@ namespace nplm
 			//int output_sent_len = output_data.rows();
 			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
-
+			//cerr<<"sequence cont indices are"<<sequence_cont_indices<<endl;
+			//cerr<<"input data is "<<input_data<<endl;
 			//Going over the input sentence to generate the hidden states
 			for (int i=0; i<=end_pos; i++){
 				//cerr<<"i is"<<i<<endl;
@@ -313,22 +317,38 @@ namespace nplm
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
 				const MatrixBase<DerivedC> &const_current_c,
 				const MatrixBase<DerivedH> &const_current_h,
-				vector<int> &predicted_sequence,
+				vector<vector<int> > &predicted_sequence,
 				int output_start_symbol,
 				int output_end_symbol) {
+					int current_minibatch_size = input_data.cols();
+					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(100,1); // I can produce at most 100 output symbols
-					predicted_output(0,0) = output_start_symbol;
+					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
+					//predicted_output.resize(1,current_minibatch_size);
+					//predicted_output.fill(output_start_symbol);
+					predicted_output.row(0).fill(output_start_symbol);
+					//predicted_output(0,0) = output_start_symbol;
 					UNCONST(DerivedC, const_current_c, current_c);
 					UNCONST(DerivedH, const_current_h, current_h);	
+					//vector<int> current_words(output_start_symbol,current_minibatch_size);
+					vector<int> live_words (current_minibatch_size,1);
+					int remaining_live_words = current_minibatch_size;
+					//cerr<<"live words are"<<live_words<<endl;
+					//predicted_output = resize(1,current_minibatch_size);
+					
+					//predicted_output
 				//cerr<<"predicted_output	is "<<predicted_output<<endl;
-				for (int i=0; i<99; i++){
+				for (int i=0; i<99 && remaining_live_words > 0; i++){
+					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
+					//current_minibatch_size = current_words.size();
+					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
 					//cerr<<"i is "<<i<<endl;
 					//cerr<<"predicted output is "<<predicted_output.row(i);
 					if (i==0) {
 						//cerr<<"Current c is "<<current_c<<endl;
 						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-						decoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].copyToHiddenStates(current_h,
+											current_c);//,sequence_cont_indices.row(i));
 						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,	
 						//cerr<<"output data is "<<output_data.row(i)<<endl;
 											//current_c,
@@ -336,14 +356,16 @@ namespace nplm
 					} else {
 						//cerr<<"Data is "<<data.row(i)<<endl;
 						//cerr<<"index is "<<i<<endl;
-						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
 						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
 											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
 					}
 					//cerr<<"ht is "<<decoder_lstm_nodes[i].h_t<<endl;
 					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t, scores);
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
@@ -351,16 +373,17 @@ namespace nplm
 	
 			        double minibatch_log_likelihood;
 			        start_timer(5);
-			        SoftmaxLogLoss().fProp(scores, 
+			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 			                   predicted_output.row(i), 
 			                   probs, 
 			                   minibatch_log_likelihood);	
-					int max_index = 0;
-					double max_value = -9999999;
+					//int max_index = 0;
+					//double max_value = -9999999;
 					//Matrix<double,1,Dynamic>::Index max_index;
-					//probs.maxCoeff(&max_index); 
+					//probs.col(maxCoeff(&max_index); 
 					//int minibatch_size = 0;
 					//THIS HAS TO CHANGE
+					/*
 					for (int index=0; index<probs.rows(); index++){
 						//cerr<<"prob is "<<probs(index,0)<<endl;
 						if (probs(index,0) > max_value){
@@ -369,21 +392,143 @@ namespace nplm
 						}
 						
 					}
+					*/
 					//getchar();
 			        //Matrix<double,1,Dynamic>::Index max_index;
 			        //probs.maxCoeff(&max_index);	
 					//if max index equals the end symbol
+					//current_minibatch_size = 0;
+					//nt live_index=0;
+					//current_words.clear();
+					for (int index=0; index<live_words.size(); index++){
+						if (live_words[index] == 1){
+							//predicted_sequence[index].push_back()
+							Matrix<double,1,Dynamic>::Index max_index;
+							probs.col(index).maxCoeff(&max_index);
+							//cerr<<"max index is "<<max_index<<endl;
+							if (max_index == output_end_symbol){
+								live_words[index] = -1;
+								remaining_live_words--;
+							} //else {
+							//	current_words.push_back(max_index);
+								//current_minibatch_size++;
+							//}
+							predicted_sequence[index].push_back(max_index);
+							predicted_output(i+1,index) = max_index;
+						} else {
+							predicted_output(i+1,index) = output_end_symbol;
+						}
+						//cerr<<"remaining live words are"<<remaining_live_words<<endl;
+					}
+					/*
 					predicted_sequence.push_back(max_index);
 					if (max_index == output_end_symbol)
 						break;
 					else{
 						predicted_output(i+1,0) = max_index;
 						//cerr<<"new predicted output is "<<predicted_output(i+1,0)<<endl;
-					}		   				
+					}
+					*/		   				
 				}
 
 		}
 
+		//currently only generate one output at a time
+		template <typename DerivedInput,typename DerivedH, typename DerivedC>
+		void generateStochasticOutput(const MatrixBase<DerivedInput> &input_data,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h,
+				vector<vector<int> > &predicted_sequence,
+				int output_start_symbol,
+				int output_end_symbol,
+				boost::random::mt19937 &eng) {
+					int current_minibatch_size = input_data.cols();
+					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+					Matrix<int,Dynamic,Dynamic> predicted_output;
+					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
+					//predicted_output.resize(1,current_minibatch_size);
+					//predicted_output.fill(output_start_symbol);
+					predicted_output.row(0).fill(output_start_symbol);
+					//predicted_output(0,0) = output_start_symbol;
+					UNCONST(DerivedC, const_current_c, current_c);
+					UNCONST(DerivedH, const_current_h, current_h);	
+					//vector<int> current_words(output_start_symbol,current_minibatch_size);
+					vector<int> live_words (current_minibatch_size,1);
+					int remaining_live_words = current_minibatch_size;
+					//cerr<<"live words are"<<live_words<<endl;
+					//predicted_output = resize(1,current_minibatch_size);
+					
+					//predicted_output
+				//cerr<<"predicted_output	is "<<predicted_output<<endl;
+				for (int i=0; i<99 && remaining_live_words > 0; i++){
+
+					if (i==0) {
+						//cerr<<"Current c is "<<current_c<<endl;
+						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
+						decoder_lstm_nodes[i].copyToHiddenStates(current_h,
+											current_c);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,	
+						//cerr<<"output data is "<<output_data.row(i)<<endl;
+											//current_c,
+											//current_h);
+					} else {
+						//cerr<<"Data is "<<data.row(i)<<endl;
+						//cerr<<"index is "<<i<<endl;
+						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
+											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
+											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
+					}
+					//cerr<<"ht is "<<decoder_lstm_nodes[i].h_t<<endl;
+					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
+
+			        double minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+			                   predicted_output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);	
+
+					for (int index=0; index<live_words.size(); index++){
+						if (live_words[index] == 1){
+							//predicted_sequence[index].push_back()
+							//Matrix<double,1,Dynamic>::Index max_index;
+							//probs.col(index).maxCoeff(&max_index);
+							//cerr<<"max index is "<<max_index<<endl;
+							double rand_value = unif_real(eng);
+							//cerr<<"rand value is"<<rand_value<<endl;
+							int rand_index =0;
+							double cumul =0;
+							for (int vocab_index=0; vocab_index<probs.col(index).rows(); vocab_index++){
+								cumul += exp(probs(vocab_index,index));
+								//cerr<<"cumul is "<<cumul<<endl;
+								if (cumul >= rand_value){
+									rand_index = vocab_index;
+									break;
+								}
+								
+							}
+							if (rand_index == output_end_symbol){
+								live_words[index] = -1;
+								remaining_live_words--;
+							} //else {
+							//	current_words.push_back(max_index);
+								//current_minibatch_size++;
+							//}
+							predicted_sequence[index].push_back(rand_index);
+							predicted_output(i+1,index) = rand_index;
+						} else {
+							predicted_output(i+1,index) = output_end_symbol;
+						}
+						//cerr<<"remaining live words are"<<remaining_live_words<<endl;
+					}
+	   				
+				}
+
+		}
 		
 		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
 		//losses from the next layer
@@ -693,7 +838,8 @@ namespace nplm
 				//cerr<<"i in gradient check is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
-					output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), scores);
+					output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
@@ -794,29 +940,7 @@ namespace nplm
 		cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
 		//cerr<<"In gradient check"<<endl;
-		/*
-		//Checking the gradient of h_t
-		encoder_lstm_nodes[0].h_t(0,0) += 1e-5;
-		fProp(input, 1, input.rows()-1);
-		//fProp(input, 1, input.rows()-1);
-		
- 		double before_log_likelihood = 0;						
- 		fProp(input,0, input.rows()-1);	
- 		computeProbs(output,
- 			  		before_log_likelihood);			
 
-		encoder_lstm_nodes[0].h_t(0,0) -= 2e-5;
-		fProp(input, 1, input.rows()-1);
-		//fProp(input, 1, input.rows()-1);
-
- 		double after_log_likelihood = 0;						
- 		fProp(input,0, input.rows()-1);	
- 		computeProbs(output,
- 			  		after_log_likelihood);
-		
-		cerr<<"the measured gradient is"<<encoder_lstm_nodes[0].d_Err_t_to_n_d_h_t<<endl;
-		cerr<<"Gradient diff is "<<	(before_log_likelihood-after_log_likelihood)/2e-5<<endl;
-		*/
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
 		
@@ -830,11 +954,207 @@ namespace nplm
 							 softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices);	
-							 
+					 		//init_rng = rng;					 
+					 		init_c = const_init_c;
+					 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->W_h_to_c,"Decoder: W_h_to_c", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;					 
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;		
+ 		paramGradientCheck(input,output,decoder_plstm->W_h_to_f,"Decoder: W_h_to_f", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;	
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;										
+ 		paramGradientCheck(input,output,decoder_plstm->W_h_to_o,"Decoder: W_h_to_o", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->W_h_to_i ,"Decoder: W_h_to_i", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;		
+ 		paramGradientCheck(input,output,decoder_plstm->W_c_to_o,"Decoder: W_c_to_o", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->W_c_to_f,"Decoder: W_c_to_f", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//nit_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->W_c_to_i,"Decoder: W_c_to_i", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;		
+ 		paramGradientCheck(input,output,decoder_plstm->o_t,"Decoder: o_t",  
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->f_t,"Decoder: f_t",
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->i_t,"Decoder: i_t",
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+ 		//init_rng = rng;
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
+ 		paramGradientCheck(input,output,decoder_plstm->tanh_c_prime_t,"Decoder: tanh_c_prime_t", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);		
+ 		//Doing gradient check for the input nodes
+  		//init_rng = rng;
+  		init_c = const_init_c;
+  		init_h = const_init_h;
+  		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_i,"Decoder: Standard_input_node: W_x_to_i", 
+ 							 init_c,
+ 							 init_h,
+ 							 unigram,
+ 							 num_noise_samples,
+ 				   			 rng,
+ 				   			 loss_function,
+ 							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);		
+   		init_c = const_init_c;
+   		init_h = const_init_h;
+   		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_f,"Decoder: Standard_input_node: W_x_to_f", 
+  							 init_c,
+  							 init_h,
+  							 unigram,
+  							 num_noise_samples,
+  				   			 rng,
+  				   			 loss_function,
+  							 softmax_nce_loss,
+ 							 input_sequence_cont_indices,
+ 							 output_sequence_cont_indices);
+		 		
+ 					   		init_c = const_init_c;
+ 					   		init_h = const_init_h;
+		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_c,"Decoder: Standard_input_node: W_x_to_c", 
+						 init_c,
+						 init_h,
+						 unigram,
+						 num_noise_samples,
+			   			 rng,
+			   			 loss_function,
+						 softmax_nce_loss,
+						 input_sequence_cont_indices,
+						 output_sequence_cont_indices);
+		 
+ 		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_o,"Decoder: Standard_input_node: W_x_to_o", 
+ 						 init_c,
+ 						 init_h,
+ 						 unigram,
+ 						 num_noise_samples,
+ 			   			 rng,
+ 			   			 loss_function,
+ 						 softmax_nce_loss,
+ 						 input_sequence_cont_indices,
+ 						 output_sequence_cont_indices);	
+		
+		//Encoder params				
+							 					 							 
 		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_h_to_c,"W_h_to_c", 
+		paramGradientCheck(input,output,encoder_plstm->W_h_to_c,"Encoder: W_h_to_c", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -847,7 +1167,7 @@ namespace nplm
 		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,encoder_plstm->W_h_to_f,"W_h_to_f", 
+		paramGradientCheck(input,output,encoder_plstm->W_h_to_f,"Encoder: W_h_to_f", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -860,7 +1180,7 @@ namespace nplm
 		//init_rng = rng;	
 		init_c = const_init_c;
 		init_h = const_init_h;										
-		paramGradientCheck(input,output,encoder_plstm->W_h_to_o,"W_h_to_o", 
+		paramGradientCheck(input,output,encoder_plstm->W_h_to_o,"Encoder: W_h_to_o", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -873,7 +1193,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_h_to_i ,"W_h_to_i", 
+		paramGradientCheck(input,output,encoder_plstm->W_h_to_i ,"Encoder: W_h_to_i", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -883,60 +1203,11 @@ namespace nplm
 							 softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices);
-		/*
-		//init_rng = rng;
-		init_c = const_init_c;
-		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_x_to_c,"W_x_to_c", 
-							 init_c,
-							 init_h,
-							 unigram,
-							 num_noise_samples,
-				   			 rng,
-				   			 loss_function,
-							 softmax_nce_loss,
-							 sequence_cont_indices);
-		//init_rng = rng;
-		init_c = const_init_c;
-		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_x_to_f,"W_x_to_f", 
-							 init_c,
-							 init_h,
-							 unigram,
-							 num_noise_samples,
-				   			 rng,
-				   			 loss_function,
-							 softmax_nce_loss,
-							 sequence_cont_indices);
-		//init_rng = rng;
-		init_c = const_init_c;
-		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_x_to_o,"W_x_to_o", 
-							 init_c,
-							 init_h,
-							 unigram,
-							 num_noise_samples,
-				   			 rng,
-				   			 loss_function,
-							 softmax_nce_loss,
-							 sequence_cont_indices);
-		//init_rng = rng;
-		init_c = const_init_c;
-		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_x_to_i,"W_x_to_i", 
-							 init_c,
-							 init_h,
-							 unigram,
-							 num_noise_samples,
-				   			 rng,
-				   			 loss_function,
-							 softmax_nce_loss,
-							 sequence_cont_indices);
-		*/
+
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,encoder_plstm->W_c_to_o,"W_c_to_o", 
+		paramGradientCheck(input,output,encoder_plstm->W_c_to_o,"Encoder: W_c_to_o", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -949,7 +1220,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_c_to_f,"W_c_to_f", 
+		paramGradientCheck(input,output,encoder_plstm->W_c_to_f,"Encoder: W_c_to_f", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -962,7 +1233,7 @@ namespace nplm
 		//nit_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->W_c_to_i,"W_c_to_i", 
+		paramGradientCheck(input,output,encoder_plstm->W_c_to_i,"Encoder: W_c_to_i", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -975,7 +1246,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
-		paramGradientCheck(input,output,encoder_plstm->o_t,"o_t",  
+		paramGradientCheck(input,output,encoder_plstm->o_t,"Encoder: o_t",  
 							 init_c,
 							 init_h,
 							 unigram,
@@ -988,7 +1259,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->f_t,"f_t",
+		paramGradientCheck(input,output,encoder_plstm->f_t,"Encoder: f_t",
 							 init_c,
 							 init_h,
 							 unigram,
@@ -1001,7 +1272,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->i_t,"i_t",
+		paramGradientCheck(input,output,encoder_plstm->i_t,"Encoder: i_t",
 							 init_c,
 							 init_h,
 							 unigram,
@@ -1014,7 +1285,7 @@ namespace nplm
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,output,encoder_plstm->tanh_c_prime_t,"tanh_c_prime_t", 
+		paramGradientCheck(input,output,encoder_plstm->tanh_c_prime_t,"Encoder: tanh_c_prime_t", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -1028,7 +1299,7 @@ namespace nplm
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
- 		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_i,"Standard_input_node: W_x_to_i", 
+ 		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_i,"Encoder: Standard_input_node: W_x_to_i", 
 							 init_c,
 							 init_h,
 							 unigram,
@@ -1040,7 +1311,7 @@ namespace nplm
 							 output_sequence_cont_indices);		
   		init_c = const_init_c;
   		init_h = const_init_h;
-  		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_f,"Standard_input_node: W_x_to_f", 
+  		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_f,"Encoder: Standard_input_node: W_x_to_f", 
  							 init_c,
  							 init_h,
  							 unigram,
@@ -1053,7 +1324,7 @@ namespace nplm
 							 		
 					   		init_c = const_init_c;
 					   		init_h = const_init_h;
-   		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_c,"Standard_input_node: W_x_to_c", 
+   		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_c,"Encoder: Standard_input_node: W_x_to_c", 
   							 init_c,
   							 init_h,
   							 unigram,
@@ -1064,7 +1335,7 @@ namespace nplm
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices);
 							 
-		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_o,"Standard_input_node: W_x_to_o", 
+		paramGradientCheck(input,output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_o,"Encoder: Standard_input_node: W_x_to_o", 
 						 init_c,
 						 init_h,
 						 unigram,
@@ -1199,7 +1470,7 @@ namespace nplm
 		 								rand_row,
 		 								rand_col);			
 
-				double threshold = 1e-04;
+				double threshold = 1e-03;
 				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
 		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
 				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/(2*perturbation);	
