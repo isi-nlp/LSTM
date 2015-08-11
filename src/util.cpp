@@ -15,7 +15,7 @@
 
 #include "util.h"
 
-//extern double drand48();
+//extern precision_type drand48();
 
 using namespace Eigen;
 using namespace std;
@@ -36,7 +36,7 @@ void splitBySpace(const std::string &line, std::vector<std::string> &items)
     boost::split(items, copy, boost::is_any_of(" \t"), boost::token_compress_on);
 }
 
-void readWeightsFile(ifstream &TRAININ, vector<double> &weights) {
+void readWeightsFile(ifstream &TRAININ, vector<precision_type> &weights) {
   string line;
   while (getline(TRAININ, line) && line != "")
   {
@@ -47,7 +47,7 @@ void readWeightsFile(ifstream &TRAININ, vector<double> &weights) {
         cerr << "Error: weights file should have only one weight per line" << endl;
         exit(-1);
     }
-    weights.push_back(boost::lexical_cast<double>(items[0]));
+    weights.push_back(boost::lexical_cast<precision_type>(items[0]));
   }
 }
 
@@ -372,7 +372,7 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 }
 
 
-double logadd(double x, double y)
+precision_type logadd(precision_type x, precision_type y)
 {
     if (x > y)
         return x + log1p(std::exp(y-x));
@@ -393,9 +393,9 @@ void Timer::stop(int i)
 
 void Timer::reset(int i) { m_total[i] = duration_type(); }
 
-double Timer::get(int i) const
+precision_type Timer::get(int i) const
 {
-    return boost::chrono::duration<double>(m_total[i]).count();
+    return boost::chrono::duration<precision_type>(m_total[i]).count();
 }
 
 Timer timer(20);

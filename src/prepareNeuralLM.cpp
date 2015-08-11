@@ -16,6 +16,7 @@
 
 # include <tclap/CmdLine.h>
 
+#include "define.h"
 #include "neuralLM.h"
 #include "util.h"
 
@@ -78,7 +79,7 @@ void writeNgrams(const string &input_filename,
      bool ngramize, 
 		 const string &filename,
      int train_data_size,
-		 vector<double> &sent_weights,
+		 vector<precision_type> &sent_weights,
 		 const string &sent_weights_filename)
 {
     ofstream file(filename.c_str());
@@ -532,7 +533,7 @@ int main(int argc, char *argv[])
         }
     }
     //READING SENTENCE WEIGHTS IF THERE ARE ANY
-    vector<double> sent_weights;
+    vector<precision_type> sent_weights;
     if (sent_weights_text != "") {
       cerr<<"Reading sentence weights from "<<sent_weights_text<<endl;
       ifstream sent_weights_file(sent_weights_text.c_str());

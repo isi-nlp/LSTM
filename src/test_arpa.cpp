@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
     ("output-file,o", value<string>(), "Output file (biglm format)")
     ("checksum-bits,k", value<int>()->default_value(8), "bits for checksum (higher is more accurate)")
     ("b", value<int>()->default_value(175), "b parameter to BRZ")
-    ("graphsize", value<double>()->default_value(2.9), "graph size parameter to BRZ (>= 2.6)")
+    ("graphsize", value<precision_type>()->default_value(2.9), "graph size parameter to BRZ (>= 2.6)")
     ("debug,d", "debug mode");
 
   positional_options_description poptdes;
@@ -110,7 +110,7 @@ int main (int argc, char *argv[]) {
   unsigned int seed = 1234; //for testing only
   boost::random::mt19937 rng(seed);
   std::vector<unsigned int> samples = std::vector<unsigned int>();
-  std::vector<double> probs;
+  std::vector<precision_type> probs;
   std::vector<unsigned int> context = std::vector<unsigned int>();
   context.push_back(20);
   context.push_back(19);

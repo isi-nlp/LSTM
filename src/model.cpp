@@ -66,11 +66,11 @@ void model::resize(int ngram_size,
   
 void model::initialize(mt19937 &init_engine,
     bool init_normal,
-    double init_range,
-	double init_output_bias,
-    double init_forget_bias,
+    precision_type init_range,
+	precision_type init_output_bias,
+    precision_type init_forget_bias,
     string &parameter_update,
-    double adagrad_epsilon)
+    precision_type adagrad_epsilon)
 {
 	/*
 	//cerr<<"Input word embeddings init"<<endl;
@@ -222,7 +222,7 @@ void model::premultiply()
     // Since input and first_hidden_linear are both linear,
     // we can multiply them into a single linear layer *if* we are not training
     int context_size = ngram_size-1;
-    Matrix<double,Dynamic,Dynamic> U = first_hidden_linear.U;
+    Matrix<precision_type,Dynamic,Dynamic> U = first_hidden_linear.U;
     first_hidden_linear.U.resize(num_hidden, input_vocab_size * context_size);
     for (int i=0; i<context_size; i++)
         first_hidden_linear.U.middleCols(i*input_vocab_size, input_vocab_size) = 
@@ -533,12 +533,12 @@ void model::write(const string &filename, const vector<string> *input_pwords, co
     file.close();
 }
 
-void model::updateParams(double learning_rate,
+void model::updateParams(precision_type learning_rate,
  					int current_minibatch_size,
-			  		double momentum,
-					double L2_reg,
+			  		precision_type momentum,
+					precision_type L2_reg,
 					bool norm_clipping,
-					double norm_threshold){
+					precision_type norm_threshold){
 						// updating the rest of the parameters
 		
 						//updating params for weights out of hidden layer 
@@ -709,9 +709,9 @@ void google_input_model::resize(int input_vocab_size,
   
 void google_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
-    double init_range,
+    precision_type init_range,
     string &parameter_update,
-    double adagrad_epsilon)
+    precision_type adagrad_epsilon)
 {
 	//cerr<<"Input word embeddings init"<<endl;
     input_layer.initialize(init_engine,
@@ -748,12 +748,12 @@ void google_input_model::initialize(mt19937 &init_engine,
 	        adagrad_epsilon);			
 }
 
-void google_input_model::updateParams(double learning_rate,
+void google_input_model::updateParams(precision_type learning_rate,
  					int current_minibatch_size,
-			  		double momentum,
-					double L2_reg,
+			  		precision_type momentum,
+					precision_type L2_reg,
 					bool norm_clipping,
-					double norm_threshold){
+					precision_type norm_threshold){
 						
 						input_layer.updateParams(learning_rate,
 																	current_minibatch_size,
@@ -925,9 +925,9 @@ void hidden_to_hidden_input_model::resize(int input_vocab_size,
   
 void hidden_to_hidden_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
-    double init_range,
+    precision_type init_range,
     string &parameter_update,
-    double adagrad_epsilon)
+    precision_type adagrad_epsilon)
 {
 
 		W_x_to_c.initialize(init_engine,
@@ -958,12 +958,12 @@ void hidden_to_hidden_input_model::initialize(mt19937 &init_engine,
 	        adagrad_epsilon);			
 }
 
-void hidden_to_hidden_input_model::updateParams(double learning_rate,
+void hidden_to_hidden_input_model::updateParams(precision_type learning_rate,
  					int current_minibatch_size,
-			  		double momentum,
-					double L2_reg,
+			  		precision_type momentum,
+					precision_type L2_reg,
 					bool norm_clipping,
-					double norm_threshold){
+					precision_type norm_threshold){
 						
 
 						//Error derivatives for the linear layers from the input word embeddings
@@ -1024,9 +1024,9 @@ void standard_input_model::resize(int input_vocab_size,
   
 void standard_input_model::initialize(mt19937 &init_engine,
     bool init_normal,
-    double init_range,
+    precision_type init_range,
     string &parameter_update,
-    double adagrad_epsilon)
+    precision_type adagrad_epsilon)
 {
 		
 		W_x_to_c.initialize(init_engine,
@@ -1057,12 +1057,12 @@ void standard_input_model::initialize(mt19937 &init_engine,
 	        adagrad_epsilon);			
 }
 
-void standard_input_model::updateParams(double learning_rate,
+void standard_input_model::updateParams(precision_type learning_rate,
  					int current_minibatch_size,
-			  		double momentum,
-					double L2_reg,
+			  		precision_type momentum,
+					precision_type L2_reg,
 					bool norm_clipping,
-					double norm_threshold){
+					precision_type norm_threshold){
 						
 						//Error derivatives for the linear layers from the input word embeddings
 						W_x_to_c.updateParams(learning_rate,

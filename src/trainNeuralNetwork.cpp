@@ -24,7 +24,8 @@
 #include "maybe_omp.h"
 #include <tclap/CmdLine.h>
 
-#include "fastonebigheader.h"
+//#include "fastonebigheader.h"
+#include "define.h"
 #include "model.h"
 #include "propagator.h"
 #include "param.h"
@@ -48,17 +49,13 @@ using namespace boost::random;
 using namespace nplm;
 
 namespace ip = boost::interprocess;
-typedef unordered_map<Matrix<int,Dynamic,1>, double> vector_map;
+typedef unordered_map<Matrix<int,Dynamic,1>, precision_type> vector_map;
 
 typedef ip::allocator<int, ip::managed_mapped_file::segment_manager> intAllocator;
 typedef ip::vector<int, intAllocator> vec;
 typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocator;
 
-#ifdef FLOAT
-#define precision_type float;
-#else
-#define precision_type double;
-#endif
+
 //typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 int main(int argc, char** argv)
@@ -70,6 +67,7 @@ int main(int argc, char** argv)
 	    return 1;
 	}	
 	*/
+	cerr<<"precision type is "<<sizeof(precision_type)<<endl;
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
@@ -85,11 +83,11 @@ int main(int argc, char** argv)
 
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
 
-      //ValueArg<double> final_momentum("", "final_momentum", "Final value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
-      //ValueArg<double> initial_momentum("", "initial_momentum", "Initial value of momentum. Default: 0.9.", false, 0.9, "double", cmd);
+      //ValueArg<precision_type> final_momentum("", "final_momentum", "Final value of momentum. Default: 0.9.", false, 0.9, "precision_type", cmd);
+      //ValueArg<precision_type> initial_momentum("", "initial_momentum", "Initial value of momentum. Default: 0.9.", false, 0.9, "precision_type", cmd);
       //ValueArg<bool> use_momentum("", "use_momentum", "Use momentum (hidden layer weights only). 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
 
-      //ValueArg<double> normalization_init("", "normalization_init", "Initial normalization parameter. Default: 0.", false, 0.0, "double", cmd);
+      //ValueArg<precision_type> normalization_init("", "normalization_init", "Initial normalization parameter. Default: 0.", false, 0.0, "precision_type", cmd);
       //ValueArg<bool> normalization("", "normalization", "Learn individual normalization factors during training. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
 
       //ValueArg<bool> mmap_file("", "mmap_file", "Use memory mapped files. This is useful if the entire data cannot fit in memory. prepareNeuralLM can generate memory mapped files", false, 0, "bool", cmd);
@@ -98,23 +96,23 @@ int main(int argc, char** argv)
 
       //ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
 
-      ValueArg<double> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "double", cmd);
+      ValueArg<precision_type> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "precision_type", cmd);
 
-      ValueArg<double> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "double", cmd);
-	  //ValueArg<double> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "double", cmd);
+      ValueArg<precision_type> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "precision_type", cmd);
+	  //ValueArg<precision_type> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "precision_type", cmd);
 
-      //ValueArg<double> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "double", cmd);
+      //ValueArg<precision_type> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "precision_type", cmd);
 
-      //ValueArg<double> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "double", cmd);
-      //ValueArg<double> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
-          Default: 10E-3", false, 10E-3, "double", cmd);
+      //ValueArg<precision_type> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "precision_type", cmd);
+      //ValueArg<precision_type> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
+          Default: 10E-3", false, 10E-3, "precision_type", cmd);
       ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 128.", false, 128, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 128.", false, 128, "int", cmd);
 
       ValueArg<int> num_epochs("", "num_epochs", "Number of epochs. Default: 10.", false, 10, "int", cmd);
 
-      ValueArg<double> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.1", false, 0.1, "double", cmd);
-	  ValueArg<double> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "double", cmd);
+      ValueArg<precision_type> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.1", false, 0.1, "precision_type", cmd);
+	  ValueArg<precision_type> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "precision_type", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
@@ -154,7 +152,7 @@ int main(int argc, char** argv)
 		  Default: 1 = yes, \n \
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
-	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
+	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 
       cmd.parse(argc, argv);
 
@@ -675,10 +673,10 @@ int main(int argc, char** argv)
 		cerr<<"Number of validation minibatches: "<<num_validation_batches<<endl;
     } 
 	
-    double current_momentum = myParam.initial_momentum;
-    double momentum_delta = (myParam.final_momentum - myParam.initial_momentum)/(myParam.num_epochs-1);
-    double current_learning_rate = myParam.learning_rate;
-    double current_validation_ll = 0.0;
+    precision_type current_momentum = myParam.initial_momentum;
+    precision_type momentum_delta = (myParam.final_momentum - myParam.initial_momentum)/(myParam.num_epochs-1);
+    precision_type current_learning_rate = myParam.learning_rate;
+    precision_type current_validation_ll = 0.0;
 
     int ngram_size = myParam.ngram_size;
     int input_vocab_size = myParam.input_vocab_size;
@@ -700,7 +698,7 @@ int main(int argc, char** argv)
       }
     }
 	*/
-	double best_perplexity = 999999999;
+	precision_type best_perplexity = 999999999;
 	int best_model = 0;	
 	//Resetting the gradient in the beginning
 	prop.resetGradient();
@@ -716,7 +714,7 @@ int main(int argc, char** argv)
 
 	cerr << "Training minibatches: ";
 
-	double log_likelihood = 0.0;
+	precision_type log_likelihood = 0.0;
 
 	int num_samples = 0;
 	if (loss_function == LogLoss)
@@ -726,16 +724,16 @@ int main(int argc, char** argv)
 	//Generating 10 samples
 	
 	/*
-	Matrix<double,Dynamic,Dynamic> minibatch_weights(num_samples, minibatch_size);
+	Matrix<precision_type,Dynamic,Dynamic> minibatch_weights(num_samples, minibatch_size);
 	Matrix<int,Dynamic,Dynamic> minibatch_samples(num_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> scores(num_samples, minibatch_size);
-	Matrix<double,Dynamic,Dynamic> probs(num_samples, minibatch_size);
+	Matrix<precision_type,Dynamic,Dynamic> scores(num_samples, minibatch_size);
+	Matrix<precision_type,Dynamic,Dynamic> probs(num_samples, minibatch_size);
 	*/
 	
 	//cerr<<"Training data size is"<<training_data_size<<endl;
     data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
-	double data_log_likelihood=0;	
-	Matrix<double,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
+	precision_type data_log_likelihood=0;	
+	Matrix<precision_type,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
 
 	//init_c.setZero(myParam.num_hidden,minibatch_size);
 	//init_h.setZero(myParam.num_hidden,minibatch_size);
@@ -763,7 +761,7 @@ int main(int argc, char** argv)
 	  
 
 
-		  	//double adjusted_learning_rate = current_learning_rate;
+		  	//precision_type adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
@@ -902,7 +900,7 @@ int main(int argc, char** argv)
 					current_h,
 					training_output_sequence_cont_sent_data);
 					
-		  	double adjusted_learning_rate = current_learning_rate;
+		  	precision_type adjusted_learning_rate = current_learning_rate;
 			if (!myParam.norm_clipping){
 				adjusted_learning_rate /= current_minibatch_size;			
 			}
@@ -1024,12 +1022,12 @@ int main(int argc, char** argv)
             //////COMPUTING VALIDATION SET PERPLEXITY///////////////////////
             ////////////////////////////////////////////////////////////////
 
-            double log_likelihood = 0.0;
+            precision_type log_likelihood = 0.0;
 			
-		    //Matrix<double,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
-		    //Matrix<double,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
+		    //Matrix<precision_type,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
+		    //Matrix<precision_type,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
 		    //Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
-			Matrix<double,Dynamic,Dynamic> current_validation_c,current_validation_h;
+			Matrix<precision_type,Dynamic,Dynamic> current_validation_c,current_validation_h;
 			current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
 			current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
 			
@@ -1037,7 +1035,7 @@ int main(int argc, char** argv)
             {
 				current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
 				current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
-				double minibatch_log_likelihood = 0.;
+				precision_type minibatch_log_likelihood = 0.;
 	            data_size_t minibatch_start_index = validation_minibatch_size * validation_batch;
 				data_size_t minibatch_end_index = min(validation_data_size-1, static_cast<data_size_t> (minibatch_start_index+validation_minibatch_size-1));
 				//cerr<<"Minibatch start index is "<<minibatch_start_index<<endl;

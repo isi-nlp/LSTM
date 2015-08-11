@@ -23,7 +23,8 @@
 #include "maybe_omp.h"
 #include <tclap/CmdLine.h>
 
-#include "fastonebigheader.h"
+//#include "fastonebigheader.h"
+#include "define.h"
 #include "model.h"
 #include "propagator.h"
 #include "param.h"
@@ -45,7 +46,7 @@ using namespace boost::random;
 using namespace nplm;
 
 namespace ip = boost::interprocess;
-typedef unordered_map<Matrix<int,Dynamic,1>, double> vector_map;
+typedef unordered_map<Matrix<int,Dynamic,1>, precision_type> vector_map;
 
 typedef ip::allocator<int, ip::managed_mapped_file::segment_manager> intAllocator;
 typedef ip::vector<int, intAllocator> vec;
@@ -97,7 +98,7 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file.", false, "", "string", cmd);
 	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file.", false, "", "string", cmd);
-	  ValueArg<double> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "double", cmd);
+	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 
       cmd.parse(argc, argv);
 
@@ -360,7 +361,7 @@ int main(int argc, char** argv)
 
 	cerr << "Testing minibatches: ";
 
-	double log_likelihood = 0.0;
+	precision_type log_likelihood = 0.0;
 	
 
 	
@@ -369,8 +370,8 @@ int main(int argc, char** argv)
 	
 	//cerr<<"Training data size is"<<training_data_size<<endl;
     //data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
-	double data_log_likelihood=0;	
-	Matrix<double,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
+	precision_type data_log_likelihood=0;	
+	Matrix<precision_type,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
 	current_c.setZero(myParam.num_hidden, minibatch_size);
 	current_h.setZero(myParam.num_hidden, minibatch_size);
 	//init_c.setZero(myParam.num_hidden,minibatch_size);
@@ -383,7 +384,7 @@ int main(int argc, char** argv)
     {
 			current_c.setZero(myParam.num_hidden, minibatch_size);
 			current_h.setZero(myParam.num_hidden, minibatch_size);
-			double minibatch_log_likelihood = 0.;
+			precision_type minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
             {
 	        cerr << batch <<"...";
@@ -399,7 +400,7 @@ int main(int argc, char** argv)
 
 	  
 
-		  	//double adjusted_learning_rate = current_learning_rate;
+		  	//precision_type adjusted_learning_rate = current_learning_rate;
 			//cerr<<"Adjusted learning rate is"<<adjusted_learning_rate<<endl;
             //cerr<<"Adjusted learning rate: "<<adjusted_learning_rate<<endl;
 
