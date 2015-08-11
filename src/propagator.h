@@ -1,6 +1,7 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+
 #include "neuralClasses.h"
 #include "util.h"
 #include "graphClasses.h"
@@ -18,17 +19,17 @@ namespace nplm
 		vector<LSTM_node<input_node_type> > decoder_lstm_nodes; //We will allow only 20 positions now.
 		vector<input_node_type > encoder_input_nodes, decoder_input_nodes; 
 		Node<Output_word_embeddings> output_layer_node;
-		Matrix<double,Dynamic,Dynamic> d_Err_tPlusOne_to_n_d_c_t,d_Err_tPlusOne_to_n_d_h_t; //Derivatives wrt the future h_t and c_t
-		Matrix<double,Dynamic,Dynamic> scores;
-		Matrix<double,Dynamic,Dynamic> minibatch_weights;
-		Matrix<double,Dynamic,Dynamic> d_Err_t_d_output;
+		Matrix<precision_type,Dynamic,Dynamic> d_Err_tPlusOne_to_n_d_c_t,d_Err_tPlusOne_to_n_d_h_t; //Derivatives wrt the future h_t and c_t
+		Matrix<precision_type,Dynamic,Dynamic> scores;
+		Matrix<precision_type,Dynamic,Dynamic> minibatch_weights;
+		Matrix<precision_type,Dynamic,Dynamic> d_Err_t_d_output;
 		Matrix<int,Dynamic,Dynamic> minibatch_samples;
 		Matrix<int,Dynamic,Dynamic> minibatch_samples_no_negative;
-		Matrix<double,Dynamic,Dynamic> probs;	
+		Matrix<precision_type,Dynamic,Dynamic> probs;	
 		int num_hidden;
-		double fixed_partition_function; 
+		precision_type fixed_partition_function; 
 		boost::random::uniform_real_distribution<> unif_real;
-		//vector<Matrix<double,Dynamic,Dynamic> > losses;
+		//vector<Matrix<precision_type,Dynamic,Dynamic> > losses;
 		vector<Output_loss_node> losses;
 
 	public:
@@ -55,7 +56,7 @@ namespace nplm
 			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(100,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
 			encoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
 			decoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
-			//losses(vector<Matrix<double,Dynamic,Dynamic> >(100,Matrix<double,Dynamic,Dynamic>()))
+			//losses(vector<Matrix<precision_type,Dynamic,Dynamic> >(100,Matrix<precision_type,Dynamic,Dynamic>()))
 			losses(vector<Output_loss_node>(100,Output_loss_node())),
 			unif_real(0.0,1.0)
 			{
@@ -90,7 +91,7 @@ namespace nplm
 		  d_Err_t_d_output.resize(output_layer_node.param->n_outputs(),minibatch_size);
 	    }
 		//Resizing some of the NCE mibatch matrices
-		void resizeNCE(int num_noise_samples, double fixed_partition_function){
+		void resizeNCE(int num_noise_samples, precision_type fixed_partition_function){
 			minibatch_weights.setZero(num_noise_samples+1,minibatch_size);
 			minibatch_samples.setZero(num_noise_samples+1,minibatch_size);
 			minibatch_samples_no_negative.setZero(num_noise_samples+1,minibatch_size);
@@ -124,7 +125,7 @@ namespace nplm
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = input_data.rows();
 			int output_sent_len = output_data.rows();
-			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
 			//cerr<<"current minibatch_size is "<<current_minibatch_size<<endl;
 			//c_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);
@@ -206,7 +207,7 @@ namespace nplm
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			//int sent_len = input_data.rows();
 			int output_sent_len = output_data.rows();
-			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = output_data.cols();
 			//cerr<<"current minibatch_size is "<<current_minibatch_size<<endl;
 			//Copying the cell and hidden states if the sequence continuation vectors say so	
@@ -269,7 +270,7 @@ namespace nplm
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			int sent_len = input_data.rows();
 			//int output_sent_len = output_data.rows();
-			//Matrix<double,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
 			//cerr<<"sequence cont indices are"<<sequence_cont_indices<<endl;
 			//cerr<<"input data is "<<input_data<<endl;
@@ -371,15 +372,15 @@ namespace nplm
 					//cerr<<"Score is"<<endl;
 					//cerr<<scores<<endl;
 	
-			        double minibatch_log_likelihood;
+			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 			                   predicted_output.row(i), 
 			                   probs, 
 			                   minibatch_log_likelihood);	
 					//int max_index = 0;
-					//double max_value = -9999999;
-					//Matrix<double,1,Dynamic>::Index max_index;
+					//precision_type max_value = -9999999;
+					//Matrix<precision_type,1,Dynamic>::Index max_index;
 					//probs.col(maxCoeff(&max_index); 
 					//int minibatch_size = 0;
 					//THIS HAS TO CHANGE
@@ -394,7 +395,7 @@ namespace nplm
 					}
 					*/
 					//getchar();
-			        //Matrix<double,1,Dynamic>::Index max_index;
+			        //Matrix<precision_type,1,Dynamic>::Index max_index;
 			        //probs.maxCoeff(&max_index);	
 					//if max index equals the end symbol
 					//current_minibatch_size = 0;
@@ -403,7 +404,7 @@ namespace nplm
 					for (int index=0; index<live_words.size(); index++){
 						if (live_words[index] == 1){
 							//predicted_sequence[index].push_back()
-							Matrix<double,1,Dynamic>::Index max_index;
+							Matrix<precision_type,1,Dynamic>::Index max_index;
 							probs.col(index).maxCoeff(&max_index);
 							//cerr<<"max index is "<<max_index<<endl;
 							if (max_index == output_end_symbol){
@@ -485,7 +486,7 @@ namespace nplm
 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
 										scores.leftCols(current_minibatch_size));
 
-			        double minibatch_log_likelihood;
+			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 			                   predicted_output.row(i), 
@@ -495,13 +496,13 @@ namespace nplm
 					for (int index=0; index<live_words.size(); index++){
 						if (live_words[index] == 1){
 							//predicted_sequence[index].push_back()
-							//Matrix<double,1,Dynamic>::Index max_index;
+							//Matrix<precision_type,1,Dynamic>::Index max_index;
 							//probs.col(index).maxCoeff(&max_index);
 							//cerr<<"max index is "<<max_index<<endl;
-							double rand_value = unif_real(eng);
+							precision_type rand_value = unif_real(eng);
 							//cerr<<"rand value is"<<rand_value<<endl;
 							int rand_index =0;
-							double cumul =0;
+							precision_type cumul =0;
 							for (int vocab_index=0; vocab_index<probs.col(index).rows(); vocab_index++){
 								cumul += exp(probs(vocab_index,index));
 								//cerr<<"cumul is "<<cumul<<endl;
@@ -534,7 +535,7 @@ namespace nplm
 		//losses from the next layer
 	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
 		void computeLosses(const MatrixBase<DerivedOut> &output,
-			 double &log_likelihood,
+			 precision_type &log_likelihood,
 			 bool gradient_check,
 			 bool norm_clipping,
 			 loss_function_type loss_function,
@@ -544,14 +545,14 @@ namespace nplm
 			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
 	 			int current_minibatch_size = output.cols();
 	 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	 			Matrix<double,Dynamic,Dynamic> dummy_zero,dummy_ones;
+	 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
 	 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 	 			//same dimension in and LSTM. this might not be a good idea
 	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
 	 			int sent_len = output.rows(); 
-	 			//double log_likelihood = 0.;
+	 			//precision_type log_likelihood = 0.;
 			
 	 			for (int i=sent_len-1; i>=1; i--) {
 	 				//cerr<<"i is "<<i<<endl;
@@ -566,7 +567,7 @@ namespace nplm
 	 					//cerr<<"Score is"<<endl;
 	 					//cerr<<scores<<endl;
 				
-	 			        double minibatch_log_likelihood;
+	 			        precision_type minibatch_log_likelihood;
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
 	 			                   output.row(i), 
@@ -631,7 +632,7 @@ namespace nplm
 			//cerr<<"In backprop..."<<endl;
 			int current_minibatch_size = input_data.cols();
 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-			Matrix<double,Dynamic,Dynamic> dummy_zero,dummy_ones;
+			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 			//same dimension in and LSTM. this might not be a good idea
 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
@@ -639,7 +640,7 @@ namespace nplm
 			
 			int input_sent_len = input_data.rows();
 			int output_sent_len = output_data.rows(); 
-			//double log_likelihood = 0.;
+			//precision_type log_likelihood = 0.;
 			
 			//first getting decoder loss
 			for (int i=output_sent_len-2; i>=0; i--) {
@@ -706,7 +707,7 @@ namespace nplm
 	//cerr<<"In backprop..."<<endl;
 	int current_minibatch_size = input_data.cols();
 	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	Matrix<double,Dynamic,Dynamic> dummy_zero,dummy_ones;
+	Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
 	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 	//same dimension in and LSTM. this might not be a good idea
 	dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
@@ -765,12 +766,12 @@ namespace nplm
    
 	}
 } 	  
-	 void updateParams(double learning_rate,
+	 void updateParams(precision_type learning_rate,
 	 					int current_minibatch_size,
-				  		double momentum,
-						double L2_reg,
+				  		precision_type momentum,
+						precision_type L2_reg,
 						bool norm_clipping,
-						double norm_threshold,
+						precision_type norm_threshold,
 						loss_function_type loss_function) {
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
@@ -820,19 +821,19 @@ namespace nplm
 						boost::random::mt19937 &rng,
 						loss_function_type loss_function,
 						SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
-	  					double &log_likelihood) 
+	  					precision_type &log_likelihood) 
 	  {	
 			
 			//cerr<<"In computeProbs..."<<endl;
 			int current_minibatch_size = output.cols();
 
-			Matrix<double,Dynamic,Dynamic> dummy_zero;
+			Matrix<precision_type,Dynamic,Dynamic> dummy_zero;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 			//same dimension in and LSTM. this might not be a good idea
 			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
 
 			int sent_len = output.rows(); 
-			//double log_likelihood = 0.;
+			//precision_type log_likelihood = 0.;
 
 			for (int i=sent_len-1; i>=1; i--) {
 				//cerr<<"i in gradient check is "<<i<<endl;
@@ -845,7 +846,7 @@ namespace nplm
 					//cerr<<"Score is"<<endl;
 					//cerr<<scores<<endl;
 	
-			        double minibatch_log_likelihood;
+			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 			                   output.row(i), 
@@ -868,19 +869,19 @@ namespace nplm
 
 	  template <typename DerivedOut>
 	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
-	  					double &log_likelihood) 
+	  					precision_type &log_likelihood) 
 	  {	
 			
 			//cerr<<"In computeProbs..."<<endl;
 			int current_minibatch_size = output.cols();
 
-			Matrix<double,Dynamic,Dynamic> dummy_zero;
+			Matrix<precision_type,Dynamic,Dynamic> dummy_zero;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 			//same dimension in and LSTM. this might not be a good idea
 			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
 
 			int sent_len = output.rows(); 
-			//double log_likelihood = 0.;
+			//precision_type log_likelihood = 0.;
 
 			for (int i=sent_len-1; i>=1; i--) {
 				//cerr<<"i is "<<i<<endl;
@@ -891,7 +892,7 @@ namespace nplm
 				//cerr<<"Score is"<<endl;
 				//cerr<<scores<<endl;
 
-		        double minibatch_log_likelihood;
+		        precision_type minibatch_log_likelihood;
 		        start_timer(5);
 		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 		                   output.row(i), 
@@ -933,8 +934,8 @@ namespace nplm
 			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices)
 				 
     {
-		Matrix<double,Dynamic,Dynamic> init_c = const_init_c;
-		Matrix<double,Dynamic,Dynamic> init_h = const_init_h;
+		Matrix<precision_type,Dynamic,Dynamic> init_c = const_init_c;
+		Matrix<precision_type,Dynamic,Dynamic> init_h = const_init_h;
 		//boost::random::mt19937 init_rng = rng;
 		cerr<<"init c is "<<init_c<<endl;
 		cerr<<"init h is "<<init_h<<endl;
@@ -1402,8 +1403,8 @@ namespace nplm
 			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &input_sequence_cont_indices,
 			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices) {
-				Matrix<double,Dynamic,Dynamic> init_c; 
-				Matrix<double,Dynamic,Dynamic> init_h;
+				Matrix<precision_type,Dynamic,Dynamic> init_c; 
+				Matrix<precision_type,Dynamic,Dynamic> init_h;
 				boost::random::mt19937 init_rng = rng;
 				init_c = const_init_c;
 				init_h = const_init_h;
@@ -1414,12 +1415,12 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-				double perturbation = 1e-5;
+				precision_type perturbation = 1e-5;
 		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);
 		 		//then do an fprop
-		 		double before_log_likelihood = 0;	
+		 		precision_type before_log_likelihood = 0;	
 				//cerr<<"input cols is "<<input.cols()<<endl;					
 		 		//fProp(input, output, 0, input.rows()-1, init_c, init_h, sequence_cont_indices);
 				fPropEncoder(input,
@@ -1446,7 +1447,7 @@ namespace nplm
 				init_c = const_init_c;
 				init_h = const_init_h;
 				init_rng = rng;
-		 		double after_log_likelihood = 0;						
+		 		precision_type after_log_likelihood = 0;						
 		 		//fProp(input,output, 0, input.rows()-1, init_c, init_h, input_sequence_cont_indices);	
 				fPropEncoder(input,
 							0,
@@ -1470,15 +1471,15 @@ namespace nplm
 		 								rand_row,
 		 								rand_col);			
 
-				double threshold = 1e-03;
+				precision_type threshold = 1e-03;
 				//cerr<<"graves "<<pow(10.0, max(0.0, ceil(log10(min(fabs(param.getGradient(rand_row,
 		 		//						rand_col)), fabs((before_log_likelihood-after_log_likelihood)/2e-5)))))-6)<<endl;
-				double symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/(2*perturbation);	
-				double graves_threshold = pow(10.0, (double) max(0.0, (double) ceil(log10(min(fabs(param.getGradient(rand_row,
+				precision_type symmetric_finite_diff_grad = (before_log_likelihood-after_log_likelihood)/(2*perturbation);	
+				precision_type graves_threshold = pow(10.0, (double) max(0.0, (double) ceil(log10(min(fabs(param.getGradient(rand_row,
 		 								rand_col)), fabs(symmetric_finite_diff_grad)))))-6);
-				double gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
+				precision_type gradient_diff =  symmetric_finite_diff_grad - param.getGradient(rand_row,
 		 								rand_col);
-				double relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
+				precision_type relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
 				if (gradient_diff > threshold || relative_error > threshold) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;

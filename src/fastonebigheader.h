@@ -108,7 +108,7 @@ typedef __m128i v4si;
 #define v2dil(x) ((const v4si) { (x), (x) })
 #define v4sil(x) v2dil((((unsigned long long) (x)) << 32) | (x))
 
-typedef union { v4sf f; double array[4]; } v4sfindexer;
+typedef union { v4sf f; precision_type array[4]; } v4sfindexer;
 #define v4sf_index(_findx, _findi)      \
   ({                                    \
      v4sfindexer _findvx = { _findx } ; \
@@ -185,34 +185,34 @@ typedef union { v4sf f; v4si i; } v4sfv4sipun;
 // Underflow of exponential is common practice in numerical routines,
 // so handle it here.
 
-static inline double
-fastpow2 (double p)
+static inline precision_type
+fastpow2 (precision_type p)
 {
-  double offset = (p < 0) ? 1.0f : 0.0f;
-  double clipp = (p < -126) ? -126.0f : p;
+  precision_type offset = (p < 0) ? 1.0f : 0.0f;
+  precision_type clipp = (p < -126) ? -126.0f : p;
   int w = clipp;
-  double z = clipp - w + offset;
-  union { uint32_t i; double f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
+  precision_type z = clipp - w + offset;
+  union { uint32_t i; precision_type f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 121.2740575f + 27.7280233f / (4.84252568f - z) - 1.49012907f * z) ) };
 
   return v.f;
 }
 
-static inline double
-fastexp (double p)
+static inline precision_type
+fastexp (precision_type p)
 {
   return fastpow2 (1.442695040f * p);
 }
 
-static inline double
-fasterpow2 (double p)
+static inline precision_type
+fasterpow2 (precision_type p)
 {
-  double clipp = (p < -126) ? -126.0f : p;
-  union { uint32_t i; double f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 126.94269504f) ) };
+  precision_type clipp = (p < -126) ? -126.0f : p;
+  union { uint32_t i; precision_type f; } v = { cast_uint32_t ( (1 << 23) * (clipp + 126.94269504f) ) };
   return v.f;
 }
 
-static inline double
-fasterexp (double p)
+static inline precision_type
+fasterexp (precision_type p)
 {
   return fasterpow2 (1.442695040f * p);
 }
@@ -317,12 +317,12 @@ vfasterexp (const v4sf p)
 
 #include <stdint.h>
 
-static inline double 
-fastlog2 (double x)
+static inline precision_type 
+fastlog2 (precision_type x)
 {
-  union { double f; uint32_t i; } vx = { x };
-  union { uint32_t i; double f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
-  double y = vx.i;
+  union { precision_type f; uint32_t i; } vx = { x };
+  union { uint32_t i; precision_type f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+  precision_type y = vx.i;
   y *= 1.1920928955078125e-7f;
 
   return y - 124.22551499f
@@ -330,28 +330,28 @@ fastlog2 (double x)
            - 1.72587999f / (0.3520887068f + mx.f);
 }
 
-static inline double
-fastlog (double x)
+static inline precision_type
+fastlog (precision_type x)
 {
   return 0.69314718f * fastlog2 (x);
 }
 
-static inline double 
-fasterlog2 (double x)
+static inline precision_type 
+fasterlog2 (precision_type x)
 {
-  union { double f; uint32_t i; } vx = { x };
-  double y = vx.i;
+  union { precision_type f; uint32_t i; } vx = { x };
+  precision_type y = vx.i;
   y *= 1.1920928955078125e-7f;
   return y - 126.94269504f;
 }
 
-static inline double
-fasterlog (double x)
+static inline precision_type
+fasterlog (precision_type x)
 {
 //  return 0.69314718f * fasterlog2 (x);
 
-  union { double f; uint32_t i; } vx = { x };
-  double y = vx.i;
+  union { precision_type f; uint32_t i; } vx = { x };
+  precision_type y = vx.i;
   y *= 8.2629582881927490e-8f;
   return y - 87.989971088f;
 }
@@ -465,27 +465,27 @@ vfasterlog (v4sf x)
 // ... although vectorized version is interesting
 //     and fastererfc is very fast
 
-static inline double
-fasterfc (double x)
+static inline precision_type
+fasterfc (precision_type x)
 {
-  static const double k = 3.3509633149424609f;
-  static const double a = 0.07219054755431126f;
-  static const double b = 15.418191568719577f;
-  static const double c = 5.609846028328545f;
+  static const precision_type k = 3.3509633149424609f;
+  static const precision_type a = 0.07219054755431126f;
+  static const precision_type b = 15.418191568719577f;
+  static const precision_type c = 5.609846028328545f;
 
-  union { double f; uint32_t i; } vc = { c * x };
-  double xsq = x * x;
-  double xquad = xsq * xsq;
+  union { precision_type f; uint32_t i; } vc = { c * x };
+  precision_type xsq = x * x;
+  precision_type xquad = xsq * xsq;
 
   vc.i |= 0x80000000;
 
   return 2.0f / (1.0f + fastpow2 (k * x)) - a * x * (b * xquad - 1.0f) * fasterpow2 (vc.f);
 }
 
-static inline double
-fastererfc (double x)
+static inline precision_type
+fastererfc (precision_type x)
 {
-  static const double k = 3.3509633149424609f;
+  static const precision_type k = 3.3509633149424609f;
 
   return 2.0f / (1.0f + fasterpow2 (k * x));
 }
@@ -494,37 +494,37 @@ fastererfc (double x)
 // ... although vectorized version is interesting
 //     and fastererf is very fast
 
-static inline double
-fasterf (double x)
+static inline precision_type
+fasterf (precision_type x)
 {
   return 1.0f - fasterfc (x);
 }
 
-static inline double
-fastererf (double x)
+static inline precision_type
+fastererf (precision_type x)
 {
   return 1.0f - fastererfc (x);
 }
 
-static inline double
-fastinverseerf (double x)
+static inline precision_type
+fastinverseerf (precision_type x)
 {
-  static const double invk = 0.30004578719350504f;
-  static const double a = 0.020287853348211326f;
-  static const double b = 0.07236892874789555f;
-  static const double c = 0.9913030456864257f;
-  static const double d = 0.8059775923760193f;
+  static const precision_type invk = 0.30004578719350504f;
+  static const precision_type a = 0.020287853348211326f;
+  static const precision_type b = 0.07236892874789555f;
+  static const precision_type c = 0.9913030456864257f;
+  static const precision_type d = 0.8059775923760193f;
 
-  double xsq = x * x;
+  precision_type xsq = x * x;
 
   return invk * fastlog2 ((1.0f + x) / (1.0f - x)) 
        + x * (a - b * xsq) / (c - d * xsq);
 }
 
-static inline double
-fasterinverseerf (double x)
+static inline precision_type
+fasterinverseerf (precision_type x)
 {
-  static const double invk = 0.30004578719350504f;
+  static const precision_type invk = 0.30004578719350504f;
 
   return invk * fasterlog2 ((1.0f + x) / (1.0f - x));
 }
@@ -641,11 +641,11 @@ vfasterinverseerf (v4sf x)
 
 /* gamma/digamma functions only work for positive inputs */
 
-static inline double
-fastlgamma (double x)
+static inline precision_type
+fastlgamma (precision_type x)
 {
-  double logterm = fastlog (x * (1.0f + x) * (2.0f + x));
-  double xp3 = 3.0f + x;
+  precision_type logterm = fastlog (x * (1.0f + x) * (2.0f + x));
+  precision_type xp3 = 3.0f + x;
 
   return - 2.081061466f 
          - x 
@@ -654,8 +654,8 @@ fastlgamma (double x)
          + (2.5f + x) * fastlog (xp3);
 }
 
-static inline double
-fasterlgamma (double x)
+static inline precision_type
+fasterlgamma (precision_type x)
 {
   return - 0.0810614667f 
          - x
@@ -663,21 +663,21 @@ fasterlgamma (double x)
          + (0.5f + x) * fasterlog (1.0f + x);
 }
 
-static inline double
-fastdigamma (double x)
+static inline precision_type
+fastdigamma (precision_type x)
 {
-  double twopx = 2.0f + x;
-  double logterm = fastlog (twopx);
+  precision_type twopx = 2.0f + x;
+  precision_type logterm = fastlog (twopx);
 
   return (-48.0f + x * (-157.0f + x * (-127.0f - 30.0f * x))) /
          (12.0f * x * (1.0f + x) * twopx * twopx)
          + logterm;
 }
 
-static inline double
-fasterdigamma (double x)
+static inline precision_type
+fasterdigamma (precision_type x)
 {
-  double onepx = 1.0f + x;
+  precision_type onepx = 1.0f + x;
 
   return -1.0f / x - 1.0f / (2 * onepx) + fasterlog (onepx);
 }
@@ -786,38 +786,38 @@ vfasterdigamma (v4sf x)
 
 #include <stdint.h>
 
-static inline double
-fastsinh (double p)
+static inline precision_type
+fastsinh (precision_type p)
 {
   return 0.5f * (fastexp (p) - fastexp (-p));
 }
 
-static inline double
-fastersinh (double p)
+static inline precision_type
+fastersinh (precision_type p)
 {
   return 0.5f * (fasterexp (p) - fasterexp (-p));
 }
 
-static inline double
-fastcosh (double p)
+static inline precision_type
+fastcosh (precision_type p)
 {
   return 0.5f * (fastexp (p) + fastexp (-p));
 }
 
-static inline double
-fastercosh (double p)
+static inline precision_type
+fastercosh (precision_type p)
 {
   return 0.5f * (fasterexp (p) + fasterexp (-p));
 }
 
-static inline double
-fasttanh (double p)
+static inline precision_type
+fasttanh (precision_type p)
 {
   return -1.0f + 2.0f / (1.0f + fastexp (-2.0f * p));
 }
 
-static inline double
-fastertanh (double p)
+static inline precision_type
+fastertanh (precision_type p)
 {
   return -1.0f + 2.0f / (1.0f + fasterexp (-2.0f * p));
 }
@@ -924,79 +924,79 @@ vfastertanh (const v4sf p)
 
 // these functions compute the upper branch aka W_0
 
-static inline double
-fastlambertw (double x)
+static inline precision_type
+fastlambertw (precision_type x)
 {
-  static const double threshold = 2.26445f;
+  static const precision_type threshold = 2.26445f;
 
-  double c = (x < threshold) ? 1.546865557f : 1.0f;
-  double d = (x < threshold) ? 2.250366841f : 0.0f;
-  double a = (x < threshold) ? -0.737769969f : 0.0f;
+  precision_type c = (x < threshold) ? 1.546865557f : 1.0f;
+  precision_type d = (x < threshold) ? 2.250366841f : 0.0f;
+  precision_type a = (x < threshold) ? -0.737769969f : 0.0f;
 
-  double logterm = fastlog (c * x + d);
-  double loglogterm = fastlog (logterm);
+  precision_type logterm = fastlog (c * x + d);
+  precision_type loglogterm = fastlog (logterm);
 
-  double minusw = -a - logterm + loglogterm - loglogterm / logterm;
-  double expminusw = fastexp (minusw);
-  double xexpminusw = x * expminusw;
-  double pexpminusw = xexpminusw - minusw;
+  precision_type minusw = -a - logterm + loglogterm - loglogterm / logterm;
+  precision_type expminusw = fastexp (minusw);
+  precision_type xexpminusw = x * expminusw;
+  precision_type pexpminusw = xexpminusw - minusw;
 
   return (2.0f * xexpminusw - minusw * (4.0f * xexpminusw - minusw * pexpminusw)) /
          (2.0f + pexpminusw * (2.0f - minusw));
 }
 
-static inline double
-fasterlambertw (double x)
+static inline precision_type
+fasterlambertw (precision_type x)
 {
-  static const double threshold = 2.26445f;
+  static const precision_type threshold = 2.26445f;
 
-  double c = (x < threshold) ? 1.546865557f : 1.0f;
-  double d = (x < threshold) ? 2.250366841f : 0.0f;
-  double a = (x < threshold) ? -0.737769969f : 0.0f;
+  precision_type c = (x < threshold) ? 1.546865557f : 1.0f;
+  precision_type d = (x < threshold) ? 2.250366841f : 0.0f;
+  precision_type a = (x < threshold) ? -0.737769969f : 0.0f;
 
-  double logterm = fasterlog (c * x + d);
-  double loglogterm = fasterlog (logterm);
+  precision_type logterm = fasterlog (c * x + d);
+  precision_type loglogterm = fasterlog (logterm);
 
-  double w = a + logterm - loglogterm + loglogterm / logterm;
-  double expw = fasterexp (-w);
+  precision_type w = a + logterm - loglogterm + loglogterm / logterm;
+  precision_type expw = fasterexp (-w);
 
   return (w * w + expw * x) / (1.0f + w);
 }
 
-static inline double
-fastlambertwexpx (double x)
+static inline precision_type
+fastlambertwexpx (precision_type x)
 {
-  static const double k = 1.1765631309f;
-  static const double a = 0.94537622168f;
+  static const precision_type k = 1.1765631309f;
+  static const precision_type a = 0.94537622168f;
 
-  double logarg = fmaxf (x, k);
-  double powarg = (x < k) ? a * (x - k) : 0;
+  precision_type logarg = fmaxf (x, k);
+  precision_type powarg = (x < k) ? a * (x - k) : 0;
 
-  double logterm = fastlog (logarg);
-  double powterm = fasterpow2 (powarg);  // don't need accuracy here
+  precision_type logterm = fastlog (logarg);
+  precision_type powterm = fasterpow2 (powarg);  // don't need accuracy here
 
-  double w = powterm * (logarg - logterm + logterm / logarg);
-  double logw = fastlog (w);
-  double p = x - logw;
+  precision_type w = powterm * (logarg - logterm + logterm / logarg);
+  precision_type logw = fastlog (w);
+  precision_type p = x - logw;
 
   return w * (2.0f + p + w * (3.0f + 2.0f * p)) /
          (2.0f - p + w * (5.0f + 2.0f * w));
 }
 
-static inline double
-fasterlambertwexpx (double x)
+static inline precision_type
+fasterlambertwexpx (precision_type x)
 {
-  static const double k = 1.1765631309f;
-  static const double a = 0.94537622168f;
+  static const precision_type k = 1.1765631309f;
+  static const precision_type a = 0.94537622168f;
 
-  double logarg = fmaxf (x, k);
-  double powarg = (x < k) ? a * (x - k) : 0;
+  precision_type logarg = fmaxf (x, k);
+  precision_type powarg = (x < k) ? a * (x - k) : 0;
 
-  double logterm = fasterlog (logarg);
-  double powterm = fasterpow2 (powarg);
+  precision_type logterm = fasterlog (logarg);
+  precision_type powterm = fasterpow2 (powarg);
 
-  double w = powterm * (logarg - logterm + logterm / logarg);
-  double logw = fasterlog (w);
+  precision_type w = powterm * (logarg - logterm + logterm / logarg);
+  precision_type logw = fasterlog (w);
 
   return w * (1.0f + x - logw) / (1.0f + w);
 }
@@ -1136,16 +1136,16 @@ vfasterlambertwexpx (v4sf x)
 
 #include <stdint.h>
 
-static inline double
-fastpow (double x,
-         double p)
+static inline precision_type
+fastpow (precision_type x,
+         precision_type p)
 {
   return fastpow2 (p * fastlog2 (x));
 }
 
-static inline double
-fasterpow (double x,
-           double p)
+static inline precision_type
+fasterpow (precision_type x,
+           precision_type p)
 {
   return fasterpow2 (p * fasterlog2 (x));
 }
@@ -1214,14 +1214,14 @@ vfasterpow (const v4sf x,
 
 #include <stdint.h>
 
-static inline double
-fastsigmoid (double x)
+static inline precision_type
+fastsigmoid (precision_type x)
 {
   return 1.0f / (1.0f + fastexp (-x));
 }
 
-static inline double
-fastersigmoid (double x)
+static inline precision_type
+fastersigmoid (precision_type x)
 {
   return 1.0f / (1.0f + fasterexp (-x));
 }
@@ -1306,22 +1306,22 @@ vfastersigmoid (const v4sf x)
 //   * vectorized versions are competitive
 //   * faster full versions are competitive
 
-static inline double
-fastsin (double x)
+static inline precision_type
+fastsin (precision_type x)
 {
-  static const double fouroverpi = 1.2732395447351627f;
-  static const double fouroverpisq = 0.40528473456935109f;
-  static const double q = 0.78444488374548933f;
-  union { double f; uint32_t i; } p = { 0.20363937680730309f };
-  union { double f; uint32_t i; } r = { 0.015124940802184233f };
-  union { double f; uint32_t i; } s = { -0.0032225901625579573f };
+  static const precision_type fouroverpi = 1.2732395447351627f;
+  static const precision_type fouroverpisq = 0.40528473456935109f;
+  static const precision_type q = 0.78444488374548933f;
+  union { precision_type f; uint32_t i; } p = { 0.20363937680730309f };
+  union { precision_type f; uint32_t i; } r = { 0.015124940802184233f };
+  union { precision_type f; uint32_t i; } s = { -0.0032225901625579573f };
 
-  union { double f; uint32_t i; } vx = { x };
+  union { precision_type f; uint32_t i; } vx = { x };
   uint32_t sign = vx.i & 0x80000000;
   vx.i = vx.i & 0x7FFFFFFF;
 
-  double qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
-  double qpproxsq = qpprox * qpprox;
+  precision_type qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
+  precision_type qpproxsq = qpprox * qpprox;
 
   p.i |= sign;
   r.i |= sign;
@@ -1330,119 +1330,119 @@ fastsin (double x)
   return q * qpprox + qpproxsq * (p.f + qpproxsq * (r.f + qpproxsq * s.f));
 }
 
-static inline double
-fastersin (double x)
+static inline precision_type
+fastersin (precision_type x)
 {
-  static const double fouroverpi = 1.2732395447351627f;
-  static const double fouroverpisq = 0.40528473456935109f;
-  static const double q = 0.77633023248007499f;
-  union { double f; uint32_t i; } p = { 0.22308510060189463f };
+  static const precision_type fouroverpi = 1.2732395447351627f;
+  static const precision_type fouroverpisq = 0.40528473456935109f;
+  static const precision_type q = 0.77633023248007499f;
+  union { precision_type f; uint32_t i; } p = { 0.22308510060189463f };
 
-  union { double f; uint32_t i; } vx = { x };
+  union { precision_type f; uint32_t i; } vx = { x };
   uint32_t sign = vx.i & 0x80000000;
   vx.i &= 0x7FFFFFFF;
 
-  double qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
+  precision_type qpprox = fouroverpi * x - fouroverpisq * x * vx.f;
 
   p.i |= sign;
 
   return qpprox * (q + p.f * qpprox);
 }
 
-static inline double
-fastsinfull (double x)
+static inline precision_type
+fastsinfull (precision_type x)
 {
-  static const double twopi = 6.2831853071795865f;
-  static const double invtwopi = 0.15915494309189534f;
+  static const precision_type twopi = 6.2831853071795865f;
+  static const precision_type invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  double half = (x < 0) ? -0.5f : 0.5f;
+  precision_type half = (x < 0) ? -0.5f : 0.5f;
   return fastsin ((half + k) * twopi - x);
 }
 
-static inline double
-fastersinfull (double x)
+static inline precision_type
+fastersinfull (precision_type x)
 {
-  static const double twopi = 6.2831853071795865f;
-  static const double invtwopi = 0.15915494309189534f;
+  static const precision_type twopi = 6.2831853071795865f;
+  static const precision_type invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  double half = (x < 0) ? -0.5f : 0.5f;
+  precision_type half = (x < 0) ? -0.5f : 0.5f;
   return fastersin ((half + k) * twopi - x);
 }
 
-static inline double
-fastcos (double x)
+static inline precision_type
+fastcos (precision_type x)
 {
-  static const double halfpi = 1.5707963267948966f;
-  static const double halfpiminustwopi = -4.7123889803846899f;
-  double offset = (x > halfpi) ? halfpiminustwopi : halfpi;
+  static const precision_type halfpi = 1.5707963267948966f;
+  static const precision_type halfpiminustwopi = -4.7123889803846899f;
+  precision_type offset = (x > halfpi) ? halfpiminustwopi : halfpi;
   return fastsin (x + offset);
 }
 
-static inline double
-fastercos (double x)
+static inline precision_type
+fastercos (precision_type x)
 {
-  static const double twooverpi = 0.63661977236758134f;
-  static const double p = 0.54641335845679634f;
+  static const precision_type twooverpi = 0.63661977236758134f;
+  static const precision_type p = 0.54641335845679634f;
 
-  union { double f; uint32_t i; } vx = { x };
+  union { precision_type f; uint32_t i; } vx = { x };
   vx.i &= 0x7FFFFFFF;
 
-  double qpprox = 1.0f - twooverpi * vx.f;
+  precision_type qpprox = 1.0f - twooverpi * vx.f;
 
   return qpprox + p * qpprox * (1.0f - qpprox * qpprox);
 }
 
-static inline double
-fastcosfull (double x)
+static inline precision_type
+fastcosfull (precision_type x)
 {
-  static const double halfpi = 1.5707963267948966f;
+  static const precision_type halfpi = 1.5707963267948966f;
   return fastsinfull (x + halfpi);
 }
 
-static inline double
-fastercosfull (double x)
+static inline precision_type
+fastercosfull (precision_type x)
 {
-  static const double halfpi = 1.5707963267948966f;
+  static const precision_type halfpi = 1.5707963267948966f;
   return fastersinfull (x + halfpi);
 }
 
-static inline double
-fasttan (double x)
+static inline precision_type
+fasttan (precision_type x)
 {
-  static const double halfpi = 1.5707963267948966f;
+  static const precision_type halfpi = 1.5707963267948966f;
   return fastsin (x) / fastsin (x + halfpi);
 }
 
-static inline double
-fastertan (double x)
+static inline precision_type
+fastertan (precision_type x)
 {
   return fastersin (x) / fastercos (x);
 }
 
-static inline double
-fasttanfull (double x)
+static inline precision_type
+fasttanfull (precision_type x)
 {
-  static const double twopi = 6.2831853071795865f;
-  static const double invtwopi = 0.15915494309189534f;
+  static const precision_type twopi = 6.2831853071795865f;
+  static const precision_type invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  double half = (x < 0) ? -0.5f : 0.5f;
-  double xnew = x - (half + k) * twopi;
+  precision_type half = (x < 0) ? -0.5f : 0.5f;
+  precision_type xnew = x - (half + k) * twopi;
 
   return fastsin (xnew) / fastcos (xnew);
 }
 
-static inline double
-fastertanfull (double x)
+static inline precision_type
+fastertanfull (precision_type x)
 {
-  static const double twopi = 6.2831853071795865f;
-  static const double invtwopi = 0.15915494309189534f;
+  static const precision_type twopi = 6.2831853071795865f;
+  static const precision_type invtwopi = 0.15915494309189534f;
 
   int k = x * invtwopi;
-  double half = (x < 0) ? -0.5f : 0.5f;
-  double xnew = x - (half + k) * twopi;
+  precision_type half = (x < 0) ? -0.5f : 0.5f;
+  precision_type xnew = x - (half + k) * twopi;
 
   return fastersin (xnew) / fastercos (xnew);
 }

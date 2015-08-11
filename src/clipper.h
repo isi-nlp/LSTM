@@ -3,7 +3,7 @@
 
 namespace nplm {
   struct Clipper{
-  double operator() (double x) const { 
+  precision_type operator() (precision_type x) const { 
     return std::min(0.5, std::max(x,-0.5));
     //return(x);
   }

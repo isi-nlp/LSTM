@@ -32,16 +32,16 @@ public:
 
 	virtual void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
-        double init_range,
+        precision_type init_range,
         string &parameter_udpate,
-        double adagrad_epsilon) = 0;
+        precision_type adagrad_epsilon) = 0;
 	
-	virtual void updateParams(double learning_rate,
+	virtual void updateParams(precision_type learning_rate,
 		 					int current_minibatch_size,
-					  		double momentum,
-							double L2_reg,
+					  		precision_type momentum,
+							precision_type L2_reg,
 							bool norm_clipping,
-							double norm_threshold) = 0;
+							precision_type norm_threshold) = 0;
 	virtual void resetGradient() = 0;	
 	virtual void write(std::ofstream &file) {
 		cerr<<"write not implemented "<<endl;
@@ -67,7 +67,7 @@ public:
     Output_word_embeddings output_layer;
 	//output_model *output;	
 	/*
-    Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
+    Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
       input_embedding_matrix,
       input_and_output_embedding_matrix,
 	  W_x_to_i_embedding_matrix, 
@@ -97,19 +97,19 @@ public:
     {
 		/*
         if (share_embeddings){
-          input_and_output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+          input_and_output_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
           input_layer.set_W(&input_and_output_embedding_matrix);
           output_layer.set_W(&input_and_output_embedding_matrix);
         }
         else {
-          input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-          output_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+          input_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+          output_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
           input_layer.set_W(&input_embedding_matrix);
           output_layer.set_W(&output_embedding_matrix);
-		  W_x_to_i_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_f_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_o_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_c_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_i_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_f_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_o_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+		  W_x_to_c_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
 		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
 		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
 		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
@@ -131,12 +131,12 @@ public:
 			ngram_size(1), 
             premultiplied(false),
             activation_function(Rectifier)//,
-            //output_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-            //input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+            //output_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+            //input_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_i_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_f_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_o_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+			//W_x_to_c_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>())
 			//input_model(NULL)
         {
 			/*
@@ -159,11 +159,11 @@ public:
 
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
-        double init_range,
-		double init_output_bias,
-        double init_forget_bias,
+        precision_type init_range,
+		precision_type init_output_bias,
+        precision_type init_forget_bias,
         string &parameter_udpate,
-        double adagrad_epsilon);
+        precision_type adagrad_epsilon);
 
     void set_activation_function(activation_function_type f)
     {
@@ -199,12 +199,12 @@ public:
     void write(const std::string &filename);
     void write(const std::string &filename, const std::vector<std::string> &words);
     void write(const std::string &filename, const std::vector<std::string> &input_words, const std::vector<std::string> &output_words);
-	void updateParams(double learning_rate,
+	void updateParams(precision_type learning_rate,
 	 					int current_minibatch_size,
-				  		double momentum,
-						double L2_reg,
+				  		precision_type momentum,
+						precision_type L2_reg,
 						bool norm_clipping,
-						double norm_threshold);
+						precision_type norm_threshold);
 	void resetGradient();			
 
  private:
@@ -220,7 +220,7 @@ class google_input_model : public input_model {
 
 public:
     Input_word_embeddings input_layer;
-    //Matrix<double,Dynamic,Dynamic,Eigen::RowMajor> input_embedding_matrix;
+    //Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor> input_embedding_matrix;
 	Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
  
     int num_hidden, input_vocab_size, input_embedding_dimension;
@@ -229,13 +229,13 @@ public:
 		int input_vocab_size,
         int input_embedding_dimension):input_model(num_hidden,input_vocab_size,input_embedding_dimension)  
     {
-          //input_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+          //input_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
           //input_layer.set_W(&input_embedding_matrix);
     }
 	
     google_input_model() : 
 			input_model() //,
-            //input_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+            //input_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>())
         {
           //input_layer.set_W(&input_embedding_matrix);  
         }
@@ -246,16 +246,16 @@ public:
 
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
-        double init_range,
+        precision_type init_range,
         string &parameter_udpate,
-        double adagrad_epsilon);	
+        precision_type adagrad_epsilon);	
 		
-	void updateParams(double learning_rate,
+	void updateParams(precision_type learning_rate,
 		 					int current_minibatch_size,
-					  		double momentum,
-							double L2_reg,
+					  		precision_type momentum,
+							precision_type L2_reg,
 							bool norm_clipping,
-							double norm_threshold);
+							precision_type norm_threshold);
 	void resetGradient();
 	
 	void write(ofstream &file);
@@ -290,16 +290,16 @@ public:
 
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
-        double init_range,
+        precision_type init_range,
         string &parameter_udpate,
-        double adagrad_epsilon);	
+        precision_type adagrad_epsilon);	
 		
-	void updateParams(double learning_rate,
+	void updateParams(precision_type learning_rate,
 		 					int current_minibatch_size,
-					  		double momentum,
-							double L2_reg,
+					  		precision_type momentum,
+							precision_type L2_reg,
 							bool norm_clipping,
-							double norm_threshold);
+							precision_type norm_threshold);
 	void resetGradient();
 };
 
@@ -308,7 +308,7 @@ class standard_input_model : public input_model{
 
 public:
     Input_word_embeddings W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
-    Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>  W_x_to_i_embedding_matrix, 
+    Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>  W_x_to_i_embedding_matrix, 
 	  W_x_to_f_embedding_matrix, 
 	  W_x_to_c_embedding_matrix, 
 	  W_x_to_o_embedding_matrix; 
@@ -320,10 +320,10 @@ public:
         int input_embedding_dimension) :input_model(num_hidden,input_vocab_size,input_embedding_dimension) 
     {
 		/*
-	  W_x_to_i_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-	  W_x_to_f_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-	  W_x_to_o_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
-	  W_x_to_c_embedding_matrix = Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_i_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_f_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_o_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
+	  W_x_to_c_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
 	  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
 	  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
 	  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
@@ -334,10 +334,10 @@ public:
     standard_input_model() : 
 		input_model()//,
 		/*
-		W_x_to_i_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-		W_x_to_f_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-		W_x_to_o_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>()),
-		W_x_to_c_embedding_matrix(Matrix<double,Dynamic,Dynamic,Eigen::RowMajor>())
+		W_x_to_i_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_f_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_o_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
+		W_x_to_c_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>())
 		*/
         {
 			/*
@@ -354,16 +354,16 @@ public:
 
     void initialize(boost::random::mt19937 &init_engine,
         bool init_normal,
-        double init_range,
+        precision_type init_range,
         string &parameter_udpate,
-        double adagrad_epsilon);
+        precision_type adagrad_epsilon);
 			
-		void updateParams(double learning_rate,
+		void updateParams(precision_type learning_rate,
 			 					int current_minibatch_size,
-						  		double momentum,
-								double L2_reg,
+						  		precision_type momentum,
+								precision_type L2_reg,
 								bool norm_clipping,
-								double norm_threshold);
+								precision_type norm_threshold);
 	   void resetGradient(){}
 };
 

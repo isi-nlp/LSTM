@@ -20,6 +20,7 @@
 
 #include <Eigen/Dense>
 
+#include "define.h"
 #include "maybe_omp.h"
 #include "vocabulary.h"
 
@@ -46,8 +47,8 @@ namespace nplm
 {
 	
 struct gradClipper{
-  double operator() (double x) const { 
-    return std::min(1., std::max(x,-1.));
+  precision_type operator() (precision_type x) const { 
+    return std::min(1., std::max(double(x),-1.));
     //return(x);
   }
 };
@@ -60,7 +61,7 @@ void readWordsFile(const std::string &file, std::vector<std::string> &word_list)
 void writeWordsFile(const std::vector<std::string> &words, std::ofstream &file);
 void writeWordsFile(const std::vector<std::string> &words, const std::string &filename);
 void readDataFile(const std::string &filename, int &ngram_size, std::vector<int> &data, int minibatch_size=0);
-void readUnigramProbs(const std::string &unigram_probs_file, std::vector<double> &unigram_probs);
+void readUnigramProbs(const std::string &unigram_probs_file, std::vector<precision_type> &unigram_probs);
 void readWeightsFile(std::ifstream &TRAININ, std::vector<float> &weights);
 void readSentFile(const std::string &filename, std::vector<std::vector <int> > &data, int minibatch_size, data_size_t &num_tokens);
 void miniBatchify(const std::vector<std::vector <int> > &sentences, 
@@ -149,7 +150,7 @@ inline void intgerize(std::vector<std::string> &ngram,std::vector<int> &int_ngra
 template <typename Derived>
 void initMatrix(boost::random::mt19937 &engine,
 		const Eigen::MatrixBase<Derived> &p_const,
-		bool init_normal, double range)
+		bool init_normal, precision_type range)
 {
     UNCONST(Derived, p_const, p);
     if (init_normal == 0)
@@ -169,7 +170,7 @@ void initMatrix(boost::random::mt19937 &engine,
     else 
       // initialize with gaussian distribution with mean 0 and stdev range
     {
-        boost::random::normal_distribution<double> unif_normal(0., range);
+        boost::random::normal_distribution<precision_type> unif_normal(0., range);
         for (int i = 0; i < p.rows(); i++)
         {
             for (int j = 0; j < p.cols(); j++)
@@ -184,17 +185,17 @@ template<typename Derived>
 void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 					 std::vector<int> &update_items,
 					 int current_minibatch_size,
-					 double norm_threshold){
+					 precision_type norm_threshold){
 	UNCONST(Derived, const_param, param);
 	int num_items = update_items.size();
-	double squared_param_norm = 0.;
+	precision_type squared_param_norm = 0.;
     for (int item_id=0; item_id<num_items; item_id++)
     {
         int update_item = update_items[item_id];
 		param.row(update_item) /= current_minibatch_size;
 		squared_param_norm += param.row(update_item).squaredNorm();
 	}
-	double param_norm = sqrt(squared_param_norm);
+	precision_type param_norm = sqrt(squared_param_norm);
 	if (param_norm > norm_threshold){
 		//param *= norm_threshold/param_norm;
 	    for (int item_id=0; item_id<num_items; item_id++)
@@ -211,10 +212,10 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 template<typename Derived>
 void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 					 int current_minibatch_size,
-					 double norm_threshold){
+					 precision_type norm_threshold){
 	UNCONST(Derived, const_param, param);
 	param /= current_minibatch_size;
-	double param_norm = param.norm();
+	precision_type param_norm = param.norm();
 	if (param_norm > norm_threshold){
 		param *= norm_threshold/param_norm;
 	}
@@ -223,7 +224,7 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 //Change a random position in the parameter by an offset. this is used for gradient checking
 template<typename Derived>
 void changeRandomParamInMatrix(const Eigen::MatrixBase<Derived> &const_param, 
-		double offset,
+		precision_type offset,
 		int &rand_row,
 		int &rand_col) {
 	UNCONST(Derived, const_param, param);
@@ -240,7 +241,7 @@ void changeRandomParamInMatrix(const Eigen::MatrixBase<Derived> &const_param,
 template <typename Derived>
 void initBias(boost::random::mt19937 &engine,
 		const Eigen::MatrixBase<Derived> &p_const,
-		bool init_normal, double range)
+		bool init_normal, precision_type range)
 {
     UNCONST(Derived, p_const, p);
     if (init_normal == 0)
@@ -257,7 +258,7 @@ void initBias(boost::random::mt19937 &engine,
     else 
       // initialize with gaussian distribution with mean 0 and stdev range
     {
-        boost::random::normal_distribution<double> unif_normal(0., range);
+        boost::random::normal_distribution<precision_type> unif_normal(0., range);
         for (int i = 0; i < p.size(); i++)
         {
             p(i) = unif_normal(engine);    
@@ -359,11 +360,11 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, std::ofstream &OUT)
 }
 
 template <typename Derived>
-double logsum(const Eigen::MatrixBase<Derived> &v)
+precision_type logsum(const Eigen::MatrixBase<Derived> &v)
 {
     int mi; 
-    double m = v.maxCoeff(&mi);
-    double logz = 0.0;
+    precision_type m = v.maxCoeff(&mi);
+    precision_type logz = 0.0;
     for (int i=0; i<v.rows(); i++)
         if (i != mi)
 	    logz += std::exp(v(i) - m);
@@ -371,7 +372,7 @@ double logsum(const Eigen::MatrixBase<Derived> &v)
     return logz;
 }
 
-double logadd(double x, double y);
+precision_type logadd(precision_type x, precision_type y);
 
 #ifdef USE_CHRONO
 class Timer 
@@ -389,7 +390,7 @@ public:
     void start(int i);
     void stop(int i);
     void reset(int i);
-    double get(int i) const;
+    precision_type get(int i) const;
 };
 
 extern Timer timer;

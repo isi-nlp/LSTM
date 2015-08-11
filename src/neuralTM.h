@@ -77,7 +77,7 @@ public:
 	return output_vocab->lookup_word(word);
     }
 
-    double lookup_ngram(const int *ngram_a, int n)
+    precision_type lookup_ngram(const int *ngram_a, int n)
     {
         Eigen::Matrix<int,Eigen::Dynamic,1> ngram(m->ngram_size);
 	for (int i=0; i<m->ngram_size; i++)
@@ -97,13 +97,13 @@ public:
 	return neuralNetwork::lookup_ngram(ngram);
     }
 
-    double lookup_ngram(const std::vector<int> &ngram_v)
+    precision_type lookup_ngram(const std::vector<int> &ngram_v)
     {
         return lookup_ngram(ngram_v.data(), ngram_v.size());
     }
 
     template <typename Derived>
-    double lookup_ngram(const Eigen::MatrixBase<Derived> &ngram)
+    precision_type lookup_ngram(const Eigen::MatrixBase<Derived> &ngram)
     {
         return neuralNetwork::lookup_ngram(ngram);
     }

@@ -43,14 +43,14 @@ struct param
     int minibatch_size;
     int validation_minibatch_size;
     int num_epochs;
-    double learning_rate;
-    double conditioning_constant;
-    double decay;
-    double adagrad_epsilon;
-	double fixed_partition_function;
+    precision_type learning_rate;
+    precision_type conditioning_constant;
+    precision_type decay;
+    precision_type adagrad_epsilon;
+	precision_type fixed_partition_function;
     bool init_normal;
-    double init_range;
-	double init_forget;
+    precision_type init_range;
+	precision_type init_forget;
 	bool norm_clipping;
 	bool gradient_check;
 	bool restart_states;
@@ -58,14 +58,14 @@ struct param
     int num_noise_samples;
 
     bool use_momentum;
-    double initial_momentum;
-    double final_momentum;
+    precision_type initial_momentum;
+    precision_type final_momentum;
 
-    double L2_reg;
-	double norm_threshold;
+    precision_type L2_reg;
+	precision_type norm_threshold;
 
     bool normalization;
-    double normalization_init;
+    precision_type normalization_init;
 
     int num_threads;
   

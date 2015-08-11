@@ -20,13 +20,13 @@ protected:
 
 private:
     bool normalization;
-    double weight;
+    precision_type weight;
 
     propagator prop;
 
     std::size_t cache_size;
     Eigen::Matrix<int,Dynamic,Dynamic> cache_keys;
-    std::vector<double> cache_values;
+    std::vector<precision_type> cache_values;
     int cache_lookups, cache_hits;
 
 public:
@@ -40,7 +40,7 @@ public:
     }
 
     void set_normalization(bool value) { normalization = value; }
-    void set_log_base(double value) { weight = 1./std::log(value); }
+    void set_log_base(precision_type value) { weight = 1./std::log(value); }
 
     // This must be called if the underlying model is resized.
     void resize() {
@@ -58,7 +58,7 @@ public:
     }
 
     template <typename Derived>
-    double lookup_ngram(const Eigen::MatrixBase<Derived> &ngram)
+    precision_type lookup_ngram(const Eigen::MatrixBase<Derived> &ngram)
     {
 	assert (ngram.rows() == m->ngram_size);
 	assert (ngram.cols() == 1);
@@ -90,14 +90,14 @@ public:
         prop.fProp(ngram.col(0));
 
 	int output = ngram(m->ngram_size-1, 0);
-	double log_prob;
+	precision_type log_prob;
 
 	start_timer(3);
 	if (normalization)
 	{
-	    Eigen::Matrix<double,Eigen::Dynamic,1> scores(m->output_vocab_size);
+	    Eigen::Matrix<precision_type,Eigen::Dynamic,1> scores(m->output_vocab_size);
 	    //prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
-	    double logz = logsum(scores.col(0));
+	    precision_type logz = logsum(scores.col(0));
 	    log_prob = weight * (scores(output, 0) - logz);
 	}
 	else
@@ -134,12 +134,12 @@ public:
 
 	if (normalization)
 	{
-	    Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> scores(m->output_vocab_size, ngram.cols());
+	    Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> scores(m->output_vocab_size, ngram.cols());
 	    //prop.output_layer_node.param->fProp(prop.second_hidden_activation_node.fProp_matrix, scores);
 
 	    // And softmax and loss
-	    Matrix<double,Dynamic,Dynamic> output_probs(m->output_vocab_size, ngram.cols());
-	    double minibatch_log_likelihood;
+	    Matrix<precision_type,Dynamic,Dynamic> output_probs(m->output_vocab_size, ngram.cols());
+	    precision_type minibatch_log_likelihood;
 	    SoftmaxLogLoss().fProp(scores.leftCols(ngram.cols()), ngram.row(m->ngram_size-1), output_probs, minibatch_log_likelihood);
 	    for (int j=0; j<ngram.cols(); j++)
 	    {
@@ -176,9 +176,9 @@ public:
 	cache_lookups = cache_hits = 0;
     }
 
-    double cache_hit_rate()
+    precision_type cache_hit_rate()
     {
-        return static_cast<double>(cache_hits)/cache_lookups;
+        return static_cast<precision_type>(cache_hits)/cache_lookups;
     }
 
 };

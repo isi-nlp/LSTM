@@ -47,35 +47,35 @@ inline std::string activation_function_to_string (activation_function_type f)
 }
 
 struct hardtanh_functor {
-  double operator() (double x) const { if (x < -1.) return -1.; else if (x > 1.) return 1.; else return x; }
+  precision_type operator() (precision_type x) const { if (x < -1.) return -1.; else if (x > 1.) return 1.; else return x; }
 };
 
 struct dhardtanh_functor {
-  double operator() (double x) const { return x > -1. && x < 1. ? 1. : 0.; }
+  precision_type operator() (precision_type x) const { return x > -1. && x < 1. ? 1. : 0.; }
 };
 
 struct tanh_functor {
-  double operator() (double x) const { return std::tanh(x); }
+  precision_type operator() (precision_type x) const { return std::tanh(x); }
 };
 
 struct dtanh_functor {
-  double operator() (double x) const { return 1.-x*x; }
+  precision_type operator() (precision_type x) const { return 1.-x*x; }
 };
 
 struct sigmoid_functor {
-  double operator() (double x) const { return 1./(1.+std::exp(-x)); }
+  precision_type operator() (precision_type x) const { return 1./(1.+std::exp(-x)); }
 };
 
 struct dsigmoid_functor {
-  double operator() (double x) const { return x*(1.-x); }
+  precision_type operator() (precision_type x) const { return x*(1.-x); }
 };
 
 struct rectifier_functor {
-  double operator() (double x) const { return std::max(double(x), 0.); }
+  precision_type operator() (precision_type x) const { return std::max(double(x), 0.); }
 };
 
 struct drectifier_functor {
-  double operator() (double x) const { return x > 0. ? 1. : 0.; }
+  precision_type operator() (precision_type x) const { return x > 0. ? 1. : 0.; }
 };
 
 class Activation_function
@@ -90,7 +90,7 @@ class Activation_function
 	void set_activation_function(activation_function_type f) { this->f = f; }
 
 	template <typename Engine>
-	void initialize(Engine &engine, bool init_normal, double init_range) { }
+	void initialize(Engine &engine, bool init_normal, precision_type init_range) { }
 
 	int n_inputs () const { return size; }
 	int n_outputs () const { return size; }

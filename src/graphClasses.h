@@ -10,14 +10,14 @@ namespace nplm
 {
 
 	struct stateClipper{
-	  double operator() (double x) const { 
-	    return (double) std::min(25., std::max(double(x),-25.));
+	  precision_type operator() (precision_type x) const { 
+	    return (precision_type) std::min(25., std::max(double(x),-25.));
 	    //return(x);
 	  }
 	};
 
 typedef Matrix<int,Dynamic,Dynamic> IndexMatrix;
-typedef Matrix<double,Dynamic,Dynamic> DoubleMatrix;
+typedef Matrix<precision_type,Dynamic,Dynamic> DoubleMatrix;
 
 /*
 //Virtual class that specifies the skeleton for the different input nodes
@@ -51,8 +51,8 @@ class Node {
         X * param; //what parameter is this
         //vector <void *> children;
         //vector <void *> parents;
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> fProp_matrix;
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> bProp_matrix;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> fProp_matrix;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> bProp_matrix;
 	int minibatch_size;
 
     public:
@@ -81,11 +81,11 @@ class Node {
 	void resize() { resize(minibatch_size); }
 
         /*
-        void Fprop(Matrix<double,Dynamic,Dynamic> & input,int n_cols)
+        void Fprop(Matrix<precision_type,Dynamic,Dynamic> & input,int n_cols)
         {
             param->fProp(input,fProp_matrix,0,0,n_cols);
         }
-        void Fprop(Matrix<double,1,Dynamic> & input,int n_cols)
+        void Fprop(Matrix<precision_type,1,Dynamic> & input,int n_cols)
         {
             param->fProp(input,fProp_matrix,0,0,n_cols);
         }
@@ -97,8 +97,8 @@ class Node {
 class Output_loss_node {
 	int minibatch_size;
 public:
-	Matrix<double,Dynamic,Dynamic> d_Err_t_d_h_t;
-	Output_loss_node() :minibatch_size(0),d_Err_t_d_h_t(Matrix<double,Dynamic,Dynamic>()) {}
+	Matrix<precision_type,Dynamic,Dynamic> d_Err_t_d_h_t;
+	Output_loss_node() :minibatch_size(0),d_Err_t_d_h_t(Matrix<precision_type,Dynamic,Dynamic>()) {}
 	
 	void resize(int num_hidden,int minibatch_size) {
 		//d_Err_t_d_h_t.resize(num_hidden, minibatch_size);
@@ -123,8 +123,8 @@ public:
     Node<Hidden_layer> i_t_node,f_t_node,o_t_node,tanh_c_prime_t_node;
 	Node<Activation_function> tanh_c_t_node;
 
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,c_t_minus_one, h_t_minus_one;
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_h_t,
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,c_t_minus_one, h_t_minus_one;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_h_t,
 														d_Err_t_to_n_d_c_t,
 														d_Err_t_to_n_d_o_t,
 														d_Err_t_to_n_d_f_t,
@@ -139,7 +139,7 @@ public:
 														tanh_c_t_input_matrix;
 														
 														
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic>	d_Err_t_to_n_d_h_tMinusOne,
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic>	d_Err_t_to_n_d_h_tMinusOne,
 														d_Err_t_to_n_d_c_tMinusOne;
 										
 	input_node_type *input_node;
@@ -330,7 +330,7 @@ public:
 			   bool gradient_check,
 			   bool norm_clipping) {
 				   
-		Matrix<double,Dynamic,Dynamic> dummy_matrix;
+		Matrix<precision_type,Dynamic,Dynamic> dummy_matrix;
 		int current_minibatch_size = data.cols();
 		//cerr<<"h_t_minus_one "<<h_t_minus_one<<endl;
 		//cerr<<"c_t_minus_one "<<c_t_minus_one<<endl;
@@ -564,9 +564,9 @@ public:
 						int current_minibatch_size = sequence_cont_indices.cols();
 						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
 						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
-							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
 						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
-							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
 						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
 						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
 						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
@@ -608,9 +608,9 @@ public:
 						int current_minibatch_size = sequence_cont_indices.cols();
 						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
 						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
-							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
 						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
-							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<double>();
+							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
 						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
 						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
 						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
@@ -702,7 +702,7 @@ public:
 	//Each LSTM node has a bunch of nodes and temporary data structures
     Node<Input_word_embeddings> input_layer_node;
     Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
 		
 	Google_input_node():
 		minibatch_size(0),
@@ -791,7 +791,7 @@ class Hidden_to_hidden_input_node{
 public:
 	//Each LSTM node has a bunch of nodes and temporary data structures
     Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
-	Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_x_t;
 		
 	Hidden_to_hidden_input_node():
 		minibatch_size(0),

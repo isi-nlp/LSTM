@@ -43,7 +43,7 @@ struct SoftmaxLogLoss
     void fProp(const MatrixBase<DerivedI> &input, 
 			const MatrixBase<DerivedW> &output_words, 
 			const MatrixBase<DerivedO> &output_const, 
-			double &loss)
+			precision_type &loss)
     {
 	//std::cerr<<"output words are "<<output_words<<std::endl;
 	//std::cerr<<"output const is "<<output_const<<std::endl;
@@ -52,7 +52,7 @@ struct SoftmaxLogLoss
 
 	//getchar();
 
-	double log_likelihood = 0.0;
+	precision_type log_likelihood = 0.0;
 	
     #pragma omp parallel for reduction(+:log_likelihood)
 	for (int train_id = 0; train_id < input.cols(); train_id++)
@@ -63,7 +63,7 @@ struct SoftmaxLogLoss
 			//std::cerr<<"word is -1"<<std::endl;
 			continue;
 		}
-	    double normalization = logsum(input.col(train_id));
+	    precision_type normalization = logsum(input.col(train_id));
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
 		//std::cerr<<"normalization is"<<normalization<<std::endl;
 	    log_likelihood += output(output_words(train_id), train_id);
@@ -122,13 +122,13 @@ public:
     void fProp(const MatrixBase<DerivedI> &scores, 
 	       const MatrixBase<DerivedW> &minibatch_samples,
 	       const MatrixBase<DerivedO> &output_const, 
-		   double &loss)
+		   precision_type &loss)
     {
         UNCONST(DerivedO, output_const, output);
 		//UNCONST(DerivedW, const_minibatch_samples, minibatch_samples);
-		double log_likelihood = 0.0;
+		precision_type log_likelihood = 0.0;
 		int num_noise_samples = minibatch_samples.rows()-1;
-		double log_num_noise_samples = std::log(num_noise_samples);
+		precision_type log_num_noise_samples = std::log(num_noise_samples);
 		//td::cerr<<"minibatch samples are "<<minibatch_samples<<std::endl;
         #pragma omp parallel for reduction(+:log_likelihood) schedule(static)
 		for (int train_id = 0; train_id < scores.cols(); train_id++)
@@ -145,11 +145,11 @@ public:
 					// To avoid zero or infinite probabilities,
 					// never take exp of score without normalizing first,
 					// even if it's a little slower...
-					double score = scores(sample_id, train_id);
-					double score_noise = log_num_noise_samples + unigram.logprob(sample);
-					double z = logadd(score, score_noise);
-					double logprob = score - z;
-					double logprob_noise = score_noise - z;
+					precision_type score = scores(sample_id, train_id);
+					precision_type score_noise = log_num_noise_samples + unigram.logprob(sample);
+					precision_type z = logadd(score, score_noise);
+					precision_type logprob = score - z;
+					precision_type logprob_noise = score_noise - z;
 					output(sample_id, train_id) = std::exp(logprob);
 					log_likelihood += sample_id == 0 ? logprob : logprob_noise;
 			    }

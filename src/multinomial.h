@@ -15,10 +15,10 @@ namespace nplm
 template <typename Count>
 class multinomial {
   std::vector<int> J;
-  std::vector<double> q;
+  std::vector<precision_type> q;
   boost::random::uniform_int_distribution<Count> unif_int;
   boost::random::uniform_real_distribution<> unif_real;
-  std::vector<double> m_prob, m_logprob;
+  std::vector<precision_type> m_prob, m_logprob;
 
 public:
   multinomial() : unif_real(0.0, 1.0) { }
@@ -36,20 +36,20 @@ public:
           n += counts[i];
       for (int i=0; i<k; i++)
       {
-          m_prob[i] = static_cast<double>(counts[i]) / n;
+          m_prob[i] = static_cast<precision_type>(counts[i]) / n;
 	  m_logprob[i] = std::log(m_prob[i]);
       }
       setup(m_prob);
   }
 
-  double prob(int i) const { return m_prob[i]; }
-  double logprob(int i) const { return m_logprob[i]; }
+  precision_type prob(int i) const { return m_prob[i]; }
+  precision_type logprob(int i) const { return m_logprob[i]; }
 
   template <typename Engine>
   int sample(Engine &eng) const
   {
       int m = unif_int(eng);
-      double p = unif_real(eng);
+      precision_type p = unif_real(eng);
       int s;
       if (q[m] > p)
 	  	s = m;
@@ -60,7 +60,7 @@ public:
   }
 
 private:
- void setup(const std::vector<double>& probs)
+ void setup(const std::vector<precision_type>& probs)
   {
     int k = probs.size();
 
@@ -74,7 +74,7 @@ private:
     // "large" outcomes (prob >= 1/k)
     std::set<int> L;
     std::set<int>::iterator l_it;
-    const double tol = 1e-3;
+    const precision_type tol = 1e-3;
     
     for (int i=0; i<k; i++) 
     {
