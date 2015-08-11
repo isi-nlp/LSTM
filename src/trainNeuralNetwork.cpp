@@ -1006,12 +1006,16 @@ int main(int argc, char** argv)
 	if (myParam.model_prefix != "")
 	{
 	    cerr << "Writing model" << endl;
+        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
+		nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());
+		/*		
 	    if (myParam.input_words_file != "") {
 	        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
 			nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());	
 		}
 	    else
 	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
+		*/
 	}
 	
 	
