@@ -196,8 +196,8 @@ namespace nplm
 	    {
 			//UNCONST(DerivedC, const_current_c, current_c);
 			//UNCONST(DerivedH, const_current_h, current_h);
-			//cerr<<"current_c is "<<current_c<<endl;
-			//cerr<<"current_h is "<<current_h<<endl;
+			//cerr<<"current_c in fPropDecoder is "<<const_current_c<<endl;
+			//cerr<<"current_h is fPropDecoder is "<<const_current_h<<endl;
 			/*
 			cerr<<"Data is "<<data<<endl;
 			cerr<<"Start pos "<<start_pos<<endl;
@@ -252,6 +252,8 @@ namespace nplm
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
 				}
 				//encoder_lstm_nodes.fProp();
+				//cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+				//cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
 			}			
 
 	    }
@@ -644,7 +646,7 @@ namespace nplm
 			
 			//first getting decoder loss
 			for (int i=output_sent_len-2; i>=0; i--) {
-				//cerr<<"i in output loss is "<<i<<endl;
+				//cerr<<"i in decoder bprop is "<<i<<endl;
 				//getchar();
 				// Now calling backprop for the LSTM nodes
 				if (i==0 && output_sent_len-2 > 0) {
@@ -734,7 +736,8 @@ namespace nplm
 														decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
 														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
 														sequence_cont_indices.row(i));			
-															
+			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne<<endl;
+			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne<<endl;												
 		    encoder_lstm_nodes[i].bProp(input_data.row(i),
 					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
@@ -1150,6 +1153,7 @@ namespace nplm
  						 input_sequence_cont_indices,
  						 output_sequence_cont_indices);	
 		
+		
 		//Encoder params				
 							 					 							 
 		//init_rng = rng;					 
@@ -1349,7 +1353,7 @@ namespace nplm
 
 		//paramGradientCheck(input,output,encoder_plstm->input_layer,"input_layer");
 		
-		
+						 
 	}
 	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
 	void paramGradientCheck(const MatrixBase<DerivedIn> &input,
@@ -1423,12 +1427,16 @@ namespace nplm
 		 		precision_type before_log_likelihood = 0;	
 				//cerr<<"input cols is "<<input.cols()<<endl;					
 		 		//fProp(input, output, 0, input.rows()-1, init_c, init_h, sequence_cont_indices);
+				//cerr<<"const init c is "<<const_init_c<<endl;
+				//cerr<<"const init h is "<<const_init_h<<endl;
 				fPropEncoder(input,
 							0,
 							input.rows()-1,
 							init_c,
 							init_h,
 							input_sequence_cont_indices);	
+				//cerr<<"just before passing const init c is "<<const_init_c<<endl;
+				//cerr<<"just before passing const init h is "<<const_init_h<<endl;							
 			    fPropDecoder(output,
 						init_c,
 						init_h,
@@ -1481,12 +1489,14 @@ namespace nplm
 		 								rand_col);
 				precision_type relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
+				cerr<<std::setprecision(15);
 				if (gradient_diff > threshold || relative_error > threshold) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;
 					cerr<<"Algorithmic gradient is "<<param.getGradient(rand_row,rand_col)<<endl;					
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
 						<<" and col: "<<rand_col<<" is "<<gradient_diff<<endl;	
+					
 					cerr<<"The likelihoods before and after perturbation are "<< before_log_likelihood<<" "<<
 									after_log_likelihood<<endl;
 					cerr<<"Graves threshold is "<<graves_threshold<<endl;

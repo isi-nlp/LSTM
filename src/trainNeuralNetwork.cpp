@@ -855,6 +855,7 @@ int main(int argc, char** argv)
 			training_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
 																		max_output_sent_len,
 																		current_minibatch_size);																
+
 			//training_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 			//																max_sent_len,
 			//																current_minibatch_size);
