@@ -147,7 +147,7 @@ public:
 					// even if it's a little slower...
 					precision_type score = scores(sample_id, train_id);
 					precision_type score_noise = log_num_noise_samples + unigram.logprob(sample);
-					precision_type z = logadd(score, score_noise);
+					precision_type z = logadd(double(score), double(score_noise));
 					precision_type logprob = score - z;
 					precision_type logprob_noise = score_noise - z;
 					output(sample_id, train_id) = std::exp(logprob);

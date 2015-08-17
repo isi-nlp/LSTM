@@ -454,7 +454,7 @@ double logsum(const Eigen::MatrixBase<Derived> &v)
     return logz;
 }
 
-precision_type logadd(precision_type x, precision_type y);
+double logadd(double x, double y);
 
 #ifdef USE_CHRONO
 class Timer 
