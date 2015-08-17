@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize=0;
+    bool use_mmap_file, randomize=0, arg_run_lm=0;
     param myParam;
     try {
       // program options //
@@ -147,10 +147,12 @@ int main(int argc, char** argv)
 	  
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
 	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
-		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);
+		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
+	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
+		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	  
 	  ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
 		  Default: 1 = yes, \n \
-		  			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
+		  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
       ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 
@@ -227,6 +229,7 @@ int main(int argc, char** argv)
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
 	  myParam.restart_states = norm_threshold.getValue();
+	  arg_run_lm = run_lm.getValue();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -246,6 +249,13 @@ int main(int argc, char** argv)
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
+	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
+	  if (arg_run_lm == 1) {
+		  cerr<<"Running as a LSTM language model"<<endl;
+	  } else {
+		  cerr<<"Running as a LSTM sequence to sequence model"<<endl;
+	  }
+	  //exit(0);
 	  //cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
 	  
 	  /*
@@ -389,44 +399,49 @@ int main(int argc, char** argv)
 	//readSentFile(myParam.input_sent_file, training_input_sent,myParam.minibatch_size, total_input_tokens);
 	//readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
 	
-	readSentFile(myParam.input_sent_file, word_training_input_sent, total_input_tokens,1,0);
+	//Reading input if we have to run it as a sequence to sequence model
+	if (arg_run_lm == 0) {
+		readSentFile(myParam.input_sent_file, word_training_input_sent, total_input_tokens,1,0);
+		if (myParam.input_words_file == "") {
+		   	input_vocab.insert_word("<s>");
+			createVocabulary(word_training_input_sent, input_vocab);
+			myParam.input_vocab_size = input_vocab.size();
+		}
+		cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;	
+		integerize(word_training_input_sent, 
+						training_input_sent, 
+						input_vocab);					
+    	cerr<<"Number of input tokens "<<total_input_tokens<<endl;						
+	}
+	
+	//Reading output 
 	readSentFile(myParam.output_sent_file, word_training_output_sent, total_output_tokens,1,1);
 	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
-	if (myParam.input_words_file == "") {
-	   	input_vocab.insert_word("<s>");
-		createVocabulary(word_training_input_sent, input_vocab);
-		myParam.input_vocab_size = input_vocab.size();
-	}
 	if (myParam.output_words_file == ""){
 		output_vocab.insert_word("<s>");
-		output_vocab.insert_word("</s>");			
+		output_vocab.insert_word("</s>");
 		createVocabulary(word_training_output_sent, output_vocab);	
 		myParam.output_vocab_size = output_vocab.size();
 	}
-		
-
-	
-	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
 	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
-	integerize(word_training_input_sent, 
-					training_input_sent, 
-					input_vocab);
+
 	integerize(word_training_output_sent, 
 					training_output_sent, 
-					output_vocab);					
+					output_vocab);		
+								
     //readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
-	training_data_size = training_input_sent.size();
+	training_data_size = training_output_sent.size();
 
 	data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
 
-    cerr<<"Number of input tokens "<<total_input_tokens<<endl;
+
 	cerr<<"Number of output tokens "<<total_output_tokens<<endl;
 	cerr<<"Number of minibatches "<<num_batches<<endl;
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
 	
-    cerr << "Number of training instances "<< training_input_sent.size() << endl;
-    cerr << "Number of validation instances "<< validation_input_sent.size() << endl;
+    cerr << "Number of training instances "<< training_output_sent.size() << endl;
+    cerr << "Number of validation instances "<< validation_output_sent.size() << endl;
 	
     Matrix<int,Dynamic,Dynamic> training_data;
 	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
@@ -440,6 +455,8 @@ int main(int argc, char** argv)
       training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
     }
 	*/
+	
+	/*
     // If neither --input_vocab_size nor --input_words_file is given, set input_vocab_size to the maximum word index
     if (myParam.input_vocab_size == 0 and myParam.input_words_file == "")
     {
@@ -451,6 +468,8 @@ int main(int argc, char** argv)
     {
         myParam.output_vocab_size = training_data.row(myParam.ngram_size-1).maxCoeff()+1;
     }
+	*/
+	
 	/*
     if (use_mmap_file == false && randomize == true) {
       cerr<<"Randomly shuffling data..."<<endl;
@@ -484,25 +503,28 @@ int main(int argc, char** argv)
 	
 	if (myParam.input_validation_sent_file != ""){
 		
-
-		
-		readSentFile(myParam.input_validation_sent_file, 
-					word_validation_input_sent, 
-					total_validation_input_tokens,
-					1,
-					0);
+		if (arg_run_lm == 0) {
+			readSentFile(myParam.input_validation_sent_file, 
+						word_validation_input_sent, 
+						total_validation_input_tokens,
+						1,
+						0);
+			//integerizing the validation data
+			integerize(word_validation_input_sent, 
+							validation_input_sent, 
+							input_vocab);			
+			cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;									
+		}
 		readSentFile(myParam.output_validation_sent_file, 
 					word_validation_output_sent, 
 					total_validation_output_tokens,
 					1,
 					1);
-		//integerizing the validation data
-		integerize(word_validation_input_sent, 
-						validation_input_sent, 
-						input_vocab);
+
 		integerize(word_validation_output_sent, 
 						validation_output_sent, 
-						output_vocab);				
+						output_vocab);	
+		cerr<<"Validation output tokens "<<total_validation_output_tokens<<endl;									
 		/*			
 		readSentFile(myParam.input_validation_sent_file, 
 		validation_input_sent,
@@ -520,9 +542,9 @@ int main(int argc, char** argv)
 		//	total_validation_sequence_tokens);			
 	}
 	
-	cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;
-	cerr<<"Validation output tokens "<<total_validation_output_tokens<<endl;
-	validation_data_size = validation_input_sent.size();
+
+
+	validation_data_size = validation_output_sent.size();
 	//data_size_t num_validation_batches = (validation_data_size-1)/myParam.validation_minibatch_size + 1;
     //Map< Matrix<int,Dynamic,Dynamic> > validation_data(validation_data_flat.data(), myParam.ngram_size, validation_data_size);
 
@@ -547,7 +569,8 @@ int main(int argc, char** argv)
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
 	
     ///// Construct unigram model and sampler that will be used for NCE
-
+	
+	
     vector<data_size_t> unigram_counts(myParam.output_vocab_size);
     for (data_size_t train_id=0; train_id < training_output_sent.size(); train_id++)
     {
@@ -556,6 +579,8 @@ int main(int argc, char** argv)
 			unigram_counts[output_word] += 1;
 		}
     }
+	
+	
 	/*
 	for (int i=0; i<unigram_counts.size(); i++)
 		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
@@ -740,7 +765,7 @@ int main(int argc, char** argv)
 	//c_last.setZero(numParam.num_hidden, minibatch_size);
 	//h_last.setZero(numParam.num_hidden, minibatch_size);
 	
-	cerr<<"About to start training "<<endl;
+	//cerr<<"About to start training "<<endl;
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
 			//err<<"batch is "<<batch<<endl;
@@ -786,21 +811,24 @@ int main(int argc, char** argv)
 							1,
 							minibatch_input_tokens);
 			*/
-			miniBatchifyEncoder(training_input_sent, 
-							minibatch_input_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_input_sent_len,
-							minibatch_input_tokens,
-							1);	
-			minibatch_input_tokens = 0;
-			miniBatchifyEncoder(training_input_sent, 
-							minibatch_input_sequence_cont_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_input_sent_len,
-							minibatch_input_tokens,
-							0);		
+			if (arg_run_lm == 0) {
+				miniBatchifyEncoder(training_input_sent, 
+								minibatch_input_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								1);	
+				minibatch_input_tokens = 0;
+				miniBatchifyEncoder(training_input_sent, 
+								minibatch_input_sequence_cont_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								0);										
+			}
+
 																			
 			miniBatchifyDecoder(training_output_sent, 
 							minibatch_output_sentences,
@@ -841,17 +869,20 @@ int main(int argc, char** argv)
 																			training_output_sent[batch].size(),
 																			current_minibatch_size);
 			*/
-			training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
-											max_input_sent_len,
-											current_minibatch_size);
-							
+			if (arg_run_lm == 0) {
+				training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+												max_input_sent_len,
+												current_minibatch_size);
+				training_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																				max_input_sent_len,
+																				current_minibatch_size);						
+			}						
+															
 			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																			max_output_sent_len,
 																			current_minibatch_size);
 																			
-			training_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
-																			max_input_sent_len,
-																			current_minibatch_size);	
+
 			training_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
 																		max_output_sent_len,
 																		current_minibatch_size);																
@@ -889,13 +920,14 @@ int main(int argc, char** argv)
 						current_h,	
 						training_sequence_cont_sent_data);	
 			*/
-			
-			prop.fPropEncoder(training_input_sent_data,
-						0,
-						max_input_sent_len-1,
-						current_c,
-						current_h,
-						training_input_sequence_cont_sent_data);						
+			if (arg_run_lm == 0) {
+				prop.fPropEncoder(training_input_sent_data,
+							0,
+							max_input_sent_len-1,
+							current_c,
+							current_h,
+							training_input_sequence_cont_sent_data);						
+			}
 		    prop.fPropDecoder(training_output_sent_data,
 					current_c,
 					current_h,
@@ -928,10 +960,13 @@ int main(int argc, char** argv)
 					training_output_sent_data,
 					 myParam.gradient_check,
 					 myParam.norm_clipping); //, 
- 			    prop.bPropEncoder(training_input_sent_data,
- 					 myParam.gradient_check,
- 					 myParam.norm_clipping,
-					 training_input_sequence_cont_sent_data); 					 
+					 
+				if (arg_run_lm == 0) { 
+	 			    prop.bPropEncoder(training_input_sent_data,
+	 					 myParam.gradient_check,
+	 					 myParam.norm_clipping,
+						 training_input_sequence_cont_sent_data); 					 
+				 }
 					 //init_c,
 					 //init_h,
 					 //training_sequence_cont_sent_data); 	
@@ -953,7 +988,8 @@ int main(int argc, char** argv)
 					   			 loss_function,
 								 softmax_nce_loss,
 								 training_input_sequence_cont_sent_data,
-								 training_output_sequence_cont_sent_data);
+								 training_output_sequence_cont_sent_data,
+								 arg_run_lm);
 					//for the next minibatch, we want the range to be updated as well
 					rng_grad_check = rng;
 				}
@@ -961,12 +997,13 @@ int main(int argc, char** argv)
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
-							max_input_sent_len,
+							current_minibatch_size,
 					  		current_momentum,
 							myParam.L2_reg,
 							myParam.norm_clipping,
 							myParam.norm_threshold,
-							loss_function);														
+							loss_function,
+							arg_run_lm);														
 	
 				//Resetting the gradients
 
@@ -1079,22 +1116,23 @@ int main(int argc, char** argv)
 									
 				*/
 				
-				miniBatchifyEncoder(validation_input_sent, 
-								minibatch_input_sentences,
-								minibatch_start_index,
-								minibatch_end_index,
-								max_input_sent_len,
-								minibatch_input_tokens,
-								1);	
-				minibatch_input_tokens = 0;
-				miniBatchifyEncoder(validation_input_sent, 
-								minibatch_input_sequence_cont_sentences,
-								minibatch_start_index,
-								minibatch_end_index,
-								max_input_sent_len,
-								minibatch_input_tokens,
-								0);		
-								
+				if (arg_run_lm == 0) {
+					miniBatchifyEncoder(validation_input_sent, 
+									minibatch_input_sentences,
+									minibatch_start_index,
+									minibatch_end_index,
+									max_input_sent_len,
+									minibatch_input_tokens,
+									1);	
+					minibatch_input_tokens = 0;
+					miniBatchifyEncoder(validation_input_sent, 
+									minibatch_input_sequence_cont_sentences,
+									minibatch_start_index,
+									minibatch_end_index,
+									max_input_sent_len,
+									minibatch_input_tokens,
+									0);		
+				}				
 				miniBatchifyDecoder(validation_output_sent, 
 								minibatch_output_sentences,
 								minibatch_start_index,
@@ -1120,16 +1158,18 @@ int main(int argc, char** argv)
 								1,
 								minibatch_sequence_cont_tokens);
 			*/					
-				validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
-												max_input_sent_len,
-												current_minibatch_size);
-						
+				if (arg_run_lm == 0) {
+					validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+													max_input_sent_len,
+													current_minibatch_size);
+					validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																					max_input_sent_len,
+																					current_minibatch_size);	
+				}						
 				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
 																				max_output_sent_len,
 																				current_minibatch_size);
-				validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
-																				max_input_sent_len,
-																				current_minibatch_size);	
+
 				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
 																			max_output_sent_len,
 																			current_minibatch_size);																				
@@ -1154,14 +1194,14 @@ int main(int argc, char** argv)
 										current_validation_h,
 										validation_input_sequence_cont_sent_data);	
 				*/															
-	
-				prop_validation.fPropEncoder(validation_input_sent_data,
-							0,
-							max_input_sent_len-1,
-							current_validation_c,
-							current_validation_h,
-							validation_input_sequence_cont_sent_data);	
-												
+				if (arg_run_lm == 0) {																
+					prop_validation.fPropEncoder(validation_input_sent_data,
+								0,
+								max_input_sent_len-1,
+								current_validation_c,
+								current_validation_h,
+								validation_input_sequence_cont_sent_data);	
+				}								
 			    prop_validation.fPropDecoder(validation_output_sent_data,
 						current_validation_c,
 						current_validation_h,

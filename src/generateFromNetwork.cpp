@@ -77,27 +77,27 @@ int main(int argc, char** argv)
       //ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 100, "int", cmd);
 
-      ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
-      ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
+      //ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
+      //ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
 
-      ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
+      //ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
+      //ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
+      //ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
 
-      ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
 	  //ValueArg<int> output_start_symbol("", "output_start_symbol", "The integer id of the output start symbol. Default: 0.", false, 0, "int", cmd);
 	  //ValueArg<int> output_end_symbol("", "output_end_symbol", "The integer id of the output end symbol Default: 1.", false, 1, "int", cmd);
-      ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
+      //ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
 
 
-      ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
-      ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
+      //ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
+      //ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
 	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  ValueArg<string> testing_sequence_cont_file("", "testing_sequence_cont_file", "Testing sequence continuation file" , false, "", "string", cmd);
+	  //ValueArg<string> testing_sequence_cont_file("", "testing_sequence_cont_file", "Testing sequence continuation file" , false, "", "string", cmd);
 
 
 	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
 		 // 			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file.", false, "", "string", cmd);
 	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file.", false, "", "string", cmd);
-	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
+	  //ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 	  ValueArg<string> predicted_sequence_file("", "predicted_sequence_file", "Predicted sequences file." , false, "", "string", cmd);
 	  ValueArg<bool> greedy("", "greedy", "If yes, then the output will be generated greedily \n \
 		  Default: 0 = yes. \n", false, 0, "bool", cmd);	
@@ -119,13 +119,13 @@ int main(int argc, char** argv)
 	  myParam.decoder_model_file = decoder_model_file.getValue();
       //myParam.train_file = train_file.getValue();
       //myParam.validation_file = validation_file.getValue();
-      myParam.input_words_file = input_words_file.getValue();
-      myParam.output_words_file = output_words_file.getValue();
+      //myParam.input_words_file = input_words_file.getValue();
+      //myParam.output_words_file = output_words_file.getValue();
 	  myParam.input_sent_file = input_sent_file.getValue();
 	  myParam.output_sent_file = output_sent_file.getValue();
 	  //arg_output_start_symbol = output_start_symbol.getValue();
 	  //arg_output_end_symbol = output_end_symbol.getValue();
-	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
+	  //arg_predicted_sequence_file = predicted_sequence_file.getValue();
 	  arg_greedy = greedy.getValue();
 	  arg_stochastic = stochastic.getValue();
 	  if (arg_greedy == 0 && arg_stochastic == 0){
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 	  if (arg_stochastic == 1){
 		  arg_greedy = 0;
 	  }
-	  myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
+	  //myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
 	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	  /*
       if (words_file.getValue() != "")
@@ -150,12 +150,13 @@ int main(int argc, char** argv)
 	  */
       //myParam.model_prefix = model_prefix.getValue();
 
-      myParam.ngram_size = ngram_size.getValue();
-      myParam.vocab_size = vocab_size.getValue();
-      myParam.input_vocab_size = input_vocab_size.getValue();
-      myParam.output_vocab_size = output_vocab_size.getValue();
-	  myParam.num_threads = num_threads.getValue();
+      //myParam.ngram_size = ngram_size.getValue();
+      //myParam.vocab_size = vocab_size.getValue();
+      //myParam.input_vocab_size = input_vocab_size.getValue();
+      //myParam.output_vocab_size = output_vocab_size.getValue();
+	  //myParam.num_threads = num_threads.getValue();
 	  
+	  /*
       if (vocab_size.getValue() >= 0) {
 	      myParam.input_vocab_size = myParam.output_vocab_size = vocab_size.getValue();
       }
@@ -166,7 +167,8 @@ int main(int argc, char** argv)
       if (embedding_dimension.getValue() >= 0) {
 	      myParam.input_embedding_dimension = myParam.output_embedding_dimension = embedding_dimension.getValue();
       }
-
+	  */
+	  
       myParam.minibatch_size = minibatch_size.getValue();
 	  //myParam.minibatch_size = 1; //hard coding this for now
 	  
@@ -178,6 +180,7 @@ int main(int argc, char** argv)
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
 
       const string sep(" Value: ");
+	  /*
       //cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
       //cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
       cerr << input_words_file.getDescription() << sep << input_words_file.getValue() << endl;
@@ -199,6 +202,8 @@ int main(int argc, char** argv)
 	      cerr << input_embedding_dimension.getDescription() << sep << input_embedding_dimension.getValue() << endl;
 	      cerr << output_embedding_dimension.getDescription() << sep << output_embedding_dimension.getValue() << endl;
       }
+	  */
+	  
 	  /*
       cerr << share_embeddings.getDescription() << sep << share_embeddings.getValue() << endl;
       if (share_embeddings.getValue() && input_embedding_dimension.getValue() != output_embedding_dimension.getValue())
@@ -207,9 +212,12 @@ int main(int argc, char** argv)
 	      exit(1);
       }
 	  */
-      cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
-
-
+      //cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
+	  cerr<<input_sent_file.getDescription() << sep << input_sent_file.getValue() << endl;
+	  cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
+	  cerr<<encoder_model_file.getDescription() << sep << encoder_model_file.getDescription() <<endl;
+	  cerr<<decoder_model_file.getDescription() << sep << decoder_model_file.getDescription() <<endl;
+	  
       cerr << minibatch_size.getDescription() << sep << minibatch_size.getValue() << endl;
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
@@ -238,6 +246,7 @@ int main(int argc, char** argv)
 	vector< vector<int> > testing_input_sent, testing_sequence_cont_sent;
 	vector< vector<int> > testing_output_sent , validation_sequence_cont_sent;
 	
+	vector< vector<string> > word_testing_input_sent, word_testing_output_sent;
     vec * training_data_flat_mmap;
     data_size_t testing_data_size, validation_data_size; //num_tokens;
     ip::managed_mapped_file mmap_file;
@@ -268,10 +277,12 @@ int main(int argc, char** argv)
 						total_validation_sequence_tokens = 0;
 	//data_size_t total_input_tokens = 0;
 	//data_size
-	readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
+	//readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
+	readSentFile(myParam.input_sent_file, word_testing_input_sent, total_input_tokens,1,0);
+	readSentFile(myParam.output_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
 	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
     //readSentFile(myParam.testing_sequence_cont_file, testing_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
-	
+	//exit(0);
 	testing_data_size = testing_input_sent.size();
 
 	data_size_t num_batches = (testing_data_size-1)/myParam.minibatch_size + 1;
@@ -315,12 +326,22 @@ int main(int argc, char** argv)
 
 
     ///// Create and initialize the neural network and associated propagators.
+	vector<string> encoder_input_words, encoder_output_words;
+	vector<string> decoder_input_words, decoder_output_words;
+	
     model encoder_nn,decoder_nn;
-	encoder_nn.read(myParam.encoder_model_file);
-	decoder_nn.read(myParam.decoder_model_file, arg_output_start_symbol, arg_output_end_symbol);
-	cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
-	cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
+	encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
+	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
+	
+	vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
+
+	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
+	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
+	
+	//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
+	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
 	google_input_model encoder_input, decoder_input;
+
 	encoder_input.read(myParam.encoder_model_file);
 	decoder_input.read(myParam.decoder_model_file);
 	encoder_nn.set_input(encoder_input);
@@ -332,8 +353,17 @@ int main(int argc, char** argv)
 	myParam.input_embedding_dimension = myParam.num_hidden;
 	myParam.output_embedding_dimension = myParam.num_hidden;
 	cerr<<"done reading the models "<<endl;
-	cerr<<"Num hidden is "<<myParam.num_hidden<<endl;
-	cerr<<"minibatch size is "<<myParam.minibatch_size<<endl;
+	
+	//Transforming the input and output data
+
+	integerize(word_testing_input_sent, 
+					testing_input_sent, 
+					encoder_vocab);
+	integerize(word_testing_output_sent, 
+					testing_output_sent, 
+					decoder_vocab);	
+	//cerr<<"Num hidden is "<<myParam.num_hidden<<endl;
+	//cerr<<"minibatch size is "<<myParam.minibatch_size<<endl;
     //loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
     //propagator prop(nn, myParam.minibatch_size);

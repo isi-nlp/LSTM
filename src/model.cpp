@@ -301,11 +301,13 @@ void model::read(const string &filename)
     read(filename, input_words, output_words);
 }
 
+/*
 void model::read(const string &filename, int &start_word, int &end_word)
 {
     vector<string> input_words;
     vector<string> output_words;
     read(filename, input_words, output_words);
+	
 	//Search for the start word and end word in output words
 	for (int i=0; i<output_words.size(); i++){
 		if (output_words[i] == "<s>")
@@ -313,7 +315,18 @@ void model::read(const string &filename, int &start_word, int &end_word)
 		if (output_words[i] == "</s>")
 			end_word = i;
 	}
+	
 }
+*/
+
+/*
+int model::getId(const string word){
+	for (int i=0; i<output_words.size(); i++){
+		if (output_words[i] == word)
+			return(i);
+	}	
+}
+*/
 
 void model::read(const string &filename, vector<string> &words)
 {
