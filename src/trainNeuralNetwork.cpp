@@ -801,6 +801,7 @@ int main(int argc, char** argv)
 			unsigned int max_input_sent_len, max_output_sent_len;
 			unsigned int minibatch_output_tokens,minibatch_input_tokens, minibatch_sequence_cont_tokens;
 			minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;
+			max_input_sent_len = max_output_sent_len = 0;
 			//cerr<<"reading data"<<endl;
 			/*
 			miniBatchify(training_input_sent, 
@@ -1133,6 +1134,12 @@ int main(int argc, char** argv)
 									max_input_sent_len,
 									minibatch_input_tokens,
 									0);		
+					validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+													max_input_sent_len,
+													current_minibatch_size);
+					validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																					max_input_sent_len,
+																					current_minibatch_size);										
 				}				
 				miniBatchifyDecoder(validation_output_sent, 
 								minibatch_output_sentences,
@@ -1149,7 +1156,14 @@ int main(int argc, char** argv)
 								minibatch_end_index,
 								max_output_sent_len,
 								minibatch_output_tokens,
-								0);																									
+								0);		
+				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
+																				max_output_sent_len,
+																				current_minibatch_size);
+
+				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
+																			max_output_sent_len,
+																			current_minibatch_size);																																
 			/*											
 				miniBatchify(validation_sequence_cont_sent, 
 								minibatch_sequence_cont_sentences,
@@ -1159,21 +1173,10 @@ int main(int argc, char** argv)
 								1,
 								minibatch_sequence_cont_tokens);
 			*/					
-				if (arg_run_lm == 0) {
-					validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
-													max_input_sent_len,
-													current_minibatch_size);
-					validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
-																					max_input_sent_len,
-																					current_minibatch_size);	
-				}						
-				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-																				max_output_sent_len,
-																				current_minibatch_size);
+				//if (arg_run_lm == 0) {
 
-				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
-																			max_output_sent_len,
-																			current_minibatch_size);																				
+				//}						
+																			
 				//validation_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
 				//																	max_sent_len,
 				//																	current_minibatch_size);
