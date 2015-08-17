@@ -997,7 +997,7 @@ int main(int argc, char** argv)
 				//Updating the gradients
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
-							current_minibatch_size,
+							max_input_sent_len + max_output_sent_len,
 					  		current_momentum,
 							myParam.L2_reg,
 							myParam.norm_clipping,
@@ -1096,6 +1096,7 @@ int main(int argc, char** argv)
 				unsigned int max_input_sent_len,max_output_sent_len;
 				unsigned int minibatch_output_tokens,minibatch_input_tokens,minibatch_sequence_cont_tokens;
 				minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;	
+				max_input_sent_len = max_output_sent_len = 0;
 				/*			
 				miniBatchify(validation_input_sent, 
 								minibatch_input_sentences,
@@ -1226,7 +1227,8 @@ int main(int argc, char** argv)
 				best_perplexity = exp(-log_likelihood/total_validation_output_tokens);
 				best_model = epoch+1;
 			}
-			if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
+			//if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
+			if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
 	        { 
 	            current_learning_rate /= 2;
 	        }
