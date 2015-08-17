@@ -247,10 +247,10 @@ public:
 		//cerr<<"data is "<<data<<endl;
 		input_node->fProp(data);
     	//input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
-		W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
-		W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
-		W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
-		W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);
+		//W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
+		//W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
+		//W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
+		//W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);
 		
 		//current_minibatch_size = data.cols();
     	//stop_timer(0);
