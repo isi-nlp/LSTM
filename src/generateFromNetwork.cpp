@@ -79,7 +79,7 @@ int main(int argc, char** argv)
       //ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 100, "int", cmd);
 
-      //ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
+      ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
       //ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
 
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
       //myParam.vocab_size = vocab_size.getValue();
       //myParam.input_vocab_size = input_vocab_size.getValue();
       //myParam.output_vocab_size = output_vocab_size.getValue();
-	  //myParam.num_threads = num_threads.getValue();
+	  myParam.num_threads = num_threads.getValue();
 	  
 	  /*
       if (vocab_size.getValue() >= 0) {
