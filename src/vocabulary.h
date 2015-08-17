@@ -43,7 +43,10 @@ public:
 	else
 	    return unk;
     }
-
+	
+	std::string get_word(const int id){
+		return m_words[id];
+	}
     // lookup word using custom unknown-word id
     int lookup_word(const std::string &word, int unk) const
     {
