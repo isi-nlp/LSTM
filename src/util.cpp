@@ -372,12 +372,12 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 }
 
 
-precision_type logadd(precision_type x, precision_type y)
+double logadd(precision_type x, precision_type y)
 {
     if (x > y)
-        return x + log1p(std::exp(y-x));
+        return x + log1p(std::exp(double(y-x)));
     else
-        return y + log1p(std::exp(x-y));
+        return y + log1p(std::exp(double(x-y)));
 }
 
 #ifdef USE_CHRONO

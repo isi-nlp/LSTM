@@ -442,14 +442,14 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, std::ofstream &OUT)
 }
 
 template <typename Derived>
-precision_type logsum(const Eigen::MatrixBase<Derived> &v)
+double logsum(const Eigen::MatrixBase<Derived> &v)
 {
     int mi; 
     precision_type m = v.maxCoeff(&mi);
-    precision_type logz = 0.0;
+    double logz = 0.0;
     for (int i=0; i<v.rows(); i++)
         if (i != mi)
-	    logz += std::exp(v(i) - m);
+	    logz += std::exp(double(v(i) - m));
     logz = log1p(logz) + m;
     return logz;
 }

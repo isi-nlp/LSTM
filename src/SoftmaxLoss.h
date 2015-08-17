@@ -52,7 +52,7 @@ struct SoftmaxLogLoss
 
 	//getchar();
 
-	precision_type log_likelihood = 0.0;
+	double log_likelihood = 0.0;
 	
     #pragma omp parallel for reduction(+:log_likelihood)
 	for (int train_id = 0; train_id < input.cols(); train_id++)
@@ -63,10 +63,10 @@ struct SoftmaxLogLoss
 			//std::cerr<<"word is -1"<<std::endl;
 			continue;
 		}
-	    precision_type normalization = logsum(input.col(train_id));
+	    double normalization = logsum(input.col(train_id));
 	    output.col(train_id).array() = input.col(train_id).array() - normalization;
 		//std::cerr<<"normalization is"<<normalization<<std::endl;
-	    log_likelihood += output(output_words(train_id), train_id);
+	    log_likelihood += double(output(output_words(train_id), train_id));
 	}
 	//std::cerr<<"output is "<<output<<std::endl;
 	//getchar();
