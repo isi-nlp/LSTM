@@ -652,7 +652,7 @@ int main(int argc, char** argv)
 				//cerr<<"writing to file "<<endl;
 				//cerr<<"predicted sequence length is "<<predicted_sequence.size()<<endl;
 				for (int sent_id = 0; sent_id<predicted_sequence.size(); sent_id++) {
-					for (int seq_id=0; seq_id<predicted_sequence[sent_id].size(); seq_id++){
+					for (int seq_id=0; seq_id<predicted_sequence[sent_id].size()-1 /*we dont want to print </s>*/; seq_id++){
 						//cerr<<"sequence word is "<<decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<endl;
 						file << decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<" ";	
 					}
