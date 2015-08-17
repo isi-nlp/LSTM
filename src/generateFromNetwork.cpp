@@ -130,10 +130,11 @@ int main(int argc, char** argv)
 	  myParam.output_sent_file = output_sent_file.getValue();
 	  //arg_output_start_symbol = output_start_symbol.getValue();
 	  //arg_output_end_symbol = output_end_symbol.getValue();
-	  //arg_predicted_sequence_file = predicted_sequence_file.getValue();
+	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
 	  arg_greedy = greedy.getValue();
 	  arg_stochastic = stochastic.getValue();
 	  arg_score = score.getValue();
+	  arg_run_lm = run_lm.getValue();
 	  
 	  /*
 	  if (arg_greedy == 0 && arg_stochastic == 0 && arg_score == 0){
@@ -235,11 +236,13 @@ int main(int argc, char** argv)
 	  cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
 	  cerr<<encoder_model_file.getDescription() << sep << encoder_model_file.getDescription() <<endl;
 	  cerr<<decoder_model_file.getDescription() << sep << decoder_model_file.getDescription() <<endl;
+	  cerr << predicted_sequence_file.getDescription()<< sep << predicted_sequence_file.getValue() << endl;
 	  
       cerr << minibatch_size.getDescription() << sep << minibatch_size.getValue() << endl;
 	  cerr << greedy.getDescription()<< sep << greedy.getValue() << endl;
 	  cerr << stochastic.getDescription()<< sep << stochastic.getValue() << endl;
 	  cerr << score.getDescription()<< sep << score.getValue() << endl;
+	  cerr << run_lm.getDescription()<< sep << run_lm.getValue() << endl;
 	  
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
@@ -282,7 +285,11 @@ int main(int argc, char** argv)
     }
 	
 	*/
-	
+	if (arg_run_lm == 1) {
+		cerr<<"Running as a LSTM language model"<<endl;
+	} else {
+		cerr<<"Running as a LSTM sequence to sequence model"<<endl;
+	}	
 	//Reading the input and output sent files
 	data_size_t total_output_tokens,
 				total_input_tokens,
@@ -300,14 +307,19 @@ int main(int argc, char** argv)
 	//data_size_t total_input_tokens = 0;
 	//data_size
 	//readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
-	readSentFile(myParam.input_sent_file, word_testing_input_sent, total_input_tokens,1,0);
+	if (arg_run_lm == 0) { //If you're running in LM mode, you do not need to read in the input
+		readSentFile(myParam.input_sent_file, word_testing_input_sent, total_input_tokens,1,0);
+	}
 	if (arg_score) {
 		readSentFile(myParam.output_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
 	}
 	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
     //readSentFile(myParam.testing_sequence_cont_file, testing_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	//exit(0);
-	testing_data_size = word_testing_input_sent.size();
+	if (arg_run_lm == 1)
+		testing_data_size = word_testing_output_sent.size();
+	else 
+		testing_data_size = word_testing_input_sent.size();
 
 	data_size_t num_batches = (testing_data_size-1)/myParam.minibatch_size + 1;
 
@@ -381,10 +393,11 @@ int main(int argc, char** argv)
 	cerr<<"done reading the models "<<endl;
 	
 	//Transforming the input and output data
-
-	integerize(word_testing_input_sent, 
-					testing_input_sent, 
-					encoder_vocab);
+	if (arg_run_lm == 0) {
+		integerize(word_testing_input_sent, 
+						testing_input_sent, 
+						encoder_vocab);
+	}
 	if (arg_score) { 
 		integerize(word_testing_output_sent, 
 						testing_output_sent, 
@@ -472,9 +485,11 @@ int main(int argc, char** argv)
 	
 	ofstream file;
 	if (arg_predicted_sequence_file != "") {
-    	file.open(arg_predicted_sequence_file.c_str());
+		//cerr<<"opeining a file"<<endl;
+    	file.open(arg_predicted_sequence_file.c_str(), std::ofstream::out ); //we are not appending | std::ofstream::app);
 		//file << std::setprecision(15);
     	if (!file) throw runtime_error("Could not open file " + arg_predicted_sequence_file);
+		//file <<"BLAH!"<<endl;
 	}
 
 	//precision_type log_likelihood = 0.0;
@@ -526,29 +541,30 @@ int main(int argc, char** argv)
 							1,
 							minibatch_input_tokens);
 			*/
-			miniBatchifyEncoder(testing_input_sent, 
-							minibatch_input_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_input_sent_len,
-							minibatch_input_tokens,
-							1);	
-			minibatch_input_tokens = 0;
-			miniBatchifyEncoder(testing_input_sent, 
-							minibatch_input_sequence_cont_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_input_sent_len,
-							minibatch_input_tokens,
-							0);		
-
-
-			testing_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
-											max_input_sent_len,
-											current_minibatch_size);
-			testing_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
-																			max_input_sent_len,
-																			current_minibatch_size);
+			if (arg_run_lm == 0) {
+				miniBatchifyEncoder(testing_input_sent, 
+								minibatch_input_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								1);	
+				minibatch_input_tokens = 0;
+				miniBatchifyEncoder(testing_input_sent, 
+								minibatch_input_sequence_cont_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_input_sent_len,
+								minibatch_input_tokens,
+								0);		
+						
+				testing_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+												max_input_sent_len,
+												current_minibatch_size);
+				testing_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+																				max_input_sent_len,
+																				current_minibatch_size);
+			}																
 			if (arg_score == 1) {
 				miniBatchifyDecoder(testing_output_sent, 
 								minibatch_output_sentences,
@@ -584,19 +600,21 @@ int main(int argc, char** argv)
 																											
 			//testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
-			init_h = current_h; 			
-			prop.fPropEncoder(testing_input_sent_data,
-						0,
-						max_input_sent_len-1,
-						current_c,
-						current_h,
-						testing_input_sequence_cont_sent_data);	
-			
+			init_h = current_h; 	
+			if (arg_run_lm == 0) {		
+				prop.fPropEncoder(testing_input_sent_data,
+							0,
+							max_input_sent_len-1,
+							current_c,
+							current_h,
+							testing_input_sequence_cont_sent_data);	
+			}
 			//prop.computeProbsLog(testing_output_sent_data,
 			// 					minibatch_log_likelihood);	
 			//cerr<<"output start symbol "<<arg_output_start_symbol<<endl;
 			//cerr<<"output end symbol "<<arg_output_end_symbol<<endl;
 			if (arg_greedy) {
+				//cerr<<"Generating greedy output"<<endl;
 				prop.generateGreedyOutput(testing_input_sent_data,
 								current_c,
 								current_h,		
@@ -628,8 +646,11 @@ int main(int argc, char** argv)
 			//data_log_likelihood += 	minibatch_log_likelihood;
 			//writing the predicted sequence
 			if (arg_stochastic || arg_greedy) {
+				//cerr<<"writing to file "<<endl;
+				//cerr<<"predicted sequence length is "<<predicted_sequence.size()<<endl;
 				for (int sent_id = 0; sent_id<predicted_sequence.size(); sent_id++) {
 					for (int seq_id=0; seq_id<predicted_sequence[sent_id].size(); seq_id++){
+						//cerr<<"sequence word is "<<decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<endl;
 						file << decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<" ";	
 					}
 					file<<endl;
@@ -637,6 +658,9 @@ int main(int argc, char** argv)
 			}
 
 		  
+	 }
+	 if (arg_predicted_sequence_file != ""){
+		 file.close();
 	 }
 	 cerr << "done." << endl;
 	 if(arg_score) {
