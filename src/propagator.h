@@ -649,6 +649,8 @@ namespace nplm
 				//cerr<<"i in decoder bprop is "<<i<<endl;
 				//getchar();
 				// Now calling backprop for the LSTM nodes
+				//cerr<<"losses[i].d_Err_t_d_h_t "<<losses[i].d_Err_t_d_h_t<<endl;
+				//getchar();
 				if (i==0 && output_sent_len-2 > 0) {
 					
 				    decoder_lstm_nodes[i].bProp(output_data.row(i),
@@ -688,7 +690,9 @@ namespace nplm
 							   norm_clipping);		
 					   						
 				} 		   
-		   
+				//cerr<<" decoder_lstm_nodes[i].d_Err_t_to_n_d_h_tMinusOne "<<decoder_lstm_nodes[i].d_Err_t_to_n_d_h_tMinusOne<<endl;
+				//cerr<<" decoder_lstm_nodes[i].d_Err_t_to_n_d_c_tMinusOne "<<decoder_lstm_nodes[i].d_Err_t_to_n_d_c_tMinusOne<<endl;
+				//getchar();
 			}
 
 	  }
@@ -775,7 +779,8 @@ namespace nplm
 						precision_type L2_reg,
 						bool norm_clipping,
 						precision_type norm_threshold,
-						loss_function_type loss_function) {
+						loss_function_type loss_function,
+						bool arg_run_lm) {
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
 		if (loss_function == LogLoss){
@@ -803,12 +808,15 @@ namespace nplm
 											norm_clipping,
 											norm_threshold);		
 		*/
-	    encoder_plstm->updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);
+		if (arg_run_lm == 0) {
+		    encoder_plstm->updateParams(learning_rate,
+												current_minibatch_size,
+												momentum,
+												L2_reg,
+												norm_clipping,
+												norm_threshold);
+		}
+		
 		decoder_plstm->updateParams(learning_rate,
 										current_minibatch_size,
 										momentum,
@@ -934,7 +942,8 @@ namespace nplm
 			 loss_function_type loss_function,
 			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &input_sequence_cont_indices,
-			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices)
+			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices,
+			 bool arg_run_lm)
 				 
     {
 		Matrix<precision_type,Dynamic,Dynamic> init_c = const_init_c;
@@ -947,7 +956,7 @@ namespace nplm
 
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
-		
+
 		paramGradientCheck(input,output,decoder_plstm->output_layer,"output_layer", 
 							 init_c,
 							 init_h,
@@ -1419,7 +1428,7 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-				precision_type perturbation = 1e-5;
+				precision_type perturbation = 1e-3;
 		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);
