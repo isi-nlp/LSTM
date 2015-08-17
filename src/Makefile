@@ -2,12 +2,13 @@
 
 # C++ compiler. Tested with g++ and Intel icpc.
 #CXX=/usr/bin/g++
-CXX=/opt/local/bin/g++-mp-4.7
+CXX=/usr/local/bin/clang-omp++
+#CXX=/opt/local/bin/g++-mp-4.7
 #CXX=icpc
-
+#CXX=nvcc
 # Compiler options. Note that -DEIGEN_NO_DEBUG is essential for good performance!
-CFLAGS=-g
-#CFLAGS=-O3 -DEIGEN_NO_DEBUG -DNDEBUG 
+#CFLAGS=-g -DDOUBLE
+CFLAGS=-O3 -DEIGEN_NO_DEBUG -DNDEBUG -DDOUBLE
 
 # Architecture. Set to x86_64 or i686 to override.
 ARCH:=$(shell uname -m)
@@ -23,17 +24,19 @@ OS:=$(shell uname -s)
 
 #BOOST=/usr/usc/boost/1.51.0
 #BOOST=/usr
-BOOST=/opt/local
+#BOOST=/opt/local
 # Where to find Boost header files
-BOOST_INC=$(BOOST)/include
+#BOOST_INC=$(BOOST)/include
 
+#BOOST_INC=/Users/avaswani/Research/boost_1_58_0
+BOOST_INC=/usr/local/Cellar/boost/1.58.0/include
 # Set this to the root directory of Eigen (should have a subdirectory named Eigen):
 EIGEN=../3rdparty
 
 ### Optional libraries.
 
 # To disable multithreading, comment out the line below:
-#OMP=1
+OMP=1
 
 # To use the MKL library, uncomment the line below and set it to the MKL root:
 #MKL=/usr/usc/intel/12.1.1/mkl
@@ -56,7 +59,9 @@ TCLAP=../3rdparty/tclap/include
 
 # Currently, this is needed only if USE_CHRONO is defined:
 # Where to find Boost libraries
-BOOST_LIB=$(BOOST)/lib
+#BOOST_LIB=$(BOOST)/lib
+#BOOST_LIB=/Users/avaswani/Research/boost_1_58_0/stage/lib
+BOOST_LIB=/usr/local/Cellar/boost/1.58.0/lib
 # On some systems, a suffix is appended for the multithreaded version.
 #BOOST_LIB_SUFFIX=
 BOOST_LIB_SUFFIX=-mt
@@ -82,6 +87,10 @@ ifdef OMP
     OMP_CFLAGS=-openmp
     OMP_LDFLAGS=-openmp
   endif
+  ifneq (,$(findstring clang-omp++,$(CXX)))
+    OMP_CFLAGS=-fopenmp
+    OMP_LDFLAGS=-fopenmp
+  endif  
 endif
 
 ifdef MKL
