@@ -112,7 +112,7 @@ int main(int argc, char** argv)
       ValueArg<int> num_epochs("", "num_epochs", "Number of epochs. Default: 10.", false, 10, "int", cmd);
 
       ValueArg<precision_type> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.1", false, 0.1, "precision_type", cmd);
-	  ValueArg<precision_type> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 20", false, 20, "precision_type", cmd);
+	  ValueArg<precision_type> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 0", false, 0, "precision_type", cmd);
       ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
 
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
