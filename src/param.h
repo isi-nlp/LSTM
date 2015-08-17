@@ -70,6 +70,9 @@ struct param
     int num_threads;
   
     bool share_embeddings;
+	string training_sent_file;
+	string validation_sent_file;
+	string testing_sent_file;
 
 };
 

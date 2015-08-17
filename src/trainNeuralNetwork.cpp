@@ -136,12 +136,14 @@ int main(int argc, char** argv)
           ADADELTA(ADAD)" , false, "SGD", "string", cmd);
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
-	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
-	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , true, "", "string", cmd);
-	  ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
-	  ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
-	  ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , true, "", "string", cmd);
-	  ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , true, "", "string", cmd);	  
+	  //ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
+	  //ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , true, "", "string", cmd);
+	  ValueArg<string> training_sent_file("", "training_sent_file", "Training sentences file" , true, "", "string", cmd);
+	  ValueArg<string> validation_sent_file("", "validation_sent_file", "Validation sentences file" , true, "", "string", cmd);
+	  //ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
+	  //ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
+	  //ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , true, "", "string", cmd);
+	  //ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , true, "", "string", cmd);	  
       //ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
 	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
 	  
@@ -166,12 +168,14 @@ int main(int argc, char** argv)
       //myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
-	  myParam.input_sent_file = input_sent_file.getValue();
-	  myParam.output_sent_file = output_sent_file.getValue();
-	  myParam.input_validation_sent_file = input_validation_sent_file.getValue();
-	  myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
-	  myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
-	  myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
+	  //myParam.input_sent_file = input_sent_file.getValue();
+	  //myParam.output_sent_file = output_sent_file.getValue();
+	  myParam.training_sent_file = training_sent_file.getValue();
+	  myParam.validation_sent_file = validation_sent_file.getValue();
+	  //myParam.input_validation_sent_file = input_validation_sent_file.getValue();
+	  //myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
+	  //myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
+	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	 /* 
       if (words_file.getValue() != "")
 	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
@@ -401,7 +405,7 @@ int main(int argc, char** argv)
 	
 	//Reading input if we have to run it as a sequence to sequence model
 	if (arg_run_lm == 0) {
-		readSentFile(myParam.input_sent_file, word_training_input_sent, total_input_tokens,1,0);
+		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens,1,0);
 		if (myParam.input_words_file == "") {
 		   	input_vocab.insert_word("<s>");
 			createVocabulary(word_training_input_sent, input_vocab);
@@ -415,7 +419,7 @@ int main(int argc, char** argv)
 	}
 	
 	//Reading output 
-	readSentFile(myParam.output_sent_file, word_training_output_sent, total_output_tokens,1,1);
+	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1);
 	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
 	if (myParam.output_words_file == ""){
 		output_vocab.insert_word("<s>");
@@ -501,10 +505,11 @@ int main(int argc, char** argv)
 	//output_vocab.print_vocabulary();
 	//getchar();
 	
-	if (myParam.input_validation_sent_file != ""){
+	//if (myParam.input_validation_sent_file != ""){
+	if (myParam.validation_sent_file != "") {
 		
 		if (arg_run_lm == 0) {
-			readSentFile(myParam.input_validation_sent_file, 
+			readEvenSentFile(myParam.validation_sent_file, 
 						word_validation_input_sent, 
 						total_validation_input_tokens,
 						1,
@@ -515,7 +520,7 @@ int main(int argc, char** argv)
 							input_vocab);			
 			cerr<<"Validation input tokens "<<total_validation_input_tokens<<endl;									
 		}
-		readSentFile(myParam.output_validation_sent_file, 
+		readOddSentFile(myParam.validation_sent_file, 
 					word_validation_output_sent, 
 					total_validation_output_tokens,
 					1,

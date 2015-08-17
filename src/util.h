@@ -136,6 +136,88 @@ void readSentFile(const std::string &file,
 	  TRAININ.close();
 }
 
+//Populates the sentences into a vector of vectors and the offset says which line to read
+template <typename T>
+void readOddSentFile(const std::string &file, 
+				std::vector<std::vector<T> > &sentences,
+				data_size_t &tokens,
+				const bool add_start_stop,
+				const bool is_output)
+{
+	  std::cerr << "Reading Odd sentences from: " << file << std::endl;
+
+	  std::ifstream TRAININ;
+	  TRAININ.open(file.c_str());
+	  if (! TRAININ)
+	  {
+	    std::cerr << "Error: can't read from file " << file<< std::endl;
+	    exit(-1);
+	  }
+
+	  std::string line;
+	  int counter = 0;
+	  while (getline(TRAININ, line))
+	  {
+		if (counter % 2 == 1) {
+			//std::cerr<<"counter is 1"<<std::endl;
+		    std::vector<T> words;
+		    splitBySpace(line, words);
+			if (add_start_stop) {
+				words.insert(words.begin(),"<s>");
+				if (is_output){
+					words.push_back("</s>");
+				}
+			}
+		    sentences.push_back(words);
+			tokens += words.size();
+		}
+		counter++;
+	  }
+	  
+	  TRAININ.close();
+}
+
+//Populates the sentences into a vector of vectors and the offset says which line to read
+template <typename T>
+void readEvenSentFile(const std::string &file, 
+				std::vector<std::vector<T> > &sentences,
+				data_size_t &tokens,
+				const bool add_start_stop,
+				const bool is_output)
+{
+	  std::cerr << "Reading Even sentences from: " << file << std::endl;
+
+	  std::ifstream TRAININ;
+	  TRAININ.open(file.c_str());
+	  if (! TRAININ)
+	  {
+	    std::cerr << "Error: can't read from file " << file<< std::endl;
+	    exit(-1);
+	  }
+
+	  std::string line;
+	  int counter = 0;
+	  while (getline(TRAININ, line))
+	  {
+		if (counter % 2 == 0) {
+			//std::cerr<<"counter is 0"<<std::endl;
+		    std::vector<T> words;
+		    splitBySpace(line, words);
+			if (add_start_stop) {
+				words.insert(words.begin(),"<s>");
+				if (is_output){
+					words.push_back("</s>");
+				}
+			}
+		    sentences.push_back(words);
+			tokens += words.size();
+		}
+		counter++;
+	  }
+	  
+	  TRAININ.close();
+}
+
 inline void intgerize(std::vector<std::string> &ngram,std::vector<int> &int_ngram){
         int ngram_size = ngram.size();
         for (int i=0;i<ngram_size;i++)

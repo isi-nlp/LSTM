@@ -97,8 +97,9 @@ int main(int argc, char** argv)
 
       //ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       //ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
-	  ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  //ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  //ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+	  ValueArg<string> testing_sent_file("", "testing_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  //ValueArg<string> testing_sequence_cont_file("", "testing_sequence_cont_file", "Testing sequence continuation file" , false, "", "string", cmd);
 
 
@@ -126,8 +127,9 @@ int main(int argc, char** argv)
       //myParam.validation_file = validation_file.getValue();
       //myParam.input_words_file = input_words_file.getValue();
       //myParam.output_words_file = output_words_file.getValue();
-	  myParam.input_sent_file = input_sent_file.getValue();
-	  myParam.output_sent_file = output_sent_file.getValue();
+	  //myParam.input_sent_file = input_sent_file.getValue();
+	  //myParam.output_sent_file = output_sent_file.getValue();
+	  myParam.testing_sent_file = testing_sent_file.getValue();
 	  //arg_output_start_symbol = output_start_symbol.getValue();
 	  //arg_output_end_symbol = output_end_symbol.getValue();
 	  arg_predicted_sequence_file = predicted_sequence_file.getValue();
@@ -232,10 +234,11 @@ int main(int argc, char** argv)
       }
 	  */
       //cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
-	  cerr<<input_sent_file.getDescription() << sep << input_sent_file.getValue() << endl;
-	  cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
-	  cerr<<encoder_model_file.getDescription() << sep << encoder_model_file.getDescription() <<endl;
-	  cerr<<decoder_model_file.getDescription() << sep << decoder_model_file.getDescription() <<endl;
+	  //cerr<<input_sent_file.getDescription() << sep << input_sent_file.getValue() << endl;
+	  //cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
+	  cerr<<testing_sent_file.getDescription() << sep << testing_sent_file.getValue() <<endl;
+	  cerr<<encoder_model_file.getDescription() << sep << encoder_model_file.getValue() <<endl;
+	  cerr<<decoder_model_file.getDescription() << sep << decoder_model_file.getValue() <<endl;
 	  cerr << predicted_sequence_file.getDescription()<< sep << predicted_sequence_file.getValue() << endl;
 	  
       cerr << minibatch_size.getDescription() << sep << minibatch_size.getValue() << endl;
@@ -308,10 +311,10 @@ int main(int argc, char** argv)
 	//data_size
 	//readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
 	if (arg_run_lm == 0) { //If you're running in LM mode, you do not need to read in the input
-		readSentFile(myParam.input_sent_file, word_testing_input_sent, total_input_tokens,1,0);
+		readEvenSentFile(myParam.testing_sent_file, word_testing_input_sent, total_input_tokens,1,0);
 	}
 	if (arg_score) {
-		readSentFile(myParam.output_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
+		readOddSentFile(myParam.testing_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
 	}
 	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
     //readSentFile(myParam.testing_sequence_cont_file, testing_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
@@ -486,7 +489,7 @@ int main(int argc, char** argv)
 	ofstream file;
 	if (arg_predicted_sequence_file != "") {
 		//cerr<<"opeining a file"<<endl;
-    	file.open(arg_predicted_sequence_file.c_str(), std::ofstream::out ); //we are not appending | std::ofstream::app);
+    	file.open(arg_predicted_sequence_file.c_str(), std::ofstream::out ); //we are not appending| std::ofstream::app);
 		//file << std::setprecision(15);
     	if (!file) throw runtime_error("Could not open file " + arg_predicted_sequence_file);
 		//file <<"BLAH!"<<endl;
