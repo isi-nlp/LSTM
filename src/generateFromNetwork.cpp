@@ -669,6 +669,7 @@ int main(int argc, char** argv)
 	 if(arg_score) {
         //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
         //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
+		cerr << "		Testing probability              :   " << exp(log_likelihood) << endl; 
 	    cerr << "		Testing log-likelihood base e    :   " << log_likelihood << endl;
 		cerr << "		Testing log-likelihood base 2    :   " << log_likelihood/log(2.) << endl;
 		cerr<<  "		Testing cross entropy in base 2  :   "<< log_likelihood/(log(2.)*total_output_tokens)<< endl;
