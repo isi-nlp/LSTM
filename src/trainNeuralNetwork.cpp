@@ -73,6 +73,7 @@ int main(int argc, char** argv)
     ios::sync_with_stdio(false);
     bool use_mmap_file, randomize=0, arg_run_lm=0;
     param myParam;
+	int arg_seed;
     try {
       // program options //
       CmdLine cmd("Tests a LSTM neural probabilistic language model.", ' ' , "0.3\n","");
@@ -113,12 +114,16 @@ int main(int argc, char** argv)
 
       ValueArg<precision_type> init_range("", "init_range", "Maximum (of uniform) or standard deviation (of normal) for initialization. Default: 0.1", false, 0.1, "precision_type", cmd);
 	  ValueArg<precision_type> init_forget("", "init_forget", "value to initialize the bias of the forget gate. Default: 0", false, 0, "precision_type", cmd);
-      ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0.", false, 0, "bool", cmd);
+      ValueArg<bool> init_normal("", "init_normal", "Initialize parameters from a normal distribution. 1 = normal, 0 = uniform. Default: 0. \
+		  (initialize from a uniform distribution)", false, 0, "bool", cmd);
+      ValueArg<int> seed("", "seed", "The seed for the random number generator (used for initializing the model parameters). \
+		   Default: 1234.", false, 1234, "int", cmd);
+
 
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
       //ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
-      ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
-		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
+      ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 64. All gates, cells, hidden layers, \n \
+		  							input and output embedding dimension are set to this value", false, 64, "int", cmd);
       //ValueArg<bool> share_embeddings("", "share_embeddings", "Share input and output embeddings. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
       //ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
       //ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
@@ -130,6 +135,8 @@ int main(int argc, char** argv)
       //ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
 
       ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , true, "", "string", cmd);
+	  //ValueArg<string> load_encoder_file("", "init_encoder_file", "Loading a pre-trained encoder" , false, "", "string", cmd);
+	  //ValueArg<string> load_decoder_file("", "init_decoder_file", "Loading a pre-trained decoder" , false, "", "string", cmd);
       //ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
       //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
           ADAGRAD(ADA)\n \
@@ -140,6 +147,7 @@ int main(int argc, char** argv)
 	  //ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  ValueArg<string> training_sent_file("", "training_sent_file", "Training sentences file" , true, "", "string", cmd);
 	  ValueArg<string> validation_sent_file("", "validation_sent_file", "Validation sentences file" , true, "", "string", cmd);
+	  
 	  //ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
 	  //ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
 	  //ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , true, "", "string", cmd);
@@ -234,6 +242,9 @@ int main(int argc, char** argv)
 	  myParam.norm_threshold = norm_threshold.getValue();
 	  myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
+	  arg_seed = seed.getValue();
+	  //myParam.load_encoder_file = load_encoder_file.getVale();
+	  //myParam.load_decoder_file = load_decoder_file.getVale();
 
       cerr << "Command line: " << endl;
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
@@ -254,6 +265,9 @@ int main(int argc, char** argv)
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
+	  cerr << seed.getDescription() << sep << seed.getValue() <<endl;
+	  //cerr << load_encoder_file.getDescription() <<sep <<load_encoder_file.getValue() <<endl;
+	  //cerr << load_decoder_file.getDescription() <<sep <<load_decoder_file.getValue() <<endl;
 	  if (arg_run_lm == 1) {
 		  cerr<<"Running as a LSTM language model"<<endl;
 	  } else {
@@ -347,8 +361,9 @@ int main(int argc, char** argv)
     int save_threads;
 
     //unsigned seed = std::time(0);
-    unsigned seed = 1234; //for testing only
-    mt19937 rng(seed), rng_grad_check(seed);
+    //unsigned seed = 1234; //for testing only
+
+    mt19937 rng(arg_seed), rng_grad_check(arg_seed);
 
     /////////////////////////READING IN THE TRAINING AND VALIDATION DATA///////////////////
     /////////////////////////////////////////////////////////////////////////////////////
@@ -404,6 +419,31 @@ int main(int argc, char** argv)
 	//readSentFile(myParam.output_sent_file, training_output_sent,myParam.minibatch_size, total_output_tokens);
 	
 	//Reading input if we have to run it as a sequence to sequence model
+	/*
+	//If pre-trained models have been specified then, you will load them and generate the vocabulary from them 
+	if (arg_rum_lm == 0 && myParam.load_encoder_file != "" ){
+		vector<string> encoder_input_words, encoder_output_words;
+		nn.read(myParam.load_encoder_file, encoder_input_words, encoder_output_words);
+		input_vocab = vocabulary(encoder_input_words);
+		
+		decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
+	
+		vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
+
+		arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
+		arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
+	
+		//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
+		//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
+		google_input_model encoder_input, decoder_input;
+
+		encoder_input.read(myParam.encoder_model_file);
+		decoder_input.read(myParam.decoder_model_file);
+		encoder_nn.set_input(encoder_input);
+		decoder_nn.set_input(decoder_input);
+		
+	}
+	*/
 	if (arg_run_lm == 0) {
 		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens,1,0);
 		if (myParam.input_words_file == "") {
@@ -420,6 +460,8 @@ int main(int argc, char** argv)
 	
 	//Reading output 
 	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1);
+	
+	//If load input model and load output model have been specified
 	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
 	if (myParam.output_words_file == ""){
 		output_vocab.insert_word("<s>");
@@ -1025,11 +1067,11 @@ int main(int argc, char** argv)
 		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
-		cerr << "Training probaility                  " << exp(data_log_likelihood) << endl;
+		cerr << "Per symbol training probability      " << exp(data_log_likelihood/total_output_tokens) << endl;
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
 		cerr << "Training log-likelihood base 2:      " << data_log_likelihood/log(2.) << endl;
-		cerr << "Training cross entropy in base 2 is  "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
-		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
+		cerr << "Training cross entropy in base 2 is  " <<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
+		cerr << "         perplexity:                 " << exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss) 
 	{
@@ -1209,11 +1251,11 @@ int main(int argc, char** argv)
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-			cerr << "		Validation probability                    "<<epoch<<":      " << exp(log_likelihood) << endl;
-		    cerr << "		Validation log-likelihood base e in epoch "<<epoch<<":      " << log_likelihood << endl;
-			cerr << "		Validation log-likelihood base 2 in epoch "<<epoch<<":     	" << log_likelihood/log(2.) << endl;
-			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":  	"<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
-			cerr << "         		perplexity in epoch "<<epoch<<":                    "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
+			cerr << "		Per symbol validation probability           "<<epoch<<":      " << exp(log_likelihood/total_validation_output_tokens) << endl;
+		    cerr << "		Validation log-likelihood base e in epoch   "<<epoch<<":      " << log_likelihood << endl;
+			cerr << "		Validation log-likelihood base 2 in epoch   "<<epoch<<":      " << log_likelihood/log(2.) << endl;
+			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":      "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
+			cerr << "         		perplexity in epoch                 "<<epoch<<":      "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
 			
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
@@ -1252,7 +1294,7 @@ int main(int argc, char** argv)
 		}
 	
     }
-	cerr<<" The best validation perplexity achieved in epoch "<<best_model<<"was "<<best_perplexity<<" and the models are ";
+	cerr<<" The best validation perplexity achieved in epoch "<<best_model<<" was "<<best_perplexity<<" and the models are ";
 		if (arg_run_lm == 1) {
 			cerr<<myParam.model_prefix<<".decoder.best"<<endl;
 		} else {
