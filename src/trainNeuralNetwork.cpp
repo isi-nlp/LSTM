@@ -129,7 +129,7 @@ int main(int argc, char** argv)
       ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       //ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
 
-      ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , false, "", "string", cmd);
+      ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , true, "", "string", cmd);
       //ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
       //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
           ADAGRAD(ADA)\n \
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 	  ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
 		  Default: 1 = yes, \n \
 		  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
-      ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
+      //ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 
       cmd.parse(argc, argv);
@@ -163,7 +163,7 @@ int main(int argc, char** argv)
       // define program parameters //
      // use_mmap_file = mmap_file.getValue();
       //randomize = arg_randomize.getValue();
-      myParam.model_file = model_file.getValue();
+      //myParam.model_file = model_file.getValue();
       //myParam.train_file = train_file.getValue();
       //myParam.validation_file = validation_file.getValue();
       myParam.input_words_file = input_words_file.getValue();
@@ -1025,9 +1025,10 @@ int main(int argc, char** argv)
 		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
+		cerr << "Training probaility                  " << exp(data_log_likelihood) << endl;
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
-		cerr << "Training log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
-		cerr << "Training cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
+		cerr << "Training log-likelihood base 2:      " << data_log_likelihood/log(2.) << endl;
+		cerr << "Training cross entropy in base 2 is  "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
 		cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
 	}
 	else if (loss_function == NCELoss) 
@@ -1046,23 +1047,7 @@ int main(int argc, char** argv)
 	cerr << endl;
 	#endif
 	
-	
-	if (myParam.model_prefix != "")
-	{
-	    cerr << "Writing model" << endl;
-        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
-		nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());
-		/*		
-	    if (myParam.input_words_file != "") {
-	        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
-			nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());	
-		}
-	    else
-	        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
-		*/
-	}
-	
-	
+		
 		
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
@@ -1224,6 +1209,7 @@ int main(int argc, char** argv)
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
+			cerr << "		Validation probability                    "<<epoch<<":      " << exp(log_likelihood) << endl;
 		    cerr << "		Validation log-likelihood base e in epoch "<<epoch<<":      " << log_likelihood << endl;
 			cerr << "		Validation log-likelihood base 2 in epoch "<<epoch<<":     	" << log_likelihood/log(2.) << endl;
 			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":  	"<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
@@ -1232,8 +1218,29 @@ int main(int argc, char** argv)
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
 			if (exp(-log_likelihood/total_validation_output_tokens) < best_perplexity){
+				
+				cerr<<"Perplexity on validation improved." <<endl;
+				cerr<<"Previous best perplexity from epoch "<<best_model<<" was "<<best_perplexity<<endl;
 				best_perplexity = exp(-log_likelihood/total_validation_output_tokens);
-				best_model = epoch+1;
+				//only write the best model
+				if (myParam.model_prefix != "")
+				{
+				    cerr << "Overwriting the previous best model from epoch " << best_model<< endl;
+			        //nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
+					//n_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());
+					nn_decoder.write(myParam.model_prefix + ".decoder.best", output_vocab.words(), output_vocab.words());
+					if (arg_run_lm == 0) 
+						nn.write(myParam.model_prefix + ".encoder.best" , input_vocab.words(), output_vocab.words());					
+					/*		
+				    if (myParam.input_words_file != "") {
+				        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
+						nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());	
+					}
+				    else
+				        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
+					*/
+					best_model = epoch+1;
+				}				
 			}
 			//if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 			if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
@@ -1245,8 +1252,12 @@ int main(int argc, char** argv)
 		}
 	
     }
-	cerr<<" The best validation perplexity was "<<best_perplexity<<" and the best model is "
-			<<myParam.model_prefix<<".encoder."<<best_model<<", "<<myParam.model_prefix<<".decoder."<<best_model<<endl;
+	cerr<<" The best validation perplexity achieved in epoch "<<best_model<<"was "<<best_perplexity<<" and the models are ";
+		if (arg_run_lm == 1) {
+			cerr<<myParam.model_prefix<<".decoder.best"<<endl;
+		} else {
+			cerr<<myParam.model_prefix<<".encoder.best"<<", "<<myParam.model_prefix<<".decoder."<<endl;
+		}
     return 0;
 }
 
