@@ -36,13 +36,13 @@ namespace nplm
 	    propagator() : minibatch_size(0), 
 					encoder_plstm(0), 
 					decoder_plstm(0),
-					encoder_lstm_nodes(100,LSTM_node<input_node_type>()),
-					decoder_lstm_nodes(100,LSTM_node<input_node_type>()),
-					encoder_input_nodes(100,input_node_type()),
-					decoder_input_nodes(100,input_node_type()),
+					encoder_lstm_nodes(105,LSTM_node<input_node_type>()),
+					decoder_lstm_nodes(105,LSTM_node<input_node_type>()),
+					encoder_input_nodes(105,input_node_type()),
+					decoder_input_nodes(105,input_node_type()),
 					num_hidden(0), 
 					fixed_partition_function(0), 
-					losses(vector<Output_loss_node>(100,Output_loss_node())),
+					losses(vector<Output_loss_node>(105,Output_loss_node())),
 					unif_real(0.0,1.0){ }
 
 	    propagator (model &encoder_lstm, 
@@ -52,12 +52,12 @@ namespace nplm
 			decoder_plstm(&decoder_lstm),
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&decoder_lstm.output_layer,minibatch_size),
-			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(100,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
-			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(100,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
-			encoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
-			decoder_input_nodes(vector<input_node_type >(100,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
+			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(105,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
+			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(105,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
+			encoder_input_nodes(vector<input_node_type >(105,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
+			decoder_input_nodes(vector<input_node_type >(105,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
 			//losses(vector<Matrix<precision_type,Dynamic,Dynamic> >(100,Matrix<precision_type,Dynamic,Dynamic>()))
-			losses(vector<Output_loss_node>(100,Output_loss_node())),
+			losses(vector<Output_loss_node>(105,Output_loss_node())),
 			unif_real(0.0,1.0)
 			{
 				resize(minibatch_size);
@@ -274,22 +274,24 @@ namespace nplm
 			//int output_sent_len = output_data.rows();
 			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
-			//cerr<<"sequence cont indices are"<<sequence_cont_indices<<endl;
+			
 			//cerr<<"input data is "<<input_data<<endl;
 			//Going over the input sentence to generate the hidden states
 			for (int i=0; i<=end_pos; i++){
+				//cerr<<"sequence cont indices are "<<sequence_cont_indices.row(i)<<endl;
 				//cerr<<"i is"<<i<<endl;
 				//cerr<<"input is "<<input_data.row(i)<<endl;
 				if (i==0) {
 					//cerr<<"Current c is "<<current_c<<endl;
 					//encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
 					
+				
 					encoder_lstm_nodes[i].filterStatesAndErrors(current_h,
 																current_c,
 																encoder_lstm_nodes[i].h_t_minus_one,
 																encoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));				
-																
+																sequence_cont_indices.row(i));	
+					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one "<<encoder_lstm_nodes[i].h_t_minus_one<<endl;											
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,	
 										//current_c,
 										//current_h);
@@ -301,12 +303,14 @@ namespace nplm
 																encoder_lstm_nodes[i-1].c_t,
 																encoder_lstm_nodes[i].h_t_minus_one,
 																encoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));
-																								
+																sequence_cont_indices.row(i-1)); //THIS IS JUST A TEMPORARY FIX THAT ASSUMES THE INITIAL HIDDEN STATES ARE 0
+					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one "<<encoder_lstm_nodes[i].h_t_minus_one<<endl;																			
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,
 
 				}
 				//encoder_lstm_nodes.fProp();
+				//cerr<<"encoder_lstm_nodes["<<i<<"].h_t "<<encoder_lstm_nodes[i].h_t<<endl;
+				
 			}
 			//Copying the cell and hidden states if the sequence continuation vectors say so	
 			//cerr<<"end pos is"<<end_pos<<endl;
@@ -315,6 +319,33 @@ namespace nplm
 
 
 	    }
+		
+		template <typename DerivedH> 
+		void getHiddenStates(const MatrixBase<DerivedH> &const_hidden_states,
+							const int max_sent_len,
+							const bool for_encoder,
+							const int sent_index) const { //if for_encoder is 1, then you will print the 
+													//hidden states for the encoder. else decoder
+			UNCONST(DerivedH, const_hidden_states, hidden_states);
+			//cerr<<"Sent index is "<<sent_index<<endl;
+			int num_hidden = decoder_lstm_nodes[0].h_t.rows();
+			//cerr<<"num hidden is "<<num_hidden<<endl;
+			//cerr<<"hidden states is "<<hidden_states<<endl;
+			//hidden_states.resize(num_hidden,max_sent_len);
+			//hidden_states.setZero();
+			for(int i=0; i<max_sent_len; i++){
+				//cerr<<"looking for hidden states in node "<<i<<"with index "<<index<<endl;
+				//cerr<<"encoder_lstm_nodes[i].h_t.col(sent_index)"<<encoder_lstm_nodes[i].h_t.col(sent_index)<<endl;
+				if (for_encoder == 1) {
+					hidden_states.col(i) = encoder_lstm_nodes[i].h_t.col(sent_index);
+					//cerr<<"encoder_lstm_nodes[i].h_t.col(sent_index)"<<encoder_lstm_nodes[i].h_t.col(sent_index)<<endl;
+				} else {
+					hidden_states.col(i) = decoder_lstm_nodes[i].h_t.col(sent_index);
+				}
+				
+				//cerr<<"hidden states col is "<<	hidden_states.col(i)<<endl;					
+			}
+		}
 		//currently only generate one output at a time
 		template <typename DerivedInput,typename DerivedH, typename DerivedC>
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
@@ -326,7 +357,7 @@ namespace nplm
 					int current_minibatch_size = input_data.cols();
 					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
+					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
 					//predicted_output.resize(1,current_minibatch_size);
 					//predicted_output.fill(output_start_symbol);
 					predicted_output.row(0).fill(output_start_symbol);
@@ -438,17 +469,16 @@ namespace nplm
 
 		//currently only generate one output at a time
 		template <typename DerivedInput,typename DerivedH, typename DerivedC>
-		void generateStochasticOutput(const MatrixBase<DerivedInput> &input_data,
+		void beamDecoding(const MatrixBase<DerivedInput> &input_data,
 				const MatrixBase<DerivedC> &const_current_c,
 				const MatrixBase<DerivedH> &const_current_h,
 				vector<vector<int> > &predicted_sequence,
 				int output_start_symbol,
-				int output_end_symbol,
-				boost::random::mt19937 &eng) {
+				int output_end_symbol) {
 					int current_minibatch_size = input_data.cols();
 					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
+					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
 					//predicted_output.resize(1,current_minibatch_size);
 					//predicted_output.fill(output_start_symbol);
 					predicted_output.row(0).fill(output_start_symbol);
@@ -463,7 +493,129 @@ namespace nplm
 					
 					//predicted_output
 				//cerr<<"predicted_output	is "<<predicted_output<<endl;
-				for (int i=0; i<99 && remaining_live_words > 0; i++){
+				for (int i=0; i<101 && remaining_live_words > 0; i++){
+					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
+					//current_minibatch_size = current_words.size();
+					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
+					//cerr<<"i is "<<i<<endl;
+					//cerr<<"predicted output is "<<predicted_output.row(i);
+					if (i==0) {
+						//cerr<<"Current c is "<<current_c<<endl;
+						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
+						decoder_lstm_nodes[i].copyToHiddenStates(current_h,
+											current_c);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,	
+						//cerr<<"output data is "<<output_data.row(i)<<endl;
+											//current_c,
+											//current_h);
+					} else {
+						//cerr<<"Data is "<<data.row(i)<<endl;
+						//cerr<<"index is "<<i<<endl;
+						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
+						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
+											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
+											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
+					}
+					//cerr<<"ht is "<<decoder_lstm_nodes[i].h_t<<endl;
+					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
+					//then compute the log loss of the objective
+					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+					//cerr<<"Score is"<<endl;
+					//cerr<<scores<<endl;
+	
+			        precision_type minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+			                   predicted_output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);	
+					//int max_index = 0;
+					//precision_type max_value = -9999999;
+					//Matrix<precision_type,1,Dynamic>::Index max_index;
+					//probs.col(maxCoeff(&max_index); 
+					//int minibatch_size = 0;
+					//THIS HAS TO CHANGE
+					/*
+					for (int index=0; index<probs.rows(); index++){
+						//cerr<<"prob is "<<probs(index,0)<<endl;
+						if (probs(index,0) > max_value){
+							max_value = probs(index,0);
+							max_index = index;
+						}
+						
+					}
+					*/
+					//getchar();
+			        //Matrix<precision_type,1,Dynamic>::Index max_index;
+			        //probs.maxCoeff(&max_index);	
+					//if max index equals the end symbol
+					//current_minibatch_size = 0;
+					//nt live_index=0;
+					//current_words.clear();
+					for (int index=0; index<live_words.size(); index++){
+						if (live_words[index] == 1){
+							//predicted_sequence[index].push_back()
+							Matrix<precision_type,1,Dynamic>::Index max_index;
+							probs.col(index).maxCoeff(&max_index);
+							//cerr<<"max index is "<<max_index<<endl;
+							if (max_index == output_end_symbol){
+								live_words[index] = -1;
+								remaining_live_words--;
+							} //else {
+							//	current_words.push_back(max_index);
+								//current_minibatch_size++;
+							//}
+							predicted_sequence[index].push_back(max_index);
+							predicted_output(i+1,index) = max_index;
+						} else {
+							predicted_output(i+1,index) = output_end_symbol;
+						}
+						//cerr<<"remaining live words are"<<remaining_live_words<<endl;
+					}
+					/*
+					predicted_sequence.push_back(max_index);
+					if (max_index == output_end_symbol)
+						break;
+					else{
+						predicted_output(i+1,0) = max_index;
+						//cerr<<"new predicted output is "<<predicted_output(i+1,0)<<endl;
+					}
+					*/		   				
+				}
+
+		}
+
+		//currently only generate one output at a time
+		template <typename DerivedInput,typename DerivedH, typename DerivedC>
+		void generateStochasticOutput(const MatrixBase<DerivedInput> &input_data,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h,
+				vector<vector<int> > &predicted_sequence,
+				int output_start_symbol,
+				int output_end_symbol,
+				boost::random::mt19937 &eng) {
+					int current_minibatch_size = input_data.cols();
+					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+					Matrix<int,Dynamic,Dynamic> predicted_output;
+					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
+					//predicted_output.resize(1,current_minibatch_size);
+					//predicted_output.fill(output_start_symbol);
+					predicted_output.row(0).fill(output_start_symbol);
+					//predicted_output(0,0) = output_start_symbol;
+					UNCONST(DerivedC, const_current_c, current_c);
+					UNCONST(DerivedH, const_current_h, current_h);	
+					//vector<int> current_words(output_start_symbol,current_minibatch_size);
+					vector<int> live_words (current_minibatch_size,1);
+					int remaining_live_words = current_minibatch_size;
+					//cerr<<"live words are"<<live_words<<endl;
+					//predicted_output = resize(1,current_minibatch_size);
+					
+					//predicted_output
+				//cerr<<"predicted_output	is "<<predicted_output<<endl;
+				for (int i=0; i<101 && remaining_live_words > 0; i++){
 
 					if (i==0) {
 						//cerr<<"Current c is "<<current_c<<endl;

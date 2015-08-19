@@ -510,7 +510,7 @@ int main(int argc, char** argv)
 	//precision_type log_likelihood = 0.0;
 	ofstream hidden_states_file;
 	if (arg_hidden_states_file != ""){
-		if (arg_score != 0) {
+		if (arg_score == 0) {
 			cerr<<"Error! You can dump hidden states with --score 1 "<<endl;
 			exit(1);
 		}
@@ -630,32 +630,44 @@ int main(int argc, char** argv)
 							current_c,
 							current_h,
 							testing_input_sequence_cont_sent_data);	
-				/*
+				
 				//printing out the encoder states along with the sentence
 							
 				if (arg_hidden_states_file != ""){
 					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
+					hidden_states.resize(myParam.num_hidden,max_input_sent_len);
+					hidden_states.setZero();
 					for(int i=0; i<current_minibatch_size; i++) {
 						//Getting all the hidden states for the particular sentence
+						//cerr<<"max input seq length is "<<max_input_sent_len<<endl;
 						prop.getHiddenStates(hidden_states,
 										max_input_sent_len,
 										1,
 										i); 
+						//cerr<<"hidden states are "<<hidden_states<<endl;
 						//printHiddenToFile()
 						//now printing them out. Using the sentence cont vector for this
 						//becase some of the initial states would be for dummy words
-						for (int j=0, word_counter=0; j<max_input_sent_len; j++, word_counter++){
+						for (int j=0; j<max_input_sent_len; j++){
+							//cerr<<"testing_input_sequence_cont_sent_data(j,i) "<<testing_input_sequence_cont_sent_data(j,i)<<endl;
 							if (testing_input_sequence_cont_sent_data(j,i) == 1){
+								//cerr<<"Word id is "<<testing_input_sent_data(j,i)<<endl;
+								//cerr<<"The encoder word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
+								//cerr<<"The word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
 								//print the hidden states
+								//cerr<<"dumping "
+								
 								hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(j,i))<<" ";
-								for (int index=0; index < hidden_states.col(i).rows(); index++){
-									hidden_states_file<<hidden_states(j,i)<<" ";
+								for (int index=0; index < hidden_states.col(j).rows(); index++){
+									hidden_states_file<<hidden_states(index,j)<<" ";
 								}
+								hidden_states_file<<endl;
 							}
+							
 						}
 					}													
 				}
-				*/
+				
 				
 			}
 			//prop.computeProbsLog(testing_output_sent_data,
