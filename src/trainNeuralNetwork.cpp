@@ -252,6 +252,8 @@ int main(int argc, char** argv)
       const string sep(" Value: ");
       //cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
       //cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
+	  cerr << training_sent_file.getDescription() << sep << training_sent_file.getValue() << endl;
+	  cerr << validation_sent_file.getDescription() << sep << validation_sent_file.getValue() << endl;
       cerr << input_words_file.getDescription() << sep << input_words_file.getValue() << endl;
       cerr << output_words_file.getDescription() << sep << output_words_file.getValue() << endl;
       cerr << model_prefix.getDescription() << sep << model_prefix.getValue() << endl;
