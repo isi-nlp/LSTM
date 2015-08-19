@@ -249,7 +249,7 @@ int main(int argc, char** argv)
 	  cerr << stochastic.getDescription()<< sep << stochastic.getValue() << endl;
 	  cerr << score.getDescription()<< sep << score.getValue() << endl;
 	  cerr << run_lm.getDescription()<< sep << run_lm.getValue() << endl;
-	  cerr << hidden_states_file.getDescription() << sep << hidden_states_file.getDescription() << endl;
+	  cerr << hidden_states_file.getDescription() << sep << hidden_states_file.getValue() << endl;
 	  
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
@@ -377,7 +377,7 @@ int main(int argc, char** argv)
     model encoder_nn,decoder_nn;
 	google_input_model encoder_input, decoder_input;
 	vocabulary encoder_vocab, decoder_vocab;
-	if (arg_run_lm != 0) {
+	if (arg_run_lm == 0) {
 		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
 		encoder_input.read(myParam.encoder_model_file);
 		encoder_nn.set_input(encoder_input);
@@ -631,6 +631,7 @@ int main(int argc, char** argv)
 							current_h,
 							testing_input_sequence_cont_sent_data);	
 				//printing out the encoder states along with the sentence
+							/*
 				if (arg_hidden_states_file != ""){
 					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
 					for(int i=0; i<current_minibatch_size; i++) {
@@ -653,6 +654,7 @@ int main(int argc, char** argv)
 						}
 					}													
 				}
+				*/
 			}
 			//prop.computeProbsLog(testing_output_sent_data,
 			// 					minibatch_log_likelihood);	
