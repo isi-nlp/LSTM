@@ -17,16 +17,17 @@ fig.savefig('pcolormesh_prettyplotlib_labels.png')
 
 data = [line.strip() for line in open(sys.argv[1])]
 num_hidden = int(sys.argv[2])
+prefix = sys.argv[3]
 column_labels = []
 for i in range(num_hidden):
   column_labels.append('h'+str(i+1))
 
 counter = 0
 example_hidden_states = []
-print 'len ',len(data)
+#print 'len ',len(data)
 diagram_counter = 0
 while (counter < len(data)):
-  print 'in outer while loop'
+  #print 'in outer while loop'
   while ("NEW SENTENCE" not in data[counter]):
     example_hidden_states.append(data[counter])
     counter += 1
@@ -40,10 +41,11 @@ while (counter < len(data)):
     hidden_states.append(map(float,line.split(' ')[1:]))
     np_hidden_states  = np.array(hidden_states)
   diagram_counter += 1
-  diagram_name = 'test'+str(diagram_counter)+'.png'
-  print np_hidden_states
-  print row_labels
-  print column_labels
+  diagram_name = prefix+str(diagram_counter)+'.png'
+  print 'Generated heat map for example',diagram_counter,'in',diagram_name
+  #print np_hidden_states
+  #print row_labels
+  #print column_labels
   example_hidden_states = []
   counter += 1
   #print data[counter]
@@ -56,7 +58,7 @@ while (counter < len(data)):
                yticklabels=row_labels)
   
   fig.savefig(diagram_name)
-  raw_input()
+  #raw_input()
 
 
 
