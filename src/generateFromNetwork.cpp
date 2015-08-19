@@ -391,8 +391,8 @@ int main(int argc, char** argv)
 	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
 	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
 	
-	//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
-	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
+	cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
+	cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
 	
 
 
@@ -623,6 +623,8 @@ int main(int argc, char** argv)
 			//testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
 			init_h = current_h; 	
+			vector<Matrix<precision_type, Dynamic, Dynamic> > input_hiddens;
+			vector<Matrix<precision_type, Dynamic, Dynamic> > output_hiddens;
 			if (arg_run_lm == 0) {		
 				prop.fPropEncoder(testing_input_sent_data,
 							0,
@@ -648,23 +650,26 @@ int main(int argc, char** argv)
 						//printHiddenToFile()
 						//now printing them out. Using the sentence cont vector for this
 						//becase some of the initial states would be for dummy words
-						for (int j=0; j<max_input_sent_len; j++){
+						//for (int j=0; j<max_input_sent_len; j++){
 							//cerr<<"testing_input_sequence_cont_sent_data(j,i) "<<testing_input_sequence_cont_sent_data(j,i)<<endl;
-							if (testing_input_sequence_cont_sent_data(j,i) == 1){
+						//	if (testing_input_sequence_cont_sent_data(j,i) == 1){
 								//cerr<<"Word id is "<<testing_input_sent_data(j,i)<<endl;
 								//cerr<<"The encoder word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
 								//cerr<<"The word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
 								//print the hidden states
 								//cerr<<"dumping "
-								
+						//		input_hiddens.push_back(hidden_states);
+								/*
 								hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(j,i))<<" ";
 								for (int index=0; index < hidden_states.col(j).rows(); index++){
 									hidden_states_file<<hidden_states(index,j)<<" ";
 								}
 								hidden_states_file<<endl;
-							}
+								*/
+						//	}
 							
-						}
+						//}
+						input_hiddens.push_back(hidden_states);
 					}													
 				}
 				
@@ -692,12 +697,34 @@ int main(int argc, char** argv)
 								arg_output_end_symbol,
 								rng);
 			}
-			if (arg_score) {
+			if (arg_score || arg_hidden_states_file != "") {
 			    prop.fPropDecoder(testing_output_sent_data,
 						current_c,
 						current_h,
 						testing_output_sequence_cont_sent_data);	
-											 
+					for(int i=0; i<current_minibatch_size; i++) {
+
+						Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
+						hidden_states.resize(myParam.num_hidden,max_output_sent_len-1);
+						hidden_states.setZero();						
+						prop.getHiddenStates(hidden_states,
+										max_output_sent_len-1,
+										0,
+										i); 
+
+						//now printing them out. Using the sentence cont vector for this
+						//becase some of the initial states would be for dummy words
+						//for (int j=0; j<max_output_sent_len; j++){
+							//cerr<<"testing_input_sequence_cont_sent_data(j,i) "<<testing_input_sequence_cont_sent_data(j,i)<<endl;
+						//	if (testing_output_sequence_cont_sent_data(j,i) == 1){
+						//		output_hiddens.push_back(hidden_states);
+						//	}						
+						//}
+						output_hiddens.push_back(hidden_states);
+						//cerr<<"The hidden states are "<<hidden_states<<endl;
+					}							
+			}
+			if (arg_score == 1) {								 
 		 		prop.computeProbsLog(testing_output_sent_data,
 		 		 			  	minibatch_log_likelihood);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;

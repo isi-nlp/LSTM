@@ -254,6 +254,7 @@ namespace nplm
 				//encoder_lstm_nodes.fProp();
 				//cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
 				//cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
+				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
 			}			
 
 	    }
@@ -357,7 +358,7 @@ namespace nplm
 					int current_minibatch_size = input_data.cols();
 					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
+					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
 					//predicted_output.resize(1,current_minibatch_size);
 					//predicted_output.fill(output_start_symbol);
 					predicted_output.row(0).fill(output_start_symbol);
