@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     param myParam;
 	int arg_output_start_symbol;
 	int arg_output_end_symbol;
-	string arg_predicted_sequence_file;
+	string arg_predicted_sequence_file, arg_hidden_states_file;
 	bool arg_greedy;
 	bool arg_stochastic;
 	bool arg_score;
@@ -106,8 +106,8 @@ int main(int argc, char** argv)
 	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
 		//  Default: 1 = yes, \n \
 		 // 			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
-      ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file.", false, "", "string", cmd);
-	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file.", false, "", "string", cmd);
+      ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file. Default: empty", false, "", "string", cmd);
+	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file. Default: empty", false, "", "string", cmd);
 	  //ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 	  ValueArg<string> predicted_sequence_file("", "predicted_sequence_file", "Predicted sequences file." , false, "", "string", cmd);
 	  ValueArg<bool> greedy("", "greedy", "If yes, then the output will be generated greedily \n \
@@ -117,7 +117,9 @@ int main(int argc, char** argv)
 	  ValueArg<bool> score("", "score", "If yes, then the program will compute the log probability of output given input \n \
 		  or probability of sentence if run as a language model. Default: 0 = no. \n", false, 0, "bool", cmd);	  	  	  
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
-		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
+		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  ValueArg<string> hidden_states_file("", "hidden_states_file", "Dump the hidden states in this file. Will only work with \
+		  								--score 1. Default: empty", false, "", "string", cmd);	  
       cmd.parse(argc, argv);
 
 
@@ -137,6 +139,7 @@ int main(int argc, char** argv)
 	  arg_stochastic = stochastic.getValue();
 	  arg_score = score.getValue();
 	  arg_run_lm = run_lm.getValue();
+	  arg_hidden_states_file = hidden_states_file.getValue();
 	  
 	  /*
 	  if (arg_greedy == 0 && arg_stochastic == 0 && arg_score == 0){
@@ -246,6 +249,7 @@ int main(int argc, char** argv)
 	  cerr << stochastic.getDescription()<< sep << stochastic.getValue() << endl;
 	  cerr << score.getDescription()<< sep << score.getValue() << endl;
 	  cerr << run_lm.getDescription()<< sep << run_lm.getValue() << endl;
+	  cerr << hidden_states_file.getDescription() << sep << hidden_states_file.getDescription() << endl;
 	  
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
@@ -371,21 +375,29 @@ int main(int argc, char** argv)
 	vector<string> decoder_input_words, decoder_output_words;
 	
     model encoder_nn,decoder_nn;
-	encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
-	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
+	google_input_model encoder_input, decoder_input;
+	vocabulary encoder_vocab, decoder_vocab;
+	if (arg_run_lm != 0) {
+		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
+		encoder_input.read(myParam.encoder_model_file);
+		encoder_nn.set_input(encoder_input);
+		encoder_vocab = vocabulary(encoder_input_words);
+	}
 	
-	vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
-
+	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
+	//vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
+	decoder_vocab = vocabulary(decoder_output_words);
+	
 	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
 	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
 	
 	//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
 	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
-	google_input_model encoder_input, decoder_input;
+	
 
-	encoder_input.read(myParam.encoder_model_file);
+
 	decoder_input.read(myParam.decoder_model_file);
-	encoder_nn.set_input(encoder_input);
+	
 	decoder_nn.set_input(decoder_input);
 	
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
@@ -496,7 +508,14 @@ int main(int argc, char** argv)
 	}
 
 	//precision_type log_likelihood = 0.0;
-	
+	ofstream hidden_states_file;
+	if (arg_hidden_states_file != ""){
+		if (arg_score != 0) {
+			cerr<<"Error! You can dump hidden states with --score 1 "<<endl;
+			exit(1);
+		}
+		hidden_states_file.open(arg_hidden_states_file,std::ofstream::out )	;
+	} 
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
 		
@@ -611,6 +630,29 @@ int main(int argc, char** argv)
 							current_c,
 							current_h,
 							testing_input_sequence_cont_sent_data);	
+				//printing out the encoder states along with the sentence
+				if (arg_hidden_states_file != ""){
+					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
+					for(int i=0; i<current_minibatch_size; i++) {
+						//Getting all the hidden states for the particular sentence
+						prop.getHiddenStates(hidden_states,
+										max_input_sent_len,
+										1,
+										i); 
+						//printHiddenToFile()
+						//now printing them out. Using the sentence cont vector for this
+						//becase some of the initial states would be for dummy words
+						for (int j=0, word_counter=0; j<max_input_sent_len; j++, word_counter++){
+							if (testing_input_sequence_cont_sent_data(j,i) == 1){
+								//print the hidden states
+								hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(j,i))<<" ";
+								for (int index=0; index < hidden_states.col(i).rows(); index++){
+									hidden_states_file<<hidden_states(j,i)<<" ";
+								}
+							}
+						}
+					}													
+				}
 			}
 			//prop.computeProbsLog(testing_output_sent_data,
 			// 					minibatch_log_likelihood);	
