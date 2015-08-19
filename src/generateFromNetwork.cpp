@@ -381,12 +381,12 @@ int main(int argc, char** argv)
 		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
 		encoder_input.read(myParam.encoder_model_file);
 		encoder_nn.set_input(encoder_input);
-		encoder_vocab = vocabulary(encoder_input_words);
+		encoder_vocab.build_vocab(encoder_input_words);
 	}
 	
 	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
 	//vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
-	decoder_vocab = vocabulary(decoder_output_words);
+	decoder_vocab.build_vocab(decoder_output_words);
 	
 	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
 	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
@@ -630,8 +630,9 @@ int main(int argc, char** argv)
 							current_c,
 							current_h,
 							testing_input_sequence_cont_sent_data);	
+				/*
 				//printing out the encoder states along with the sentence
-							/*
+							
 				if (arg_hidden_states_file != ""){
 					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
 					for(int i=0; i<current_minibatch_size; i++) {
@@ -655,6 +656,7 @@ int main(int argc, char** argv)
 					}													
 				}
 				*/
+				
 			}
 			//prop.computeProbsLog(testing_output_sent_data,
 			// 					minibatch_log_likelihood);	

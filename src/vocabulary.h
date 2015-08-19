@@ -32,9 +32,13 @@ public:
     {
         for (int i=0; i<words.size(); i++)
             m_index[words[i]] = i;
-	unk = m_index["<unk>"];
+		unk = m_index["<unk>"];
     }
-
+	void build_vocab(const std::vector<std::string> &words) {
+        for (int i=0; i<words.size(); i++)
+            m_index[words[i]] = i;
+		unk = m_index["<unk>"];		
+	}
     int lookup_word(const std::string &word) const
     {
         boost::unordered_map<std::string, int>::const_iterator pos = m_index.find(word);
