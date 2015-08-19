@@ -514,7 +514,7 @@ int main(int argc, char** argv)
 			cerr<<"Error! You can dump hidden states with --score 1 "<<endl;
 			exit(1);
 		}
-		hidden_states_file.open(arg_hidden_states_file,std::ofstream::out )	;
+		hidden_states_file.open(arg_hidden_states_file.c_str(),std::ofstream::out )	;
 	} 
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
