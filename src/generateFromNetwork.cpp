@@ -377,12 +377,12 @@ int main(int argc, char** argv)
     model encoder_nn,decoder_nn;
 	google_input_model encoder_input, decoder_input;
 	vocabulary encoder_vocab, decoder_vocab;
-	if (arg_run_lm == 0) {
+	//if (arg_run_lm == 0) {
 		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
 		encoder_input.read(myParam.encoder_model_file);
 		encoder_nn.set_input(encoder_input);
 		encoder_vocab.build_vocab(encoder_input_words);
-	}
+	//}
 	
 	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
 	//vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
