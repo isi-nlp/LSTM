@@ -402,7 +402,7 @@ int main(int argc, char** argv)
 	
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
     // LOAD THE NEURAL NETWORK MODEL
-	myParam.num_hidden = encoder_nn.get_hidden();
+	myParam.num_hidden = decoder_nn.get_hidden();
 	myParam.input_embedding_dimension = myParam.num_hidden;
 	myParam.output_embedding_dimension = myParam.num_hidden;
 	cerr<<"done reading the models "<<endl;
@@ -711,6 +711,7 @@ int main(int argc, char** argv)
 	 if (arg_predicted_sequence_file != ""){
 		 file.close();
 	 }
+	 hidden_states_file.close();
 	 cerr << "done." << endl;
 	 if(arg_score) {
         //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
