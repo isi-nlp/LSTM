@@ -69,6 +69,7 @@ int main(int argc, char** argv)
 	bool arg_stochastic;
 	bool arg_score;
 	bool arg_run_lm;
+	bool generate_hidden_states = 0;
     try {
       // program options //
       CmdLine cmd("Trains a LSTM.", ' ' , "0.3\n","");
@@ -158,12 +159,15 @@ int main(int argc, char** argv)
 	  }
 	  */
 	  
-	  if (arg_greedy + arg_stochastic + arg_score  == 0 || arg_greedy + arg_stochastic + arg_score  >= 2 ) {
-		  cerr<<"You have to choose only one option between greedy, stochastic and score"<<endl;
-		  cerr<<"Currently : "<<endl;
-		  cerr<<"greedy     :"<<greedy.getValue()<<endl;
-		  cerr<<"stochastic :"<<stochastic.getValue()<<endl;
-		  cerr<<"score      :"<<score.getValue()<<endl;
+	  if (arg_hidden_states_file != "")
+		  generate_hidden_states = 1;
+	  if (arg_greedy + arg_stochastic + arg_score + generate_hidden_states == 0 || arg_greedy + arg_stochastic + arg_score  >= 2 ) {
+		  cerr<<"You have to choose only one option between greedy, stochastic and score or generating hidden states"<<endl;
+		  cerr<<"Currently             : "<<endl;
+		  cerr<<"greedy                :"<<greedy.getValue()<<endl;
+		  cerr<<"stochastic            :"<<stochastic.getValue()<<endl;
+		  cerr<<"score                 :"<<score.getValue()<<endl;
+		  cerr<<"hidden states file    :"<<hidden_states_file.getValue()<<endl;
 		  exit(1); 
 	  }
 	  //myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
@@ -317,7 +321,7 @@ int main(int argc, char** argv)
 	if (arg_run_lm == 0) { //If you're running in LM mode, you do not need to read in the input
 		readEvenSentFile(myParam.testing_sent_file, word_testing_input_sent, total_input_tokens,1,0);
 	}
-	if (arg_score) {
+	if (arg_score || generate_hidden_states) {
 		readOddSentFile(myParam.testing_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
 	}
 	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
@@ -413,7 +417,7 @@ int main(int argc, char** argv)
 						testing_input_sent, 
 						encoder_vocab);
 	}
-	if (arg_score) { 
+	if (arg_score || generate_hidden_states) { 
 		integerize(word_testing_output_sent, 
 						testing_output_sent, 
 						decoder_vocab);	
@@ -510,10 +514,10 @@ int main(int argc, char** argv)
 	//precision_type log_likelihood = 0.0;
 	ofstream hidden_states_file;
 	if (arg_hidden_states_file != ""){
-		if (arg_score == 0) {
-			cerr<<"Error! You can dump hidden states with --score 1 "<<endl;
-			exit(1);
-		}
+		//if (arg_score == 0) {
+		//	cerr<<"Error! You can dump hidden states with --score 1 "<<endl;
+		//	exit(1);
+		//}
 		hidden_states_file.open(arg_hidden_states_file.c_str(),std::ofstream::out )	;
 	} 
     for(data_size_t batch=0;batch<num_batches;batch++)
@@ -587,7 +591,7 @@ int main(int argc, char** argv)
 																				max_input_sent_len,
 																				current_minibatch_size);
 			}																
-			if (arg_score == 1) {
+			if (arg_score == 1 || generate_hidden_states == 1) {
 				miniBatchifyDecoder(testing_output_sent, 
 								minibatch_output_sentences,
 								minibatch_start_index,
@@ -636,16 +640,17 @@ int main(int argc, char** argv)
 				//printing out the encoder states along with the sentence
 							
 				if (arg_hidden_states_file != ""){
+					//cerr<<"gettig hiddens from encoder"<<endl;
 					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
 					hidden_states.resize(myParam.num_hidden,max_input_sent_len);
 					hidden_states.setZero();
-					for(int i=0; i<current_minibatch_size; i++) {
+					for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
 						//Getting all the hidden states for the particular sentence
 						//cerr<<"max input seq length is "<<max_input_sent_len<<endl;
 						prop.getHiddenStates(hidden_states,
 										max_input_sent_len,
 										1,
-										i); 
+										minibatch_index); 
 						//cerr<<"hidden states are "<<hidden_states<<endl;
 						//printHiddenToFile()
 						//now printing them out. Using the sentence cont vector for this
@@ -702,7 +707,8 @@ int main(int argc, char** argv)
 						current_c,
 						current_h,
 						testing_output_sequence_cont_sent_data);	
-					for(int i=0; i<current_minibatch_size; i++) {
+					//cerr<<"Getting hiddens from decoder"<<endl;
+					for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
 
 						Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
 						hidden_states.resize(myParam.num_hidden,max_output_sent_len-1);
@@ -710,16 +716,8 @@ int main(int argc, char** argv)
 						prop.getHiddenStates(hidden_states,
 										max_output_sent_len-1,
 										0,
-										i); 
+										minibatch_index); 
 
-						//now printing them out. Using the sentence cont vector for this
-						//becase some of the initial states would be for dummy words
-						//for (int j=0; j<max_output_sent_len; j++){
-							//cerr<<"testing_input_sequence_cont_sent_data(j,i) "<<testing_input_sequence_cont_sent_data(j,i)<<endl;
-						//	if (testing_output_sequence_cont_sent_data(j,i) == 1){
-						//		output_hiddens.push_back(hidden_states);
-						//	}						
-						//}
 						output_hiddens.push_back(hidden_states);
 						//cerr<<"The hidden states are "<<hidden_states<<endl;
 					}							
@@ -744,13 +742,57 @@ int main(int argc, char** argv)
 					file<<endl;
 				}
 			}
+			//Now to print the input and output hidden states
+			if (arg_hidden_states_file != ""){
+				//Then print the hidden 
+				for (int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++){
+					if (arg_run_lm == 0){
+						//hidden_states_file<<"--ENCODER_STATES--"<<endl;
+						//Then first generate the hidden from the encoder
+						for (int word_index=0; word_index<max_input_sent_len; word_index++){
+							if (testing_input_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
+							hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(word_index,minibatch_index))<<" ";
+							for (int hdim=0; hdim < myParam.num_hidden; hdim++){
+								hidden_states_file<<input_hiddens[minibatch_index](hdim,word_index)<<" ";
+							}
+							hidden_states_file<<endl;	
+						}						
+					}
+					//hidden_states_file<<"--DECODER_STATES--"<<endl;
+					//Now printing the decoder states		
+					//cerr<<"testing_output_sequence_cont_sent_data"<<testing_output_sequence_cont_sent_data<<endl;
+					//cerr<<"max output sent len is "<<max_output_sent_len<<endl;
+					//First get the sentence length
+						int current_sentence_length=0;
+					for (int word_index=0; word_index<max_output_sent_len; word_index++) {
+						if (testing_output_sequence_cont_sent_data(word_index,minibatch_index) == 1)
+							current_sentence_length++;	
+					}
+					//cerr<<"current sentence length is "<<current_sentence_length<<endl;
+					current_sentence_length--; //this is because the last word in the output sentence is </s> 
+					for (int word_index=0; word_index<current_sentence_length; word_index++){
+						//cerr<<"testing_output_sequence_cont_sent_data("<<word_index<<","<<minibatch_index<<") "
+						//		<<testing_output_sequence_cont_sent_data(word_index,minibatch_index)<<endl;
+						if (testing_output_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
+						hidden_states_file << decoder_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<" ";
+						for (int hdim=0; hdim < myParam.num_hidden; hdim++){
+							hidden_states_file<<output_hiddens[minibatch_index](hdim,word_index)<<" ";
+						}
+						hidden_states_file<<endl;	
+					}														
+				}
+				hidden_states_file<<"<<<<<<<<<NEW SENTENCE>>>>>>>>>"<<endl;
+			  }	
+			}
+		}	
 
-		  
-	 }
+	 }//End minibatch  
+	 
 	 if (arg_predicted_sequence_file != ""){
 		 file.close();
 	 }
-	 hidden_states_file.close();
+	 if(arg_hidden_states_file != "")
+	 	hidden_states_file.close();
 	 cerr << "done." << endl;
 	 if(arg_score) {
         //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
@@ -762,23 +804,6 @@ int main(int argc, char** argv)
 		cerr << "         		perplexity               :   "<< exp(-log_likelihood/total_output_tokens) << endl;	 	
 	 } 	 
 
-	//if (loss_function == LogLoss)
-	//{
-		//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-		//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
-		//log_likelihood /= sent_len;		
-	    //cerr << "Testing log-likelihood base e:      " << data_log_likelihood << endl;
-		//cerr << "Testing log-likelihood base 2:     " << data_log_likelihood/log(2.) << endl;
-		//cerr << "Testing cross entropy in base 2 is "<<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
-		//cerr << "         perplexity:                 "<< exp(-data_log_likelihood/total_output_tokens) << endl;
-	//}
-	//else if (loss_function == NCELoss)
-	//   cerr << "Testing NCE log-likelihood: " << log_likelihood << endl;
-	
-	//if (myParam.use_momentum)
-    //    current_momentum += momentum_delta;
 
 	#ifdef USE_CHRONO
 	cerr << "Propagation times:";

@@ -29,6 +29,19 @@
 typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 
+struct value_and_index {
+	int value;
+	int index;
+};
+
+/*
+//sort functor for sorting that takes two vectors and returns a comparion
+//based on the first element of the two vectors
+struct by_first { 
+    bool operator() {  value_and_index const &a,  value_and_index const &b) const { 
+        return a.value < b.value;
+    }
+};
 
 
 namespace Eigen {
@@ -42,6 +55,7 @@ namespace Eigen {
 	return h;
     }
 }
+*/
 
 namespace nplm
 {
@@ -123,6 +137,10 @@ void readSentFile(const std::string &file,
 	  {
 	    std::vector<T> words;
 	    splitBySpace(line, words);
+		if (words.size() > 100){
+			std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+			exit(1);
+		}
 		if (add_start_stop) {
 			words.insert(words.begin(),"<s>");
 			if (is_output){
@@ -162,12 +180,17 @@ void readOddSentFile(const std::string &file,
 			//std::cerr<<"counter is 1"<<std::endl;
 		    std::vector<T> words;
 		    splitBySpace(line, words);
+			if (words.size() > 100){
+				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+				exit(1);
+			}
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){
 					words.push_back("</s>");
 				}
 			}
+
 		    sentences.push_back(words);
 			tokens += words.size();
 		}
@@ -203,6 +226,10 @@ void readEvenSentFile(const std::string &file,
 			//std::cerr<<"counter is 0"<<std::endl;
 		    std::vector<T> words;
 		    splitBySpace(line, words);
+			if (words.size() > 100){
+				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+				exit(1);
+			}
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){

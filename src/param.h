@@ -73,6 +73,8 @@ struct param
 	string training_sent_file;
 	string validation_sent_file;
 	string testing_sent_file;
+	string load_encoder_file;
+	string load_decoder_file;
 
 };
 

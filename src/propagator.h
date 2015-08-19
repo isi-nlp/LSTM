@@ -254,6 +254,7 @@ namespace nplm
 				//encoder_lstm_nodes.fProp();
 				//cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
 				//cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
+				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
 				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
 			}			
 
@@ -278,6 +279,8 @@ namespace nplm
 			
 			//cerr<<"input data is "<<input_data<<endl;
 			//Going over the input sentence to generate the hidden states
+			//Matrix<DerivedInput> dummy_ones;
+			//dummy_ones.setOnes(1,current_minibatch_size);
 			for (int i=0; i<=end_pos; i++){
 				//cerr<<"sequence cont indices are "<<sequence_cont_indices.row(i)<<endl;
 				//cerr<<"i is"<<i<<endl;
@@ -291,6 +294,7 @@ namespace nplm
 																current_c,
 																encoder_lstm_nodes[i].h_t_minus_one,
 																encoder_lstm_nodes[i].c_t_minus_one,
+																//dummy_ones); //this might just be a patch for now
 																sequence_cont_indices.row(i));	
 					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one "<<encoder_lstm_nodes[i].h_t_minus_one<<endl;											
 					encoder_lstm_nodes[i].fProp(input_data.row(i));//,	
@@ -356,9 +360,9 @@ namespace nplm
 				int output_start_symbol,
 				int output_end_symbol) {
 					int current_minibatch_size = input_data.cols();
-					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+					//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(100,current_minibatch_size); // I can produce at most 100 output symbols
+					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
 					//predicted_output.resize(1,current_minibatch_size);
 					//predicted_output.fill(output_start_symbol);
 					predicted_output.row(0).fill(output_start_symbol);
@@ -373,7 +377,7 @@ namespace nplm
 					
 					//predicted_output
 				//cerr<<"predicted_output	is "<<predicted_output<<endl;
-				for (int i=0; i<99 && remaining_live_words > 0; i++){
+				for (int i=0; i<100 && remaining_live_words > 0; i++){
 					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
 					//current_minibatch_size = current_words.size();
 					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
@@ -494,7 +498,7 @@ namespace nplm
 					
 					//predicted_output
 				//cerr<<"predicted_output	is "<<predicted_output<<endl;
-				for (int i=0; i<101 && remaining_live_words > 0; i++){
+				for (int i=0; i<100 && remaining_live_words > 0; i++){
 					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
 					//current_minibatch_size = current_words.size();
 					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
