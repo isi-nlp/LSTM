@@ -35,6 +35,8 @@ public:
 		unk = m_index["<unk>"];
     }
 	void build_vocab(const std::vector<std::string> &words) {
+		//std::cerr<<"The vocab size is "<<words.size()<<std::endl;
+		m_words = words;
         for (int i=0; i<words.size(); i++)
             m_index[words[i]] = i;
 		unk = m_index["<unk>"];		
@@ -49,6 +51,7 @@ public:
     }
 	
 	std::string get_word(const int id){
+		//std::cerr<<"getting word for id "<<id<<std::endl;
 		return m_words[id];
 	}
     // lookup word using custom unknown-word id
