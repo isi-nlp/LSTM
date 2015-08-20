@@ -797,6 +797,8 @@ public:
 								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 							} else {
 								//cerr<<"copying"<<endl;
+								//cerr<<"to_h_matrix.col(index) "<<to_h_matrix.col(index)<<endl;
+								//cerr<<"from_h_matrix.col(index)" <<from_h_matrix.col(index)<<endl;
 								to_h_matrix.col(index) = from_h_matrix.col(index);
 								to_c_matrix.col(index) = from_c_matrix.col(index);
 								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
@@ -825,7 +827,32 @@ public:
 	void resetGradient(){
 		
 	}	
-	  				  
+    //Question, should the state gather be a part of 
+    template<typename DerivedO, 
+				typename DerivedF, 
+				typename DerivedI, 
+				typename DerivedH, 
+				typename DerivedC>
+    void getInternals(const MatrixBase<DerivedH> &const_get_h_t,
+					const MatrixBase<DerivedC>   &const_get_c_t,
+					const MatrixBase<DerivedF>   &const_get_f_t,
+					const MatrixBase<DerivedI>   &const_get_i_t,
+					const MatrixBase<DerivedO>   &const_get_o_t,
+					const int sent_index){
+		UNCONST(DerivedH, const_get_h_t, get_h_t);
+		UNCONST(DerivedH, const_get_c_t, get_c_t);
+		UNCONST(DerivedH, const_get_f_t, get_f_t);
+		UNCONST(DerivedH, const_get_i_t, get_i_t);
+		UNCONST(DerivedH, const_get_o_t, get_o_t);
+		get_h_t = h_t.col(sent_index);
+		//cerr<<"graph classes h_t.col("<<sent_index<<") "<<h_t.col(sent_index)<<endl;
+		//cerr<<"graph classes c_t.col("<<sent_index<<") "<<c_t.col(sent_index)<<endl;
+		get_c_t = c_t.col(sent_index);
+		get_f_t = f_t_node.fProp_matrix.col(sent_index);
+		get_i_t = i_t_node.fProp_matrix.col(sent_index);	
+		get_o_t = o_t_node.fProp_matrix.col(sent_index);
+    }
+
 	
 };
 

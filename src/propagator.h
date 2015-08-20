@@ -128,13 +128,6 @@ namespace nplm
 			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
 			//cerr<<"current minibatch_size is "<<current_minibatch_size<<endl;
-			//c_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);
-			//h_0.setZero(output_layer_node.param->n_inputs(), minibatch_size);			
-			//c_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
-			//h_1.setOnes(output_layer_node.param->n_inputs(), minibatch_size);
-			//cerr<<"c0 is "<<c_0<<endl;
-			//cerr<<"h0 is "<<h_0<<endl;
-			//getchar();
 			//Going over the input sentence to generate the hidden states
 			for (int i=0; i<=end_pos; i++){
 				//cerr<<"i is"<<i<<endl;
@@ -351,6 +344,46 @@ namespace nplm
 				//cerr<<"hidden states col is "<<	hidden_states.col(i)<<endl;					
 			}
 		}
+		
+	    template<typename DerivedO, 
+					typename DerivedF, 
+					typename DerivedI, 
+					typename DerivedH, 
+					typename DerivedC>		
+	    void getInternals(const MatrixBase<DerivedH> &const_get_h_t,
+						const MatrixBase<DerivedC>   &const_get_c_t,
+						const MatrixBase<DerivedF>   &const_get_f_t,
+						const MatrixBase<DerivedI>   &const_get_i_t,
+						const MatrixBase<DerivedO>   &const_get_o_t,
+						const int max_sent_len,
+						const bool for_encoder,
+						const int sent_index){
+			UNCONST(DerivedH, const_get_h_t, get_h_t);
+			UNCONST(DerivedH, const_get_c_t, get_c_t);
+			UNCONST(DerivedH, const_get_f_t, get_f_t);
+			UNCONST(DerivedH, const_get_i_t, get_i_t);
+			UNCONST(DerivedH, const_get_o_t, get_o_t);			
+			for (int i=0; i<max_sent_len; i++){
+				if (for_encoder == 1){
+					encoder_lstm_nodes[i].getInternals(get_h_t.col(i),
+													get_c_t.col(i),
+													get_f_t.col(i),
+													get_i_t.col(i),
+													get_o_t.col(i),
+													sent_index);
+					//cerr<<"propagator const_get_h_t.col("<<i<<") "<<get_h_t.col(i)<<endl;
+				} else {
+					decoder_lstm_nodes[i].getInternals(get_h_t.col(i),
+													get_c_t.col(i),
+													get_f_t.col(i),
+													get_i_t.col(i),
+													get_o_t.col(i),
+													sent_index);
+				}
+			}
+
+	    }
+			
 		//currently only generate one output at a time
 		template <typename DerivedInput,typename DerivedH, typename DerivedC>
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,
@@ -1070,13 +1103,10 @@ namespace nplm
 		        stop_timer(5);
 		        log_likelihood += minibatch_log_likelihood;		
 			}
-			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-			//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
-			//log_likelihood /= sent_len;
-	  }	  
 
+	  }	  
+	  
+	  //void LogProbs
 
   	void resetGradient(){
 		encoder_plstm->resetGradient();	

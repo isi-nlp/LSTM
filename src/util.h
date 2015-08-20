@@ -436,7 +436,7 @@ void readMatrix(const std::string &param_file, const Eigen::MatrixBase<Derived> 
 }
 
 template <typename Derived>
-void writeMatrix(const Eigen::MatrixBase<Derived> &param, const std::string &filename)
+void readMatrix(const Eigen::MatrixBase<Derived> &param, const std::string &filename)
 {
     std::cerr << "Writing parameters to " << filename << std::endl;
 
@@ -451,6 +451,7 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, const std::string &fil
     writeMatrix(param, OUT);
     OUT.close();
 }
+
 
 template <typename Derived>
 void writeMatrix(const Eigen::MatrixBase<Derived> &param, std::ofstream &OUT)
