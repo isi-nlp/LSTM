@@ -580,7 +580,9 @@ void model::updateParams(precision_type learning_rate,
 															L2_reg,
 															norm_clipping,
 															norm_threshold);
-
+						#ifdef NOPEEP
+															
+						#else										
 						//updating params for weights out of cell
 						W_c_to_f.updateParams(learning_rate,
 															current_minibatch_size,
@@ -599,7 +601,8 @@ void model::updateParams(precision_type learning_rate,
 															momentum,
 															L2_reg,
 															norm_clipping,
-															norm_threshold);				
+															norm_threshold);	
+						#endif			
 
 						/*											
 						//Error derivatives for the input word embeddings
