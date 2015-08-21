@@ -53,6 +53,30 @@ typedef ip::vector<int, intAllocator> vec;
 typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocator;
 
 
+template<typename VectorDerivedO, 
+			typename VectorDerivedF, 
+			typename VectorDerivedI, 
+			typename VectorDerivedH, 
+			typename VectorDerivedC>
+void writeStates(ofstream &hidden_states_file,
+					const vector<VectorDerivedH >   &internal_h_t,
+					const vector<VectorDerivedC>   &internal_c_t,
+					const vector<VectorDerivedF>   &internal_f_t,
+					const vector<VectorDerivedI>   &internal_i_t,
+					const vector<VectorDerivedO>   &internal_o_t,
+					const int minibatch_index,
+					const int word_index){
+	hidden_states_file<<"h_t: ";
+	writeMatrix(internal_h_t[minibatch_index].col(word_index).transpose(),hidden_states_file);
+	hidden_states_file<<"c_t: ";
+	writeMatrix(internal_c_t[minibatch_index].col(word_index).transpose(),hidden_states_file);
+	hidden_states_file<<"o_t: ";
+	writeMatrix(internal_o_t[minibatch_index].col(word_index).transpose(),hidden_states_file);
+	hidden_states_file<<"f_t: ";
+	writeMatrix(internal_f_t[minibatch_index].col(word_index).transpose(),hidden_states_file);
+	hidden_states_file<<"i_t: ";
+	writeMatrix(internal_i_t[minibatch_index].col(word_index).transpose(),hidden_states_file);			
+}
 //typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 int main(int argc, char** argv)
@@ -627,7 +651,18 @@ int main(int argc, char** argv)
 			//testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
 			init_c = current_c;
 			init_h = current_h; 	
-			vector<Matrix<precision_type, Dynamic, Dynamic> > input_hiddens;
+			vector<Matrix<precision_type, Dynamic, Dynamic> > input_hiddens,
+															encoder_h_t,
+															encoder_o_t,
+															encoder_c_t,
+															encoder_i_t,
+															encoder_f_t,
+															decoder_h_t,
+															decoder_o_t,
+															decoder_c_t,
+															decoder_i_t,
+															decoder_f_t;
+															
 			vector<Matrix<precision_type, Dynamic, Dynamic> > output_hiddens;
 			if (arg_run_lm == 0) {		
 				prop.fPropEncoder(testing_input_sent_data,
@@ -641,40 +676,45 @@ int main(int argc, char** argv)
 							
 				if (arg_hidden_states_file != ""){
 					//cerr<<"gettig hiddens from encoder"<<endl;
-					Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
-					hidden_states.resize(myParam.num_hidden,max_input_sent_len);
-					hidden_states.setZero();
+
 					for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
+						Matrix< precision_type, Dynamic, Dynamic> hidden_states,
+																	internal_h_t,
+																	internal_c_t,
+																	internal_i_t,
+																	internal_f_t,
+																	internal_o_t; 
+						hidden_states.setZero(myParam.num_hidden,max_input_sent_len);
+						//hidden_states.setZero();
+						internal_h_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_c_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_i_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_f_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_o_t.setZero(myParam.num_hidden,max_input_sent_len);
+							
+						
 						//Getting all the hidden states for the particular sentence
 						//cerr<<"max input seq length is "<<max_input_sent_len<<endl;
 						prop.getHiddenStates(hidden_states,
 										max_input_sent_len,
 										1,
 										minibatch_index); 
-						//cerr<<"hidden states are "<<hidden_states<<endl;
-						//printHiddenToFile()
-						//now printing them out. Using the sentence cont vector for this
-						//becase some of the initial states would be for dummy words
-						//for (int j=0; j<max_input_sent_len; j++){
-							//cerr<<"testing_input_sequence_cont_sent_data(j,i) "<<testing_input_sequence_cont_sent_data(j,i)<<endl;
-						//	if (testing_input_sequence_cont_sent_data(j,i) == 1){
-								//cerr<<"Word id is "<<testing_input_sent_data(j,i)<<endl;
-								//cerr<<"The encoder word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
-								//cerr<<"The word is "<<encoder_vocab.get_word(testing_input_sent_data(j,i))<<endl;
-								//print the hidden states
-								//cerr<<"dumping "
-						//		input_hiddens.push_back(hidden_states);
-								/*
-								hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(j,i))<<" ";
-								for (int index=0; index < hidden_states.col(j).rows(); index++){
-									hidden_states_file<<hidden_states(index,j)<<" ";
-								}
-								hidden_states_file<<endl;
-								*/
-						//	}
-							
-						//}
+						prop.getInternals(internal_h_t,
+										  internal_c_t,
+											internal_f_t,
+											internal_i_t,
+											internal_o_t,
+											max_input_sent_len,
+											1,
+											minibatch_index);										
+						//cerr<<"internal h_t"<<internal_h_t<<endl;
+						//prob.getInternals	
 						input_hiddens.push_back(hidden_states);
+						encoder_h_t.push_back(internal_h_t);
+						encoder_o_t.push_back(internal_o_t);
+						encoder_f_t.push_back(internal_f_t);
+						encoder_i_t.push_back(internal_i_t);
+						encoder_c_t.push_back(internal_c_t);
 					}													
 				}
 				
@@ -710,16 +750,45 @@ int main(int argc, char** argv)
 					//cerr<<"Getting hiddens from decoder"<<endl;
 					for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
 
-						Matrix< precision_type, Dynamic, Dynamic> hidden_states; 
+						//Matrix< precision_type, Dynamic, Dynamic> hidden_states;
+						Matrix< precision_type, Dynamic, Dynamic> hidden_states,
+																	internal_h_t,
+																	internal_c_t,
+																	internal_i_t,
+																	internal_f_t,
+																	internal_o_t; 
+						//hidden_states.setZero(myParam.num_hidden,max_input_sent_len);
+						//hidden_states.setZero();
+						internal_h_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_c_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_i_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_f_t.setZero(myParam.num_hidden,max_input_sent_len);
+						internal_o_t.setZero(myParam.num_hidden,max_input_sent_len);						 
 						hidden_states.resize(myParam.num_hidden,max_output_sent_len-1);
 						hidden_states.setZero();						
+						
 						prop.getHiddenStates(hidden_states,
 										max_output_sent_len-1,
 										0,
 										minibatch_index); 
-
+										
+						prop.getInternals(internal_h_t,
+										  internal_c_t,
+											internal_f_t,
+											internal_i_t,
+											internal_o_t,
+											max_output_sent_len-1,
+											0,
+											minibatch_index);	
+											
 						output_hiddens.push_back(hidden_states);
 						//cerr<<"The hidden states are "<<hidden_states<<endl;
+						//cerr<<" internal_h_t "<<internal_h_t<<endl;
+						decoder_h_t.push_back(internal_h_t);
+						decoder_o_t.push_back(internal_o_t);
+						decoder_f_t.push_back(internal_f_t);
+						decoder_i_t.push_back(internal_i_t);
+						decoder_c_t.push_back(internal_c_t);						
 					}							
 			}
 			if (arg_score == 1) {								 
@@ -751,11 +820,23 @@ int main(int argc, char** argv)
 						//Then first generate the hidden from the encoder
 						for (int word_index=0; word_index<max_input_sent_len; word_index++){
 							if (testing_input_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
-							hidden_states_file << encoder_vocab.get_word(testing_input_sent_data(word_index,minibatch_index))<<" ";
+							hidden_states_file << "input_symbol: "<<encoder_vocab.get_word(testing_input_sent_data(word_index,minibatch_index))<<endl;
+							//now printing all the states
+							writeStates(hidden_states_file,
+										encoder_h_t,
+										encoder_c_t,
+										encoder_f_t,
+										encoder_i_t,
+										encoder_o_t,
+										minibatch_index,
+										word_index);																											
+							/*
 							for (int hdim=0; hdim < myParam.num_hidden; hdim++){
 								hidden_states_file<<input_hiddens[minibatch_index](hdim,word_index)<<" ";
+								
 							}
 							hidden_states_file<<endl;	
+							*/
 						}						
 					}
 					//hidden_states_file<<"--DECODER_STATES--"<<endl;
@@ -774,11 +855,22 @@ int main(int argc, char** argv)
 						//cerr<<"testing_output_sequence_cont_sent_data("<<word_index<<","<<minibatch_index<<") "
 						//		<<testing_output_sequence_cont_sent_data(word_index,minibatch_index)<<endl;
 						if (testing_output_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
-						hidden_states_file << decoder_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<" ";
+						hidden_states_file << "input_symbol: " << decoder_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<endl;
+						writeStates(hidden_states_file,
+									decoder_h_t,
+									decoder_c_t,
+									decoder_f_t,
+									decoder_i_t,
+									decoder_o_t,
+									minibatch_index,
+									word_index);		
+																													
+						/*
 						for (int hdim=0; hdim < myParam.num_hidden; hdim++){
 							hidden_states_file<<output_hiddens[minibatch_index](hdim,word_index)<<" ";
 						}
 						hidden_states_file<<endl;	
+						*/
 					}														
 				}
 				hidden_states_file<<"<<<<<<<<<NEW SENTENCE>>>>>>>>>"<<endl;
