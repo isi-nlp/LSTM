@@ -143,8 +143,8 @@ int main(int argc, char** argv)
 		  or probability of sentence if run as a language model. Default: 0 = no. \n", false, 0, "bool", cmd);	  	  	  
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
-	  ValueArg<string> hidden_states_file("", "hidden_states_file", "Dump the hidden states in this file. Will only work with \
-		  								--score 1. Default: empty", false, "", "string", cmd);	  
+	  ValueArg<string> hidden_states_file("", "hidden_states_file", "Dump the hidden states in this file. Will currently only \
+		  generate the forced decode trace. That is, it needs both input and output pairs. Default: empty", false, "", "string", cmd);	  
       cmd.parse(argc, argv);
 
 
