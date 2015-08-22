@@ -498,51 +498,12 @@ int main(int argc, char** argv)
 	Array<int,Dynamic,Dynamic> validation_output_sequence_cont_sent_data, training_output_sequence_cont_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
-	/*
-    if (use_mmap_file == false) {
-      training_data = Map< Matrix<int,Dynamic,Dynamic> >(training_data_flat.data(), myParam.ngram_size, training_data_size);
-    }
-	*/
-	
-	/*
-    // If neither --input_vocab_size nor --input_words_file is given, set input_vocab_size to the maximum word index
-    if (myParam.input_vocab_size == 0 and myParam.input_words_file == "")
-    {
-        myParam.input_vocab_size = training_data.topRows(myParam.ngram_size-1).maxCoeff()+1;
-    }
-
-    // If neither --output_vocab_size nor --output_words_file is given, set output_vocab_size to the maximum word index
-    if (myParam.output_vocab_size == 0 and myParam.output_words_file == "")
-    {
-        myParam.output_vocab_size = training_data.row(myParam.ngram_size-1).maxCoeff()+1;
-    }
-	*/
-	
-	/*
-    if (use_mmap_file == false && randomize == true) {
-      cerr<<"Randomly shuffling data..."<<endl;
-      // Randomly shuffle training data to improve learning
-      for (data_size_t i=training_data_size-1; i>0; i--)
-      {
-        data_size_t j = uniform_int_distribution<data_size_t>(0, i-1)(rng);
-        training_data.col(i).swap(training_data.col(j));
-      }
-    }
-	*/
-	
 	
     // Read validation data
     //vector<int> validation_data_flat;
     validation_data_size = 0;
     
-	/*
-    if (myParam.validation_file != "")
-    {
-      readDataFile(myParam.validation_file, myParam.ngram_size, validation_data_flat);
-      validation_data_size = validation_data_flat.size() / myParam.ngram_size;
-      cerr << "Number of validation instances: " << validation_data_size << endl;
-    }
-	*/
+
 	//cerr<<"printing input vocabulary"<<endl;
 	//input_vocab.print_vocabulary();
 	//cerr<<"printing output vocabulary"<<endl;
@@ -574,16 +535,7 @@ int main(int argc, char** argv)
 						validation_output_sent, 
 						output_vocab);	
 		cerr<<"Validation output tokens "<<total_validation_output_tokens<<endl;									
-		/*			
-		readSentFile(myParam.input_validation_sent_file, 
-		validation_input_sent,
-		myParam.validation_minibatch_size, 
-		total_validation_input_tokens);				
-		readSentFile(myParam.output_validation_sent_file, 
-		validation_output_sent,
-		myParam.validation_minibatch_size, 
-		total_validation_output_tokens);
-		*/
+
 					
 		//readSentFile(myParam.validation_sequence_cont_file, 
 		//	validation_sequence_cont_sent,
