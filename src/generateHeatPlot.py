@@ -71,12 +71,18 @@ for line in data:
     ax[0].set_title("Hidden State Values")
     sns.heatmap(h_t,ax=ax[0], 
                xticklabels=h_column_labels, 
-               yticklabels=row_labels)
+               yticklabels=row_labels,
+                annot=False)
+    ax[0].set_yticklabels(row_labels,rotation=0)
     ax[1].set_title("Cell Values")
     sns.heatmap(c_t,ax=ax[1],
                xticklabels=c_column_labels, 
-               yticklabels=row_labels)
+               yticklabels=row_labels,
+              annot=False)
+    ax[1].set_yticklabels(row_labels,rotation=0)
 
+    #ax[1].yticks(rotation=0) 
+    #fig.yticks(rotation=0) 
     fig.tight_layout()
     fig.savefig(pdf, format='pdf') 
     #fig.savefig(diagram_name)
