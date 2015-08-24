@@ -1252,7 +1252,7 @@ int main(int argc, char** argv)
 		if (arg_run_lm == 1) {
 			cerr<<myParam.model_prefix<<".decoder.best"<<endl;
 		} else {
-			cerr<<myParam.model_prefix<<".encoder.best"<<", "<<myParam.model_prefix<<".decoder."<<endl;
+			cerr<<myParam.model_prefix<<".encoder.best"<<", "<<myParam.model_prefix<<".decoder.best"<<endl;
 		}
     return 0;
 }

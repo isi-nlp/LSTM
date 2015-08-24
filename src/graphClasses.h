@@ -442,21 +442,7 @@ public:
         //start_timer(0);
 		//cerr<<"data is "<<data<<endl;
 		input_node->fProp(data);
-    	//input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
-		//W_x_to_c_node.param->fProp(data,W_x_to_c_node.fProp_matrix);
-		//W_x_to_f_node.param->fProp(data,W_x_to_f_node.fProp_matrix);
-		//W_x_to_o_node.param->fProp(data,W_x_to_o_node.fProp_matrix);
-		//W_x_to_i_node.param->fProp(data,W_x_to_i_node.fProp_matrix);
-		
-		//current_minibatch_size = data.cols();
-    	//stop_timer(0);
-    	//std::cerr<<"input layer fprop matrix is "<<input_layer_node.fProp_matrix<<endl;
-		
-	    //first_hidden_linear_node.param->fProp(sparse_data,
-		//				  first_hidden_linear_node.fProp_matrix);
-						  
-		//How much to scale the input
-		//W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
+
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
@@ -634,21 +620,7 @@ public:
 									W_c_to_f_node.bProp_matrix +
 									W_c_to_i_node.bProp_matrix;
 		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
-		//Error derivatives for the input word embeddings
-		/*
-		W_x_to_c_node.param->bProp(tanh_c_prime_t_node.bProp_matrix,
-								W_x_to_c_node.bProp_matrix);
-		W_x_to_o_node.param->bProp(o_t_node.bProp_matrix,
-								W_x_to_o_node.bProp_matrix);
-		W_x_to_f_node.param->bProp(f_t_node.bProp_matrix,
-								W_x_to_f_node.bProp_matrix);
-		W_x_to_i_node.param->bProp(i_t_node.bProp_matrix,
-								W_x_to_i_node.bProp_matrix);
-		d_Err_t_to_n_d_x_t = W_x_to_c_node.bProp_matrix + 
-							W_x_to_o_node.bProp_matrix +
-							W_x_to_f_node.bProp_matrix +
-							W_x_to_i_node.bProp_matrix;
-		*/
+
 		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 		//nonlinearities. This is done if there is no norm clipping
 		if (!gradient_check && !norm_clipping){
@@ -688,31 +660,6 @@ public:
 	    W_c_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
 											c_t_minus_one.leftCols(current_minibatch_size));		
  
-		//Derivatives of weights out of x_t
-		/*
-		//cerr<<"input_layer_node.fProp_matrix is "<<input_layer_node.fProp_matrix<<endl;
-		//cerr<<"W_x_to_o_node"<<endl;
-		W_x_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											data);
-		//cerr<<"W_x_to_i_node"<<endl;									
-		W_x_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											data);
-		//cerr<<"W_x_to_f_node"<<endl;									
-		W_x_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											data);	
-		//cerr<<"W_x_to_c_node"<<endl;									
-		W_x_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
-											data);	
-		*/		
-		
-		/*
-		//Derivatives of the input embeddings. I THINK THIS IS WRONG!							
-	    input_layer_node.param->updateGradient(o_t_node.bProp_matrix + 
-												f_t_node.bProp_matrix + 
-												i_t_node.bProp_matrix + 
-												tanh_c_prime_t_node.bProp_matrix,
-									            data);
-		*/
 		// Updating the gradient of the hidden layer biases									
 		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
@@ -759,18 +706,7 @@ public:
 							}
 						}	
 												
-						/*
-						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
-						int current_minibatch_size = sequence_cont_indices.cols();
-						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
-						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
-							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
-						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
-							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
-						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
-						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
-						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
-						*/
+
 		
 	}
 
@@ -804,19 +740,7 @@ public:
 								//this->c_t_minus_one.col(index) = c_t_minus_one.col(index).array().unaryExpr(stateClipper());
 							}
 						}	
-												
-						/*
-						//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
-						int current_minibatch_size = sequence_cont_indices.cols();
-						//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
-						this->h_t_minus_one.leftCols(current_minibatch_size).array() = 
-							h_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
-						this->c_t_minus_one.leftCols(current_minibatch_size).array() = 
-							c_t_minus_one.array().leftCols(current_minibatch_size).rowwise()*sequence_cont_indices.template cast<precision_type>();
-						//err<<"sequence_cont_indices "<<sequence_cont_indices<<endl;
-						//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
-						//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
-						*/
+
 		
 	}
 		
