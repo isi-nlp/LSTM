@@ -1,3 +1,8 @@
+//TODO: 
+//1. beam search should allow minibatches. It should be possible
+//2. Generate hiddens states is very ugly right now. It assumes so much about the architecture.
+// It should accept a struct back and then print the struct
+
 #include <ctime>
 #include <cmath>
 
@@ -94,6 +99,9 @@ int main(int argc, char** argv)
 	bool arg_score;
 	bool arg_run_lm;
 	bool generate_hidden_states = 0;
+	bool do_beam_search;
+	int arg_beam_size = 0;
+	
     try {
       // program options //
       CmdLine cmd("Trains a LSTM.", ' ' , "0.3\n","");
@@ -139,6 +147,8 @@ int main(int argc, char** argv)
 		  Default: 0 = no. \n", false, 0, "bool", cmd);	
 	  ValueArg<bool> stochastic("", "stochastic", "If yes, then the output will be generated stochastically \n \
 		  Default: 0 = no. \n", false, 0, "bool", cmd);	
+	  ValueArg<int> beam_size("", "beam_size", "Do beam search with specified beam size (>=1). Default: 0 (No beam search). \n \
+	Note: Please supply an argument to --predicted_sequence_file where the results of beam search will be saved.", false, 0, "int", cmd);		  
 	  ValueArg<bool> score("", "score", "If yes, then the program will compute the log probability of output given input \n \
 		  or probability of sentence if run as a language model. Default: 0 = no. \n", false, 0, "bool", cmd);	  	  	  
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
@@ -165,6 +175,8 @@ int main(int argc, char** argv)
 	  arg_score = score.getValue();
 	  arg_run_lm = run_lm.getValue();
 	  arg_hidden_states_file = hidden_states_file.getValue();
+	  arg_beam_size = beam_size.getValue();
+	  do_beam_search = (arg_beam_size > 0);
 	  
 	  /*
 	  if (arg_greedy == 0 && arg_stochastic == 0 && arg_score == 0){
@@ -185,14 +197,19 @@ int main(int argc, char** argv)
 	  
 	  if (arg_hidden_states_file != "")
 		  generate_hidden_states = 1;
-	  if (arg_greedy + arg_stochastic + arg_score + generate_hidden_states == 0 || arg_greedy + arg_stochastic + arg_score  >= 2 ) {
-		  cerr<<"You have to choose only one option between greedy, stochastic and score or generating hidden states"<<endl;
+	  if (arg_greedy + arg_stochastic + arg_score + generate_hidden_states + do_beam_search == 0 || arg_greedy + arg_stochastic + arg_score + do_beam_search >= 2 ) {
+		  cerr<<"You have to choose only one option between greedy, stochastic, score, generating hidden states, or do beam search"<<endl;
 		  cerr<<"Currently             : "<<endl;
 		  cerr<<"greedy                :"<<greedy.getValue()<<endl;
 		  cerr<<"stochastic            :"<<stochastic.getValue()<<endl;
 		  cerr<<"score                 :"<<score.getValue()<<endl;
 		  cerr<<"hidden states file    :"<<hidden_states_file.getValue()<<endl;
+		  cerr<<"beam size             :"<<beam_size.getValue()<<endl;
 		  exit(1); 
+	  }
+	  if (arg_greedy + arg_stochastic + do_beam_search >= 1 && arg_predicted_sequence_file == ""){
+		  cerr<<"You have to specify a predicted sequence file!"<<endl;
+		  exit(1);
 	  }
 	  //myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
 	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
@@ -222,6 +239,11 @@ int main(int argc, char** argv)
 	  */
 	  
       myParam.minibatch_size = minibatch_size.getValue();
+	  if (do_beam_search) {
+		  myParam.minibatch_size = 1;
+		  //myParam.minibatch_size = arg_beam_size;
+	  }
+	  		
 	  //myParam.minibatch_size = 1; //hard coding this for now
 	  
       //myParam.validation_minibatch_size = validation_minibatch_size.getValue();
@@ -232,38 +254,7 @@ int main(int argc, char** argv)
       cerr << boost::algorithm::join(vector<string>(argv, argv+argc), " ") << endl;
 
       const string sep(" Value: ");
-	  /*
-      //cerr << train_file.getDescription() << sep << train_file.getValue() << endl;
-      //cerr << validation_file.getDescription() << sep << validation_file.getValue() << endl;
-      cerr << input_words_file.getDescription() << sep << input_words_file.getValue() << endl;
-      cerr << output_words_file.getDescription() << sep << output_words_file.getValue() << endl;
-      //cerr << model_prefix.getDescription() << sep << model_prefix.getValue() << endl;
 
-      cerr << ngram_size.getDescription() << sep << ngram_size.getValue() << endl;
-      cerr << input_vocab_size.getDescription() << sep << input_vocab_size.getValue() << endl;
-      cerr << output_vocab_size.getDescription() << sep << output_vocab_size.getValue() << endl;
-
-	  //cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
-
-      if (embedding_dimension.getValue() >= 0)
-      {
-	      cerr << embedding_dimension.getDescription() << sep << embedding_dimension.getValue() << endl;
-      }
-      else
-      {
-	      cerr << input_embedding_dimension.getDescription() << sep << input_embedding_dimension.getValue() << endl;
-	      cerr << output_embedding_dimension.getDescription() << sep << output_embedding_dimension.getValue() << endl;
-      }
-	  */
-	  
-	  /*
-      cerr << share_embeddings.getDescription() << sep << share_embeddings.getValue() << endl;
-      if (share_embeddings.getValue() && input_embedding_dimension.getValue() != output_embedding_dimension.getValue())
-      {
-	      cerr << "error: sharing input and output embeddings requires that input and output embeddings have same dimension" << endl;
-	      exit(1);
-      }
-	  */
       //cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
 	  //cerr<<input_sent_file.getDescription() << sep << input_sent_file.getValue() << endl;
 	  //cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
@@ -278,7 +269,7 @@ int main(int argc, char** argv)
 	  cerr << score.getDescription()<< sep << score.getValue() << endl;
 	  cerr << run_lm.getDescription()<< sep << run_lm.getValue() << endl;
 	  cerr << hidden_states_file.getDescription() << sep << hidden_states_file.getValue() << endl;
-	  
+	  cerr << beam_size.getDescription() << sep << beam_size.getValue() <<endl;
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
      // }
@@ -419,10 +410,16 @@ int main(int argc, char** argv)
 	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
 	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
 	
-	cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
-	cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
+	//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
+	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
 	
-
+	if (arg_beam_size > decoder_vocab.size()) {
+		cerr<<"Warning: The beam size cannot be larger than the output vocabulary."<<endl;
+		cerr<<"User specified beam size: "<<arg_beam_size<<endl;
+		cerr<<"Output vocabulary size: "<<decoder_vocab.size()<<endl;
+		arg_beam_size  = decoder_vocab.size();
+		cerr<<"New beam size :"<<arg_beam_size<<endl;
+	}
 
 	decoder_input.read(myParam.decoder_model_file);
 	
@@ -640,15 +637,7 @@ int main(int argc, char** argv)
 																			max_output_sent_len,
 																			current_minibatch_size);											
 			}																			
-			//cerr<<"sequence cont data is "<<testing_sequence_cont_sent_data<<endl;
-			//testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-			//																max_output_sent_len,
-			//																current_minibatch_size);
-			//testing_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
-			//																max_sent_len,
-			//																current_minibatch_size);
-																											
-			//testing_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>();																																			
+																																			
 			init_c = current_c;
 			init_h = current_h; 	
 			vector<Matrix<precision_type, Dynamic, Dynamic> > input_hiddens,
@@ -741,6 +730,39 @@ int main(int argc, char** argv)
 								arg_output_start_symbol,
 								arg_output_end_symbol,
 								rng);
+			}
+			if (do_beam_search) {
+				//Need to resize the propagator to the beam size
+				prop.resize(arg_beam_size);
+				vector<k_best_seq_item> final_k_best_seq_list;
+				prop.beamDecoding(testing_input_sent_data,
+					current_c,
+					current_h,
+					final_k_best_seq_list,
+					arg_output_start_symbol,
+					arg_output_end_symbol,
+					arg_beam_size);
+				//cerr<<"Final k best seq list size is "<<final_k_best_seq_list.size()<<endl;
+				//Now printing the k best list
+				file<<"Source: ";
+				//ASSUMING THAT THE MINIBATCH SIZE IS 1 FOR NOW!! HAVE TO CHANGE THIS!!
+				//Starting with word index 1 because we don't want to print <s>
+				for (int word_index=1; word_index<max_input_sent_len; word_index++){																
+					file << encoder_vocab.get_word(testing_input_sent_data(word_index,0))<<" ";
+				}
+				file<<endl;
+				
+				for (int sent_id=0; sent_id<arg_beam_size; sent_id++){
+					file<<"Hyp"<<sent_id<<" :";
+					for(int word_id=0; word_id<final_k_best_seq_list.at(sent_id).seq.size(); word_id++){
+						if (final_k_best_seq_list.at(sent_id).seq.at(word_id) == arg_output_end_symbol) {
+							break;
+						} else {
+							file << decoder_vocab.get_word(final_k_best_seq_list.at(sent_id).seq.at(word_id))<<" ";
+						}	
+					}
+					file<<"Probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
+				}
 			}
 			if (arg_score || arg_hidden_states_file != "") {
 			    prop.fPropDecoder(testing_output_sent_data,
@@ -839,10 +861,7 @@ int main(int argc, char** argv)
 							*/
 						}						
 					}
-					//hidden_states_file<<"--DECODER_STATES--"<<endl;
-					//Now printing the decoder states		
-					//cerr<<"testing_output_sequence_cont_sent_data"<<testing_output_sequence_cont_sent_data<<endl;
-					//cerr<<"max output sent len is "<<max_output_sent_len<<endl;
+
 					//First get the sentence length
 						int current_sentence_length=0;
 					for (int word_index=0; word_index<max_output_sent_len; word_index++) {
@@ -889,7 +908,7 @@ int main(int argc, char** argv)
 	 if(arg_score) {
         //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
         //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-		cerr << "		Per symbol testing probability   :   " << exp(log_likelihood/total_output_tokens) << endl; 
+		cerr << "		Per symbol testing probability   :   " << exp(log_likelihood) << endl; 
 	    cerr << "		Testing log-likelihood base e    :   " << log_likelihood << endl;
 		cerr << "		Testing log-likelihood base 2    :   " << log_likelihood/log(2.) << endl;
 		cerr<<  "		Testing cross entropy in base 2  :   "<< log_likelihood/(log(2.)*total_output_tokens)<< endl;
