@@ -28,22 +28,7 @@
 
 typedef long long int data_size_t; // training data can easily exceed 2G instances
 
-
-struct value_and_index {
-	int value;
-	int index;
-};
-
 /*
-//sort functor for sorting that takes two vectors and returns a comparion
-//based on the first element of the two vectors
-struct by_first { 
-    bool operator() {  value_and_index const &a,  value_and_index const &b) const { 
-        return a.value < b.value;
-    }
-};
-
-
 namespace Eigen {
     template <typename Derived>
     size_t hash_value(const DenseBase<Derived> &m)
@@ -111,13 +96,31 @@ template<typename dType>
 void allocate_Matrix_CPU(dType **h_matrix,int rows,int cols) {
 	*h_matrix = (dType *)malloc(rows*cols*sizeof(dType));
 }						
-	
+
+//Aug-27-2015
+//Structure for saving decoder trace. The current decoder trace assumes so much about the LSTM model. 
+//The decoder trace should contain a generic dump that that can be printed out. For that, a simple structure
+//That contains the state_name and the value should be created
+template<typename Derived>
+struct state_storage {
+	std::string state_name;
+	Eigen::MatrixBase<Derived> state_value;
+};
+
 //template <typename T> readSentFile(const std::string &file, T &sentences);
 
 ////FOR GETTING THE K-BEST ITEMS in beam search
 ///row and col will store the row index and col idex of the k-best item
 ///For the probability matrix, row will also be the word id and col will correspond
 /// to the previous k-best item sequence index that this k-best item is coming from
+
+
+struct value_and_index {
+	int value;
+	int index;
+};
+
+
 struct beam_item {
 	double value;
 	int row;

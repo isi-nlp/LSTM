@@ -383,7 +383,9 @@ namespace nplm
 			}
 
 	    }
-			
+
+
+					
 		//currently only generate one output at a time
 		template <typename DerivedInput,typename DerivedH, typename DerivedC>
 		void generateGreedyOutput(const MatrixBase<DerivedInput> &input_data,

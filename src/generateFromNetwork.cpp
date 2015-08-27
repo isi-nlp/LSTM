@@ -761,7 +761,7 @@ int main(int argc, char** argv)
 							file << decoder_vocab.get_word(final_k_best_seq_list.at(sent_id).seq.at(word_id))<<" ";
 						}	
 					}
-					file<<"Probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
+					file<<"Sequence probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
 				}
 			}
 			if (arg_score || arg_hidden_states_file != "") {

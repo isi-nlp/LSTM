@@ -19,27 +19,47 @@ class vocabulary {
     std::vector<std::string> m_words;
     boost::unordered_map<std::string, int> m_index;
     int unk;
+	bool unk_defined;
 
 public:
     vocabulary() 
     { 
-        unk = insert_word("<unk>");
+        //unk = insert_word("<unk>");
+		unk_defined = 0;
     }
 
     vocabulary(const std::vector<std::string> &words)
       :
       m_words(words)
     {
-        for (int i=0; i<words.size(); i++)
+        for (int i=0; i<words.size(); i++) {
             m_index[words[i]] = i;
-		unk = m_index["<unk>"];
+			if (words[i] == "<unk>"){
+				unk = m_index["<unk>"];
+				unk_defined = 1;
+			}
+		}
+		if (unk_defined == 0){
+			std::cerr<<"Warning:: The vocabulary does not have unk! \n\
+				Program will fail if the development set or test set have unknown words"<<std::endl;
+		}
+		//unk = m_index["<unk>"];
     }
 	void build_vocab(const std::vector<std::string> &words) {
 		//std::cerr<<"The vocab size is "<<words.size()<<std::endl;
 		m_words = words;
-        for (int i=0; i<words.size(); i++)
+        for (int i=0; i<words.size(); i++) {
             m_index[words[i]] = i;
-		unk = m_index["<unk>"];		
+			if (words[i] == "<unk>"){
+				unk = m_index["<unk>"];
+				unk_defined = 1;
+			}			
+		}
+		if (unk_defined == 0){
+			std::cerr<<"Warning:: The vocabulary does not have unk! \n\
+				Program will fail if the development set or test set have unknown words"<<std::endl;
+		}		
+		//unk = m_index["<unk>"];		
 	}
     int lookup_word(const std::string &word) const
     {
@@ -58,10 +78,15 @@ public:
     int lookup_word(const std::string &word, int unk) const
     {
         boost::unordered_map<std::string, int>::const_iterator pos = m_index.find(word);
-	if (pos != m_index.end())
-	    return pos->second;
-	else
-	    return unk;
+		if (pos != m_index.end())
+		    return pos->second;
+		else if (!unk_defined) {
+				std::cerr<<"Error:: Word "<<word<<" is not in the vocabulary and \n \
+					vocabulary does not have <unk>"<<std::endl;
+				std::exit(1);
+		} else {
+	    	return unk;
+		}
     }
 
     int insert_word(const std::string &word)
