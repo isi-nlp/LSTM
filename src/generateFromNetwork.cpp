@@ -764,53 +764,55 @@ int main(int argc, char** argv)
 					file<<"Sequence probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
 				}
 			}
-			if (arg_score || arg_hidden_states_file != "") {
+			if (arg_score || generate_hidden_states ) {
 			    prop.fPropDecoder(testing_output_sent_data,
 						current_c,
 						current_h,
-						testing_output_sequence_cont_sent_data);	
-					//cerr<<"Getting hiddens from decoder"<<endl;
-					for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
+						testing_output_sequence_cont_sent_data);
+					if (generate_hidden_states) {
+						//cerr<<"Getting hiddens from decoder"<<endl;
+						for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
 
-						//Matrix< precision_type, Dynamic, Dynamic> hidden_states;
-						Matrix< precision_type, Dynamic, Dynamic> hidden_states,
-																	internal_h_t,
-																	internal_c_t,
-																	internal_i_t,
-																	internal_f_t,
-																	internal_o_t; 
-						//hidden_states.setZero(myParam.num_hidden,max_input_sent_len);
-						//hidden_states.setZero();
-						internal_h_t.setZero(myParam.num_hidden,max_input_sent_len);
-						internal_c_t.setZero(myParam.num_hidden,max_input_sent_len);
-						internal_i_t.setZero(myParam.num_hidden,max_input_sent_len);
-						internal_f_t.setZero(myParam.num_hidden,max_input_sent_len);
-						internal_o_t.setZero(myParam.num_hidden,max_input_sent_len);						 
-						hidden_states.resize(myParam.num_hidden,max_output_sent_len-1);
-						hidden_states.setZero();						
+							//Matrix< precision_type, Dynamic, Dynamic> hidden_states;
+							Matrix< precision_type, Dynamic, Dynamic> hidden_states,
+																		internal_h_t,
+																		internal_c_t,
+																		internal_i_t,
+																		internal_f_t,
+																		internal_o_t; 
+							//hidden_states.setZero(myParam.num_hidden,max_input_sent_len);
+							//hidden_states.setZero();
+							internal_h_t.setZero(myParam.num_hidden,max_input_sent_len);
+							internal_c_t.setZero(myParam.num_hidden,max_input_sent_len);
+							internal_i_t.setZero(myParam.num_hidden,max_input_sent_len);
+							internal_f_t.setZero(myParam.num_hidden,max_input_sent_len);
+							internal_o_t.setZero(myParam.num_hidden,max_input_sent_len);						 
+							hidden_states.resize(myParam.num_hidden,max_output_sent_len-1);
+							hidden_states.setZero();						
 						
-						prop.getHiddenStates(hidden_states,
-										max_output_sent_len-1,
-										0,
-										minibatch_index); 
-										
-						prop.getInternals(internal_h_t,
-										  internal_c_t,
-											internal_f_t,
-											internal_i_t,
-											internal_o_t,
+							prop.getHiddenStates(hidden_states,
 											max_output_sent_len-1,
 											0,
-											minibatch_index);	
+											minibatch_index); 
+										
+							prop.getInternals(internal_h_t,
+											  internal_c_t,
+												internal_f_t,
+												internal_i_t,
+												internal_o_t,
+												max_output_sent_len-1,
+												0,
+												minibatch_index);	
 											
-						output_hiddens.push_back(hidden_states);
-						//cerr<<"The hidden states are "<<hidden_states<<endl;
-						//cerr<<" internal_h_t "<<internal_h_t<<endl;
-						decoder_h_t.push_back(internal_h_t);
-						decoder_o_t.push_back(internal_o_t);
-						decoder_f_t.push_back(internal_f_t);
-						decoder_i_t.push_back(internal_i_t);
-						decoder_c_t.push_back(internal_c_t);						
+							output_hiddens.push_back(hidden_states);
+							//cerr<<"The hidden states are "<<hidden_states<<endl;
+							//cerr<<" internal_h_t "<<internal_h_t<<endl;
+							decoder_h_t.push_back(internal_h_t);
+							decoder_o_t.push_back(internal_o_t);
+							decoder_f_t.push_back(internal_f_t);
+							decoder_i_t.push_back(internal_i_t);
+							decoder_c_t.push_back(internal_c_t);						
+						}
 					}							
 			}
 			if (arg_score == 1) {								 
