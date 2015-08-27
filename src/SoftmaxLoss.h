@@ -45,34 +45,64 @@ struct SoftmaxLogLoss
 			const MatrixBase<DerivedO> &output_const, 
 			precision_type &loss)
     {
-	//std::cerr<<"output words are "<<output_words<<std::endl;
-	//std::cerr<<"output const is "<<output_const<<std::endl;
-    UNCONST(DerivedO, output_const, output);
-	//std::cerr<<"input is "<<input<<std::endl;
+		//std::cerr<<"output words are "<<output_words<<std::endl;
+		//std::cerr<<"output const is "<<output_const<<std::endl;
+	    UNCONST(DerivedO, output_const, output);
+		//std::cerr<<"input is "<<input<<std::endl;
 
-	//getchar();
+		//getchar();
 
-	double log_likelihood = 0.0;
+		double log_likelihood = 0.0;
 	
-    #pragma omp parallel for reduction(+:log_likelihood)
-	for (int train_id = 0; train_id < input.cols(); train_id++)
-	{
-		//std::cerr<<"output word "<<output_words(train_id)<<std::endl;
-		//If the output word is negative, that means there was no sample
-		if (output_words(train_id) == -1){
-			//std::cerr<<"word is -1"<<std::endl;
-			continue;
+	    #pragma omp parallel for reduction(+:log_likelihood)
+		for (int train_id = 0; train_id < input.cols(); train_id++)
+		{
+			//std::cerr<<"output word "<<output_words(train_id)<<std::endl;
+			//If the output word is negative, that means there was no sample
+			if (output_words(train_id) == -1){
+				//std::cerr<<"word is -1"<<std::endl;
+				continue;
+			}
+		    double normalization = logsum(input.col(train_id));
+		    output.col(train_id).array() = input.col(train_id).array() - normalization;
+			//std::cerr<<"normalization is"<<normalization<<std::endl;
+		    log_likelihood += double(output(output_words(train_id), train_id));
 		}
-	    double normalization = logsum(input.col(train_id));
-	    output.col(train_id).array() = input.col(train_id).array() - normalization;
-		//std::cerr<<"normalization is"<<normalization<<std::endl;
-	    log_likelihood += double(output(output_words(train_id), train_id));
-	}
-	//std::cerr<<"output is "<<output<<std::endl;
-	//getchar();
-	loss = log_likelihood;
+		//std::cerr<<"output is "<<output<<std::endl;
+		//getchar();
+		loss = log_likelihood;
     }
 
+    template <typename DerivedI, typename DerivedW, typename DerivedO>
+    void computeProbs(const MatrixBase<DerivedI> &input, 
+			const MatrixBase<DerivedW> &output_words, 
+			const MatrixBase<DerivedO> &output_const)
+    {
+		//std::cerr<<"output words are "<<output_words<<std::endl;
+		//std::cerr<<"output const is "<<output_const<<std::endl;
+	    UNCONST(DerivedO, output_const, output);
+		//std::cerr<<"input is "<<input<<std::endl;
+
+		//getchar();
+
+		double log_likelihood = 0.0;
+	
+	    #pragma omp parallel for
+		for (int train_id = 0; train_id < input.cols(); train_id++)
+		{
+			//std::cerr<<"output word "<<output_words(train_id)<<std::endl;
+			//If the output word is negative, that means there was no sample
+			if (output_words(train_id) == -1){
+				//std::cerr<<"word is -1"<<std::endl;
+				continue;
+			}
+		    double normalization = logsum(input.col(train_id));
+		    output.col(train_id).array() = input.col(train_id).array() - normalization;
+			//std::cerr<<"normalization is"<<normalization<<std::endl;
+		}
+
+    }
+	
     template <typename DerivedW, typename DerivedO, typename DerivedI>
     void bProp(const MatrixBase<DerivedW> &output_words, const MatrixBase<DerivedO> &output, const MatrixBase<DerivedI> &grad_input_const)
     {

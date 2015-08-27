@@ -510,119 +510,156 @@ namespace nplm
 		void beamDecoding(const MatrixBase<DerivedInput> &input_data,
 				const MatrixBase<DerivedC> &const_current_c,
 				const MatrixBase<DerivedH> &const_current_h,
-				vector<vector<int> > &predicted_sequence,
-				int output_start_symbol,
-				int output_end_symbol) {
-					int current_minibatch_size = input_data.cols();
+				vector<k_best_seq_item> &final_k_best_seq_list,
+				const int output_start_symbol,
+				const int output_end_symbol,
+				const int beam_size) {
+					int k = beam_size;
+					//int current_minibatch_size = input_data.cols();
+					int current_minibatch_size = 1;
 					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
-					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
+					predicted_output.resize(1,1); //For now, I'm processing one sentence at a time. 
+												  //In the beginning, there is only one symbol,<s>. 
+												  //After that, we will have k items in predicted output
 					//predicted_output.resize(1,current_minibatch_size);
 					//predicted_output.fill(output_start_symbol);
 					predicted_output.row(0).fill(output_start_symbol);
 					//predicted_output(0,0) = output_start_symbol;
-					UNCONST(DerivedC, const_current_c, current_c);
-					UNCONST(DerivedH, const_current_h, current_h);	
+					//UNCONST(DerivedC, const_current_c, current_c);
+					//UNCONST(DerivedH, const_current_h, current_h);	
 					//vector<int> current_words(output_start_symbol,current_minibatch_size);
-					vector<int> live_words (current_minibatch_size,1);
-					int remaining_live_words = current_minibatch_size;
-					//cerr<<"live words are"<<live_words<<endl;
 					//predicted_output = resize(1,current_minibatch_size);
 					
 					//predicted_output
 				//cerr<<"predicted_output	is "<<predicted_output<<endl;
-				for (int i=0; i<100 && remaining_live_words > 0; i++){
+				//First generate k items to populate the beam
+				decoder_lstm_nodes[0].copyToHiddenStates(const_current_h.leftCols(1),
+									const_current_c.leftCols(1));
+				decoder_lstm_nodes[0].fProp(predicted_output.row(0));
+				//Get the k-best items from the list first
+				vector<beam_item> initial_k_best_list;
+				output_layer_node.param->fProp(decoder_lstm_nodes[0].h_t.leftCols(1), 
+									scores.leftCols(1));
+		        SoftmaxLogLoss().computeProbs(scores.leftCols(1), 
+		                   predicted_output.row(0), 
+		                   probs);										
+				getKBest(probs.leftCols(1), initial_k_best_list, k);
+				//cerr<<"probs.leftCols(1) "<<probs.leftCols(1)<<endl;
+				//Now populate the k-best sequences with the initial k best list
+				vector<k_best_seq_item> k_best_seq_list;
+				assert(initial_k_best_list.size() == k);
+				for (int i=0; i<k; i++)	{
+					k_best_seq_item seq_item;
+					seq_item.seq.push_back(initial_k_best_list.at(i).row); //Row indicates the word index in the probability matrix
+					seq_item.value = initial_k_best_list.at(i).value;
+					k_best_seq_list.push_back(seq_item);
+				}
+				//vector<k_best_seq_item> final_k_best_seq_list;
+				//Now create a new predicted output from the k_best list and also transfer the hidden states
+				//For the 1st position, all the hidden states will come from the same hidden state of just seeing 
+				//<s>
+				vector<int> k_best_state_copy_indices = vector<int>(k,0);
+				//Resizing predicted output to now contain 12 items in the k-best list
+				predicted_output.resize(101,k); // I can produce at most 100 output symbols
+				for (int i=0; i<k;  i++){
+					predicted_output(1,i) = initial_k_best_list.at(i).row;
+					//cerr<<"predicted_output(1,i) "<<predicted_output(1,i)<<endl;
+				}
+				//getchar();
+				/*
+				decoder_lstm_nodes[1].copyKBestHiddenStates(decoder_lstm_nodes[0].h_t,
+									  decoder_lstm_nodes[0].c_t,
+									  decoder_lstm_nodes[1].h_t,
+									  decoder_lstm_nodes[1].c_t,
+									  k_best_state_copy_indices);
+				*/
+
+				for (int i=1; i<100 ; i++){
 					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
 					//current_minibatch_size = current_words.size();
 					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
 					//cerr<<"i is "<<i<<endl;
 					//cerr<<"predicted output is "<<predicted_output.row(i);
-					if (i==0) {
-						//cerr<<"Current c is "<<current_c<<endl;
-						//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-						decoder_lstm_nodes[i].copyToHiddenStates(current_h,
-											current_c);//,sequence_cont_indices.row(i));
-						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,	
-						//cerr<<"output data is "<<output_data.row(i)<<endl;
-											//current_c,
-											//current_h);
-					} else {
-						//cerr<<"Data is "<<data.row(i)<<endl;
-						//cerr<<"index is "<<i<<endl;
-						decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,
-											decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
-						decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
-											//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
-											//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
-					}
-					//cerr<<"ht is "<<decoder_lstm_nodes[i].h_t<<endl;
+					//Copying the decoder hidden states according to the k best copy indices
+					decoder_lstm_nodes[i].copyKBestHiddenStates(decoder_lstm_nodes[i-1].h_t,
+										  decoder_lstm_nodes[i-1].c_t,
+										  decoder_lstm_nodes[i].h_t_minus_one,
+										  decoder_lstm_nodes[i].c_t_minus_one,
+										  k_best_state_copy_indices);	
+	  				//cerr<<"decoder_lstm_nodes[i].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
+	  				//cerr<<"decoder_lstm_nodes[i].c_t "<<decoder_lstm_nodes[i].c_t<<endl;										  			
+					decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
+										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
+										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
+
+					//cerr<<"ht is   "<<decoder_lstm_nodes[i].h_t<<endl;
 					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-										scores.leftCols(current_minibatch_size));
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(k), 
+										scores.leftCols(k));
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
 					//cerr<<scores<<endl;
 	
-			        precision_type minibatch_log_likelihood;
+			        //precision_type minibatch_log_likelihood;
 			        start_timer(5);
-			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+			        SoftmaxLogLoss().computeProbs(scores.leftCols(k), 
 			                   predicted_output.row(i), 
-			                   probs, 
-			                   minibatch_log_likelihood);	
-					//int max_index = 0;
-					//precision_type max_value = -9999999;
-					//Matrix<precision_type,1,Dynamic>::Index max_index;
-					//probs.col(maxCoeff(&max_index); 
-					//int minibatch_size = 0;
-					//THIS HAS TO CHANGE
-					/*
-					for (int index=0; index<probs.rows(); index++){
-						//cerr<<"prob is "<<probs(index,0)<<endl;
-						if (probs(index,0) > max_value){
-							max_value = probs(index,0);
-							max_index = index;
-						}
-						
-					}
-					*/
-					//getchar();
-			        //Matrix<precision_type,1,Dynamic>::Index max_index;
-			        //probs.maxCoeff(&max_index);	
-					//if max index equals the end symbol
-					//current_minibatch_size = 0;
-					//nt live_index=0;
-					//current_words.clear();
-					for (int index=0; index<live_words.size(); index++){
-						if (live_words[index] == 1){
-							//predicted_sequence[index].push_back()
-							Matrix<precision_type,1,Dynamic>::Index max_index;
-							probs.col(index).maxCoeff(&max_index);
-							//cerr<<"max index is "<<max_index<<endl;
-							if (max_index == output_end_symbol){
-								live_words[index] = -1;
-								remaining_live_words--;
-							} //else {
-							//	current_words.push_back(max_index);
-								//current_minibatch_size++;
-							//}
-							predicted_sequence[index].push_back(max_index);
-							predicted_output(i+1,index) = max_index;
+			                   probs);	
+					//cerr<<"probs is "<<probs<<endl;
+					vector<beam_item> k_best_list;
+					getKBest(probs.leftCols(k), k_best_list, 2*k);  //Extracting 2k best items because we could have k
+																	//items with end symbols
+					//Now that we have the k-best list, we add to the k_best_seq_list and remove 
+					//the previous items.
+					int new_k = 0;
+					k_best_state_copy_indices.clear();
+					//cerr<<"K best seq list size is "<<k_best_seq_list.size()<<endl;
+					for (int item_index=0; new_k<k; item_index++){
+						k_best_seq_item seq_item;
+						int prev_k_best_seq_item_index = k_best_list.at(item_index).col;
+						int word_index = k_best_list.at(item_index).row;
+						//cerr<<"Word index in k_best_item "<<item_index<<" is "<<word_index<<endl;
+						seq_item.seq = k_best_seq_list.at(prev_k_best_seq_item_index).seq;
+						seq_item.seq.push_back(word_index);
+						seq_item.value = k_best_seq_list.at(prev_k_best_seq_item_index).value +
+										k_best_list.at(item_index).value;
+						if (word_index != output_end_symbol){
+							k_best_seq_list.push_back(seq_item);
+							//The hidden state to be transmitted to the next LSTM block is 
+							//the one with the index of the previous k_best seq item 
+							k_best_state_copy_indices.push_back(prev_k_best_seq_item_index);
+							//cerr<<"predicted output rows "<<predicted_output.rows()<<" predicted_output cols: "<<predicted_output.cols()<<endl;
+							//cerr<<"i is "<<i<<endl;
+							//cerr<<"new k is "<<new_k<<endl;
+							predicted_output(i+1,new_k) = word_index;
+							//cerr<<" predicted_output(i+1,new_k) is "<<predicted_output(i+1,new_k)<<endl;
+							new_k++;
 						} else {
-							predicted_output(i+1,index) = output_end_symbol;
+							final_k_best_seq_list.push_back(seq_item);
+							//Should I make the k-best list smaller now ? Not sure. 
+							//new_k--;
 						}
-						//cerr<<"remaining live words are"<<remaining_live_words<<endl;
 					}
-					/*
-					predicted_sequence.push_back(max_index);
-					if (max_index == output_end_symbol)
-						break;
-					else{
-						predicted_output(i+1,0) = max_index;
-						//cerr<<"new predicted output is "<<predicted_output(i+1,0)<<endl;
-					}
-					*/		   				
+					//k = new_k;
+					//The k_best_seq_list has expanded now and the initial k-items should be deleted
+					assert (k_best_seq_list.size() == 2*k);
+					k_best_seq_list.erase(k_best_seq_list.begin(), k_best_seq_list.begin()+k);
+					//cerr<<"After erasing the k best seq list size is "<<k_best_seq_list.size()<<endl;
+					//assert(k_best_list.size() == k);
 				}
+				//cerr<<"k best seq list size is "<<k_best_seq_list.size()<<endl;
+				//Now adding the k_best_seq list to the final list
+				for (int item_index=0; item_index<k_best_seq_list.size(); item_index++){
+					final_k_best_seq_list.push_back(k_best_seq_list.at(item_index));
+				}
+				//cerr<<"Final k best seq list size is "<<final_k_best_seq_list.size()<<endl;
+				//First soring the k_best_list
+				//Getting the average symbol probability
+				std::make_heap(final_k_best_seq_list.begin(), final_k_best_seq_list.end(), comparator<k_best_seq_item>());
+				std::sort_heap(final_k_best_seq_list.begin(), final_k_best_seq_list.end(), comparator<k_best_seq_item>());
+				//Now populating the predicted sequence
 
 		}
 
@@ -636,7 +673,7 @@ namespace nplm
 				int output_end_symbol,
 				boost::random::mt19937 &eng) {
 					int current_minibatch_size = input_data.cols();
-					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+					//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
 					predicted_output.resize(101,current_minibatch_size); // I can produce at most 100 output symbols
 					//predicted_output.resize(1,current_minibatch_size);

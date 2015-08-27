@@ -6,7 +6,7 @@
 #include <vector>
 #include <string>
 #include <math.h>
-
+#include <algorithm>
 
 #include <boost/unordered_map.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -113,6 +113,74 @@ void allocate_Matrix_CPU(dType **h_matrix,int rows,int cols) {
 }						
 	
 //template <typename T> readSentFile(const std::string &file, T &sentences);
+
+////FOR GETTING THE K-BEST ITEMS in beam search
+///row and col will store the row index and col idex of the k-best item
+///For the probability matrix, row will also be the word id and col will correspond
+/// to the previous k-best item sequence index that this k-best item is coming from
+struct beam_item {
+	double value;
+	int row;
+	int col;
+};
+
+////FOR STORING A K-BEST SEQUENCE
+
+struct k_best_seq_item {
+	double value;
+	std::vector<int> seq;
+};
+//I think the comparator should be more general. 
+//It should be templated on a type which could be a class or a struct
+//and all it needs is that it should return a value
+//This comparator returns true if a>b, which means it will end up sorting in 
+//non-decreasing order or it will generate a min-heap if used in a heap
+template <typename item>
+struct comparator {
+  bool operator()(const item& a,const item& b) const{
+    return a.value > b.value;
+  }
+};
+//typedef long long int data_size_t; // training data can easily exceed 2G instances
+
+template<typename DerivedValue> 
+void getKBest(const Eigen::MatrixBase<DerivedValue> &values, std::vector<beam_item>& k_best_list, const int k){
+	//UNCONST(DerivedIndex, const_indices, indices);
+	//vector<
+	//std::cerr<<"Values is "<<values<<std::endl;
+	int rows = values.rows();
+	int cols = values.cols();
+	
+	//create k elements in the priority queue, 
+	//vector<beam_item> k_best_list;
+	for (int i=0; i<k; i++) {
+		beam_item item;
+		//tem.value = *(values.derived().data()+k);
+		item.row = i%rows;
+		item.col = i/rows;
+		item.value = values(item.row, item.col);
+		k_best_list.push_back(item);
+		//std::cerr<<" row is "<<item.row<<" col is "<<item.col<<std::endl;
+		//std::cerr<<"Value while creating the beam is "<<item.value<<std::endl;
+	}
+	make_heap(k_best_list.begin(), k_best_list.end(), comparator<beam_item>());
+	//Now go over all the elements of the list
+	for (int i=k; i<rows*cols; i++){
+		beam_item item;
+		item.row = i%rows;
+		item.col = i/rows;
+		item.value = values(item.row,item.col);
+		k_best_list.push_back(item);
+		std::pop_heap(k_best_list.begin(), k_best_list.end(), comparator<beam_item>());
+		k_best_list.pop_back();
+		//make_heap(k_best_list.begin(), k_best_list.end(), comparator);
+	}
+	std::sort_heap(k_best_list.begin(), k_best_list.end(), comparator<beam_item>());
+	//k_best_list;
+}
+
+///FUNCTIONS FOR GETTING K-BEST ITEMS END HERE
+
 
 //Populates the sentences into a vector of vectors.
 template <typename T>

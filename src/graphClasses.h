@@ -743,7 +743,44 @@ public:
 
 		
 	}
+
+	//This takes the sequence continuation indices, the previous hidden and cell states and creates new ones for this LSTM block/
+	//It also takes a list that says where the new hidden states must be obtained from. This is very useful for beam search.
+	//In beam search, the hidden states must come from the current k-best sequence. The current k-best sequence might be continuations
+	//of the same item or different items in the previous k-best sequence and thus we can't just copy over the previous hidden states
+	//because some of the k-best sequences corresponding to previous hidden states might have died. 
+	//TODO: should the indices be a vector ? 
+	template <typename DerivedH, typename DerivedC , typename indexType>
+	static void copyKBestHiddenStates(const MatrixBase<DerivedH> &from_h_matrix,
+							const MatrixBase<DerivedC> &from_c_matrix,
+							const MatrixBase<DerivedH> &const_to_h_matrix,
+							const MatrixBase<DerivedC> &const_to_c_matrix,
+							const vector<indexType> &from_indices) {
+						int current_minibatch_size = from_indices.size();
+				
+						UNCONST(DerivedC, const_to_c_matrix, to_c_matrix);
+						UNCONST(DerivedH, const_to_h_matrix, to_h_matrix);
+						/*
+						cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;	
+						cerr<<"from_h_matrix "<<from_h_matrix<<endl;
+						cerr<<"from_c_matrix "<<from_c_matrix<<endl;
+						cerr<<"to_h_matrix "<<to_h_matrix<<endl;
+						cerr<<"to_c_matrix "<<to_c_matrix<<endl;			
+						*/					
+						//int current_minibatch_size = h_t_minus_one.cols();	
+						//#pragma omp parallel for 
+						for (int index=0; index<current_minibatch_size; index++){ 
+							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+							//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
+								//cerr<<"from_indices.at(index) "<<from_indices.at(index)<<endl;
+								to_h_matrix.col(index) = from_h_matrix.col(from_indices.at(index)); 			
+								to_c_matrix.col(index) = from_c_matrix.col(from_indices.at(index));
+
+						}	
+
 		
+	}
+			
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
 	//nonlinearities 
 	void clipGradient(){}
