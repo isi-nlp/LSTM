@@ -744,7 +744,7 @@ int main(int argc, char** argv)
 					arg_beam_size);
 				//cerr<<"Final k best seq list size is "<<final_k_best_seq_list.size()<<endl;
 				//Now printing the k best list
-				file<<"Source: ";
+				file<<"Source\t:";
 				//ASSUMING THAT THE MINIBATCH SIZE IS 1 FOR NOW!! HAVE TO CHANGE THIS!!
 				//Starting with word index 1 because we don't want to print <s>
 				for (int word_index=1; word_index<max_input_sent_len; word_index++){																
@@ -753,7 +753,7 @@ int main(int argc, char** argv)
 				file<<endl;
 				
 				for (int sent_id=0; sent_id<arg_beam_size; sent_id++){
-					file<<"Hyp"<<sent_id<<" :";
+					file<<"Hyp"<<sent_id<<"\t\t:";
 					for(int word_id=0; word_id<final_k_best_seq_list.at(sent_id).seq.size(); word_id++){
 						if (final_k_best_seq_list.at(sent_id).seq.at(word_id) == arg_output_end_symbol) {
 							break;
