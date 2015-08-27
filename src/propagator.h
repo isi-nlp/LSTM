@@ -517,7 +517,7 @@ namespace nplm
 					int k = beam_size;
 					//int current_minibatch_size = input_data.cols();
 					int current_minibatch_size = 1;
-					cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+					//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 					Matrix<int,Dynamic,Dynamic> predicted_output;
 					predicted_output.resize(1,1); //For now, I'm processing one sentence at a time. 
 												  //In the beginning, there is only one symbol,<s>. 
