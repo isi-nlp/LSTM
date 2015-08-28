@@ -262,8 +262,8 @@ void readOddSentFile(const std::string &file,
 			//for (int i=0;i<words.size(); i++){
 			//	std::cerr<<" words "<<i<<" "<<words.at(i);
 			//}
-			std::cerr<<std::endl;
-			getchar();
+			//std::cerr<<std::endl;
+			//getchar();
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){
@@ -317,8 +317,8 @@ void readEvenSentFile(const std::string &file,
 			//for (int i=0;i<words.size(); i++){
 			//	std::cerr<<" words "<<i<<" "<<words.at(i);
 			//}					
-			std::cerr<<std::endl;
-			getchar();
+			//std::cerr<<std::endl;
+			//getchar();
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){
