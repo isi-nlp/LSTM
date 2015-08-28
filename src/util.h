@@ -231,7 +231,8 @@ void readOddSentFile(const std::string &file,
 				std::vector<std::vector<T> > &sentences,
 				data_size_t &tokens,
 				const bool add_start_stop,
-				const bool is_output)
+				const bool is_output,
+				const bool reverse)
 {
 	  std::cerr << "Reading Odd sentences from: " << file << std::endl;
 
@@ -255,6 +256,8 @@ void readOddSentFile(const std::string &file,
 				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
 				exit(1);
 			}
+			if (reverse) //If the user wants to reverse
+				std::reverse(words.begin(),words.end());
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){
@@ -277,7 +280,8 @@ void readEvenSentFile(const std::string &file,
 				std::vector<std::vector<T> > &sentences,
 				data_size_t &tokens,
 				const bool add_start_stop,
-				const bool is_output)
+				const bool is_output,
+				const bool reverse)
 {
 	  std::cerr << "Reading Even sentences from: " << file << std::endl;
 
@@ -301,6 +305,8 @@ void readEvenSentFile(const std::string &file,
 				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
 				exit(1);
 			}
+			if (reverse) //If the user wants to reverse
+				std::reverse(words.begin(),words.end());			
 			if (add_start_stop) {
 				words.insert(words.begin(),"<s>");
 				if (is_output){

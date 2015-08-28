@@ -75,6 +75,7 @@ struct param
 	string testing_sent_file;
 	string load_encoder_file;
 	string load_decoder_file;
+	bool reverse_input; //Reverse input in while training the seq2seq LSTM 
 
 };
 

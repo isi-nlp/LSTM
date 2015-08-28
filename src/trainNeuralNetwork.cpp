@@ -159,8 +159,10 @@ int main(int argc, char** argv)
 	  ValueArg<bool> norm_clipping("", "norm_clipping", "Do you want to do norm clipping or gradient clipping. 1 = norm cilpping, \n \
 		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
-		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	  
-	  ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
+		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  ValueArg<bool> reverse_input("", "reverse", "Reverse the input sentence before training, \n \
+		  			1 = yes. Default: 0 (No reversing).", false, 0, "bool", cmd);		    
+	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
 		  Default: 1 = yes, \n \
 		  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
       //ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
@@ -180,6 +182,7 @@ int main(int argc, char** argv)
 	  //myParam.output_sent_file = output_sent_file.getValue();
 	  myParam.training_sent_file = training_sent_file.getValue();
 	  myParam.validation_sent_file = validation_sent_file.getValue();
+	  myParam.reverse_input = reverse_input.getValue();
 	  //myParam.input_validation_sent_file = input_validation_sent_file.getValue();
 	  //myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
 	  //myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
@@ -240,7 +243,7 @@ int main(int argc, char** argv)
 	  myParam.gradient_check = gradient_check.getValue();
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
-	  myParam.restart_states = norm_threshold.getValue();
+	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
 	  arg_seed = seed.getValue();
 	  //myParam.load_encoder_file = load_encoder_file.getVale();
@@ -265,8 +268,9 @@ int main(int argc, char** argv)
 	  cerr << norm_clipping.getDescription() << sep << norm_clipping.getValue() <<endl;
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
-	  cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
+	  //cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
+	  cerr << reverse_input.getDescription() <<sep <<reverse_input.getValue() <<endl;
 	  cerr << seed.getDescription() << sep << seed.getValue() <<endl;
 	  //cerr << load_encoder_file.getDescription() <<sep <<load_encoder_file.getValue() <<endl;
 	  //cerr << load_decoder_file.getDescription() <<sep <<load_decoder_file.getValue() <<endl;
@@ -446,8 +450,9 @@ int main(int argc, char** argv)
 		
 	}
 	*/
+	//Even sentences are input
 	if (arg_run_lm == 0) {
-		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens,1,0);
+		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens, 1, 0, myParam.reverse_input);
 		if (myParam.input_words_file == "") {
 		   	input_vocab.insert_word("<s>");
 			createVocabulary(word_training_input_sent, input_vocab);
@@ -461,7 +466,7 @@ int main(int argc, char** argv)
 	}
 	
 	//Reading output 
-	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1);
+	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1, 0); //We do not reverse the input
 	
 	//If load input model and load output model have been specified
 	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
@@ -518,7 +523,8 @@ int main(int argc, char** argv)
 						word_validation_input_sent, 
 						total_validation_input_tokens,
 						1,
-						0);
+						0,
+						myParam.reverse_input);
 			//integerizing the validation data
 			integerize(word_validation_input_sent, 
 							validation_input_sent, 
@@ -529,7 +535,8 @@ int main(int argc, char** argv)
 					word_validation_output_sent, 
 					total_validation_output_tokens,
 					1,
-					1);
+					1,
+					0);
 
 		integerize(word_validation_output_sent, 
 						validation_output_sent, 

@@ -101,6 +101,7 @@ int main(int argc, char** argv)
 	bool generate_hidden_states = 0;
 	bool do_beam_search;
 	int arg_beam_size = 0;
+	bool arg_reverse_input;
 	
     try {
       // program options //
@@ -153,6 +154,9 @@ int main(int argc, char** argv)
 		  or probability of sentence if run as a language model. Default: 0 = no. \n", false, 0, "bool", cmd);	  	  	  
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  ValueArg<bool> reverse_input("", "reverse", "Reverse the input sentence before decoding. \n \
+		  			It should be set to the same value as used during training. \n \
+		  			1 = yes. Default: 0 (No reversing).", false, 0, "bool", cmd);  
 	  ValueArg<string> hidden_states_file("", "hidden_states_file", "Dump the hidden states in this file. Will currently only \
 		  generate the forced decode trace. That is, it needs both input and output pairs. Default: empty", false, "", "string", cmd);	  
       cmd.parse(argc, argv);
@@ -177,6 +181,7 @@ int main(int argc, char** argv)
 	  arg_hidden_states_file = hidden_states_file.getValue();
 	  arg_beam_size = beam_size.getValue();
 	  do_beam_search = (arg_beam_size > 0);
+	  arg_reverse_input = reverse_input.getValue();
 	  
 	  /*
 	  if (arg_greedy == 0 && arg_stochastic == 0 && arg_score == 0){
@@ -268,8 +273,10 @@ int main(int argc, char** argv)
 	  cerr << stochastic.getDescription()<< sep << stochastic.getValue() << endl;
 	  cerr << score.getDescription()<< sep << score.getValue() << endl;
 	  cerr << run_lm.getDescription()<< sep << run_lm.getValue() << endl;
+	  cerr << reverse_input.getDescription()<< sep << reverse_input.getValue() << endl;
 	  cerr << hidden_states_file.getDescription() << sep << hidden_states_file.getValue() << endl;
 	  cerr << beam_size.getDescription() << sep << beam_size.getValue() <<endl;
+	  
       //if (myParam.validation_file != "") {
 	  //   cerr << validation_minibatch_size.getDescription() << sep << validation_minibatch_size.getValue() << endl;
      // }
@@ -334,10 +341,10 @@ int main(int argc, char** argv)
 	//data_size
 	//readSentFile(myParam.input_sent_file, testing_input_sent,myParam.minibatch_size, total_input_tokens);
 	if (arg_run_lm == 0) { //If you're running in LM mode, you do not need to read in the input
-		readEvenSentFile(myParam.testing_sent_file, word_testing_input_sent, total_input_tokens,1,0);
+		readEvenSentFile(myParam.testing_sent_file, word_testing_input_sent, total_input_tokens,1,0, arg_reverse_input);
 	}
 	if (arg_score || generate_hidden_states) {
-		readOddSentFile(myParam.testing_sent_file, word_testing_output_sent, total_output_tokens,1,1);	
+		readOddSentFile(myParam.testing_sent_file, word_testing_output_sent, total_output_tokens,1,1,0);	
 	}
 	//readSentFile(myParam.output_sent_file, testing_output_sent,myParam.minibatch_size, total_output_tokens);
     //readSentFile(myParam.testing_sequence_cont_file, testing_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
