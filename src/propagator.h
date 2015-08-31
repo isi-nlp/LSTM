@@ -545,16 +545,19 @@ namespace nplm
 									scores.leftCols(1));
 		        SoftmaxLogLoss().computeProbs(scores.leftCols(1), 
 		                   predicted_output.row(0), 
-		                   probs);										
-				getKBest(probs.leftCols(1), initial_k_best_list, k);
+		                   probs);					
+				vector<k_best_seq_item> k_best_seq_list;		   					
+				getKBest(probs.leftCols(1), initial_k_best_list, k_best_seq_list, k);
 				//cerr<<"probs.leftCols(1) "<<probs.leftCols(1)<<endl;
 				//Now populate the k-best sequences with the initial k best list
-				vector<k_best_seq_item> k_best_seq_list;
+
 				assert(initial_k_best_list.size() == k);
 				for (int i=0; i<k; i++)	{
 					k_best_seq_item seq_item;
 					seq_item.seq.push_back(initial_k_best_list.at(i).row); //Row indicates the word index in the probability matrix
+					//cerr<<"initial_k_best_list.at(i).row "<<initial_k_best_list.at(i).row<<endl;
 					seq_item.value = initial_k_best_list.at(i).value;
+					//cerr<<"seq_item.value "<<seq_item.value<<endl;					
 					k_best_seq_list.push_back(seq_item);
 				}
 				//vector<k_best_seq_item> final_k_best_seq_list;
@@ -584,6 +587,11 @@ namespace nplm
 					//cerr<<"i is "<<i<<endl;
 					//cerr<<"predicted output is "<<predicted_output.row(i);
 					//Copying the decoder hidden states according to the k best copy indices
+					/*
+					for (int copy_index=0; copy_index<k_best_state_copy_indices.size();copy_index++){
+						cerr<<"k_best_state_copy_indices.at(copy_index)" <<k_best_state_copy_indices.at(copy_index)<<endl;
+					}
+					*/
 					decoder_lstm_nodes[i].copyKBestHiddenStates(decoder_lstm_nodes[i-1].h_t,
 										  decoder_lstm_nodes[i-1].c_t,
 										  decoder_lstm_nodes[i].h_t_minus_one,
@@ -611,27 +619,44 @@ namespace nplm
 			                   probs);	
 					//cerr<<"probs is "<<probs<<endl;
 					vector<beam_item> k_best_list;
-					getKBest(probs.leftCols(k), k_best_list, 2*k);  //Extracting 2k best items because we could have k
+					getKBest(probs.leftCols(k), k_best_list, k_best_seq_list, 2*k);  //Extracting 2k best items because we could have k
 																	//items with end symbols
 					//Now that we have the k-best list, we add to the k_best_seq_list and remove 
 					//the previous items.
+					//cerr<<"probs.leftCols(k) "<<probs.leftCols(k)<<endl;
 					int new_k = 0;
 					k_best_state_copy_indices.clear();
 					//cerr<<"K best seq list size is "<<k_best_seq_list.size()<<endl;
 					for (int item_index=0; new_k<k; item_index++){
+						//cerr<<"item_index"<<item_index<<endl;
+						//cerr<<"k_best_list.at(item_index).value "<<k_best_list.at(item_index).value<<endl;
 						k_best_seq_item seq_item;
 						int prev_k_best_seq_item_index = k_best_list.at(item_index).col;
 						int word_index = k_best_list.at(item_index).row;
+						/*
 						//cerr<<"Word index in k_best_item "<<item_index<<" is "<<word_index<<endl;
+						//cerr<<"prev_k_best_seq_item_index "<<prev_k_best_seq_item_index<<endl;
+						//cerr<<"k_best_seq_list.at(prev_k_best_seq_item_index).value "<<
+						//		k_best_seq_list.at(prev_k_best_seq_item_index).value<<endl;
 						seq_item.seq = k_best_seq_list.at(prev_k_best_seq_item_index).seq;
+						*/
 						seq_item.seq.push_back(word_index);
-						seq_item.value = k_best_seq_list.at(prev_k_best_seq_item_index).value +
-										k_best_list.at(item_index).value;
+						//seq_item.value = k_best_seq_list.at(prev_k_best_seq_item_index).value +
+						//				k_best_list.at(item_index).value;
+						seq_item.value = k_best_list.at(item_index).value;
+						/*
+						for (int seq_item_index=0; seq_item_index<seq_item.seq.size(); seq_item_index++){
+							cerr<<"seq_item.seq["<<seq_item_index<<"] "<<seq_item.seq.at(seq_item_index)<<endl;
+						}
+						cerr<<"seq_item.value "<<seq_item.value<<endl;
+						getchar();
+						*/
 						if (word_index != output_end_symbol){
 							k_best_seq_list.push_back(seq_item);
 							//The hidden state to be transmitted to the next LSTM block is 
 							//the one with the index of the previous k_best seq item 
 							k_best_state_copy_indices.push_back(prev_k_best_seq_item_index);
+							
 							//cerr<<"predicted output rows "<<predicted_output.rows()<<" predicted_output cols: "<<predicted_output.cols()<<endl;
 							//cerr<<"i is "<<i<<endl;
 							//cerr<<"new k is "<<new_k<<endl;
@@ -640,6 +665,16 @@ namespace nplm
 							new_k++;
 						} else {
 							final_k_best_seq_list.push_back(seq_item);
+							/*
+							cerr<<"just inserted "<<endl;
+							for (int seq_item_index=0; 
+								seq_item_index<final_k_best_seq_list.at(final_k_best_seq_list.size()-1).seq.size(); 
+									seq_item_index++){
+								cerr<<"seq_item.seq["<<seq_item_index<<"] "<<
+									final_k_best_seq_list.at(final_k_best_seq_list.size()-1).seq.at(seq_item_index)<<endl;
+							}		
+							getchar();	
+							*/				
 							//Should I make the k-best list smaller now ? Not sure. 
 							//new_k--;
 						}
@@ -1144,7 +1179,53 @@ namespace nplm
 			}
 
 	  }	  
-	  
+
+	  template <typename DerivedOut>
+	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
+	  					precision_type &log_likelihood,
+						vector<precision_type> &sentence_probabilities) 
+	  {	
+			
+			//cerr<<"In computeProbs..."<<endl;
+			int current_minibatch_size = output.cols();
+
+			Matrix<precision_type,Dynamic,Dynamic> dummy_zero;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
+
+			int sent_len = output.rows(); 
+			//precision_type log_likelihood = 0.;
+			//first initializing the sentence log probabilities to 0
+			sentence_probabilities = vector<precision_type> (current_minibatch_size,0.);
+			for (int i=sent_len-1; i>=1; i--) {
+				//cerr<<"i is "<<i<<endl;
+				//First doing fProp for the output layer
+				output_layer_node.param->fProp(decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size), scores);
+				//then compute the log loss of the objective
+				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+				//cerr<<"Score is"<<endl;
+				//cerr<<scores<<endl;
+
+		        precision_type minibatch_log_likelihood;
+		        start_timer(5);
+		        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+		                   output.row(i), 
+		                   probs, 
+		                   minibatch_log_likelihood);
+				//Now adding the sentence probabilities
+				#pragma omp parallel for 
+				for (int sent_index=0; sent_index<current_minibatch_size; sent_index++){
+					int output_word_index = output(i,sent_index);
+					//If the output word is not -1, then add to sentence log probability
+					sentence_probabilities[sent_index] += (output_word_index >= 0) ? probs(output_word_index,sent_index) : 0.;
+				}
+				//cerr<<"probs is "<<probs<<endl;
+		        stop_timer(5);
+		        log_likelihood += minibatch_log_likelihood;		
+			}
+
+	  }		  
 	  //void LogProbs
 
   	void resetGradient(){

@@ -147,13 +147,16 @@ struct comparator {
 //typedef long long int data_size_t; // training data can easily exceed 2G instances
 
 template<typename DerivedValue> 
-void getKBest(const Eigen::MatrixBase<DerivedValue> &values, std::vector<beam_item>& k_best_list, const int k){
+void getKBest(const Eigen::MatrixBase<DerivedValue> &values, 
+				std::vector<beam_item>& k_best_list, 
+				std::vector<k_best_seq_item>& k_best_seq_list,
+				const int k){
 	//UNCONST(DerivedIndex, const_indices, indices);
 	//vector<
 	//std::cerr<<"Values is "<<values<<std::endl;
 	int rows = values.rows();
 	int cols = values.cols();
-	
+	//getchar();
 	//create k elements in the priority queue, 
 	//vector<beam_item> k_best_list;
 	for (int i=0; i<k; i++) {
@@ -162,6 +165,11 @@ void getKBest(const Eigen::MatrixBase<DerivedValue> &values, std::vector<beam_it
 		item.row = i%rows;
 		item.col = i/rows;
 		item.value = values(item.row, item.col);
+		if (k_best_seq_list.size() > 0) {
+			//We have to add the probability of the previous subsequence as well
+			item.value = values(item.row, item.col) + k_best_seq_list.at(item.col).value;
+		}
+		//std::cerr<<"inserting values("<<item.row<<","<<item.col<<") "<<values(item.row,item.col)<<std::endl;
 		k_best_list.push_back(item);
 		//std::cerr<<" row is "<<item.row<<" col is "<<item.col<<std::endl;
 		//std::cerr<<"Value while creating the beam is "<<item.value<<std::endl;
@@ -173,6 +181,11 @@ void getKBest(const Eigen::MatrixBase<DerivedValue> &values, std::vector<beam_it
 		item.row = i%rows;
 		item.col = i/rows;
 		item.value = values(item.row,item.col);
+		if (k_best_seq_list.size() > 0) {
+			//We have to add the probability of the previous subsequence as well
+			item.value = values(item.row, item.col) + k_best_seq_list.at(item.col).value;
+		}		
+		//td::cerr<<"inserting values("<<item.row<<","<<item.col<<") "<<values(item.row,item.col)<<std::endl;
 		k_best_list.push_back(item);
 		std::pop_heap(k_best_list.begin(), k_best_list.end(), comparator<beam_item>());
 		k_best_list.pop_back();

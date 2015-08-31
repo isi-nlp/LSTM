@@ -760,13 +760,8 @@ public:
 				
 						UNCONST(DerivedC, const_to_c_matrix, to_c_matrix);
 						UNCONST(DerivedH, const_to_h_matrix, to_h_matrix);
-						/*
-						cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;	
-						cerr<<"from_h_matrix "<<from_h_matrix<<endl;
-						cerr<<"from_c_matrix "<<from_c_matrix<<endl;
-						cerr<<"to_h_matrix "<<to_h_matrix<<endl;
-						cerr<<"to_c_matrix "<<to_c_matrix<<endl;			
-						*/					
+		
+										
 						//int current_minibatch_size = h_t_minus_one.cols();	
 						//#pragma omp parallel for 
 						for (int index=0; index<current_minibatch_size; index++){ 
@@ -777,8 +772,13 @@ public:
 								to_c_matrix.col(index) = from_c_matrix.col(from_indices.at(index));
 
 						}	
-
-		
+						/*
+						cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;	
+						cerr<<"from_h_matrix "<<from_h_matrix<<endl;
+						cerr<<"from_c_matrix "<<from_c_matrix<<endl;
+						cerr<<"to_h_matrix "<<to_h_matrix<<endl;
+						cerr<<"to_c_matrix "<<to_c_matrix<<endl;	
+						*/
 	}
 			
 	//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid

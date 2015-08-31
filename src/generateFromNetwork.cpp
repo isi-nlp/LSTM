@@ -216,6 +216,7 @@ int main(int argc, char** argv)
 		  cerr<<"You have to specify a predicted sequence file!"<<endl;
 		  exit(1);
 	  }
+
 	  //myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
 	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
 	  /*
@@ -287,7 +288,7 @@ int main(int argc, char** argv)
       cerr << "error: " << e.error() <<  " for arg " << e.argId() << endl;
       exit(1);
     }
-
+	vector<precision_type> sentence_probabilities; 
     myParam.num_threads = setup_threads(myParam.num_threads);
     int save_threads;
 
@@ -462,7 +463,7 @@ int main(int argc, char** argv)
 
 	//string temp_encoder_file = "temp.encoder";
 	//string temp_decoder_file = "temp.decoder";
-    cerr<<"Number of testing minibatches: "<<num_batches<<endl;
+    //cerr<<"Number of testing minibatches: "<<num_batches<<endl;
 	
 	/*
     int num_validation_batches = 0;
@@ -548,6 +549,7 @@ int main(int argc, char** argv)
 		//}
 		hidden_states_file.open(arg_hidden_states_file.c_str(),std::ofstream::out )	;
 	} 
+	
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
 		
@@ -822,9 +824,18 @@ int main(int argc, char** argv)
 						}
 					}							
 			}
-			if (arg_score == 1) {								 
+			if (arg_score == 1) {				
+				//sentence_probabilities.clear();
+				sentence_probabilities = vector<precision_type> (current_minibatch_size,0.);
+		 		//prop.computeProbsLog(testing_output_sent_data,
+		 		// 			  	minibatch_log_likelihood);
 		 		prop.computeProbsLog(testing_output_sent_data,
-		 		 			  	minibatch_log_likelihood);
+		 		 			  	minibatch_log_likelihood,
+								sentence_probabilities);	
+				cerr<<endl;
+				for (int sent_id=0; sent_id<current_minibatch_size; sent_id++){
+					cerr<<"Sequence "<<minibatch_start_index+sent_id<<" probability: "<<exp(sentence_probabilities[sent_id])<<endl;
+				}			
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;				
 			}
