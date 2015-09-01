@@ -187,16 +187,7 @@ namespace nplm
 				const MatrixBase<DerivedH> &const_current_h,
 				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
 	    {
-			//UNCONST(DerivedC, const_current_c, current_c);
-			//UNCONST(DerivedH, const_current_h, current_h);
-			//cerr<<"current_c in fPropDecoder is "<<const_current_c<<endl;
-			//cerr<<"current_h is fPropDecoder is "<<const_current_h<<endl;
-			/*
-			cerr<<"Data is "<<data<<endl;
-			cerr<<"Start pos "<<start_pos<<endl;
-			cerr<<"End pos "<<end_pos<<endl;
-			cerr<<"In Fprop"<<endl;
-			*/
+
 			//The data is just an eigen matrix. Now I have to go over each column and do fProp
 			//int sent_len = input_data.rows();
 			int output_sent_len = output_data.rows();
@@ -633,13 +624,13 @@ namespace nplm
 						k_best_seq_item seq_item;
 						int prev_k_best_seq_item_index = k_best_list.at(item_index).col;
 						int word_index = k_best_list.at(item_index).row;
-						/*
+						
 						//cerr<<"Word index in k_best_item "<<item_index<<" is "<<word_index<<endl;
 						//cerr<<"prev_k_best_seq_item_index "<<prev_k_best_seq_item_index<<endl;
 						//cerr<<"k_best_seq_list.at(prev_k_best_seq_item_index).value "<<
 						//		k_best_seq_list.at(prev_k_best_seq_item_index).value<<endl;
 						seq_item.seq = k_best_seq_list.at(prev_k_best_seq_item_index).seq;
-						*/
+						
 						seq_item.seq.push_back(word_index);
 						//seq_item.value = k_best_seq_list.at(prev_k_best_seq_item_index).value +
 						//				k_best_list.at(item_index).value;

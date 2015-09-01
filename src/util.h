@@ -91,6 +91,16 @@ void integerize(std::vector<std::vector<std::string> > &word_sentences,
 				std::vector<std::vector<int> > &int_sentences, 
 				vocabulary &vocab);
 
+void integerize(std::vector<std::vector<std::string> > &word_sentences, 
+				std::vector<std::vector<int> > &int_sentences, 
+				vocabulary &vocab,
+				int start_index,
+				int end_offset);
+
+void buildDecoderVocab(std::vector<std::vector<std::string> > word_training_output_sent, 
+						vocabulary &vocab,
+						int start_index,
+						int output_offset);
 //for creating memory								
 template<typename dType>
 void allocate_Matrix_CPU(dType **h_matrix,int rows,int cols) {
@@ -197,7 +207,6 @@ void getKBest(const Eigen::MatrixBase<DerivedValue> &values,
 
 ///FUNCTIONS FOR GETTING K-BEST ITEMS END HERE
 
-
 //Populates the sentences into a vector of vectors.
 template <typename T>
 void readSentFile(const std::string &file, 
@@ -232,7 +241,7 @@ void readSentFile(const std::string &file,
 			}
 		}
 	    sentences.push_back(words);
-		tokens += words.size();
+		tokens += words.size()-1;
 	  }
 	  
 	  TRAININ.close();
@@ -285,7 +294,7 @@ void readOddSentFile(const std::string &file,
 			}
 
 		    sentences.push_back(words);
-			tokens += words.size();
+			tokens += words.size()-1;
 		}
 		counter++;
 	  }

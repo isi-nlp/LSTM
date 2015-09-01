@@ -379,11 +379,13 @@ int main(int argc, char** argv)
     vector<int> training_data_flat;
 	vector< vector<int> > training_input_sent, validation_input_sent, training_sequence_cont_sent;
 	vector< vector<int> > training_output_sent, validation_output_sent, validation_sequence_cont_sent;
+	vector< vector<int> > decoder_input_sent, decoder_output_sent;
 	vector< vector<string> > word_training_input_sent, word_validation_input_sent;
 	vector< vector<string> > word_training_output_sent, word_validation_output_sent;
 
     // Construct vocabulary
     vocabulary input_vocab, output_vocab;
+	vocabulary decoder_input_vocab, decoder_output_vocab;
     int start, stop;
 	
 
@@ -454,7 +456,7 @@ int main(int argc, char** argv)
 	if (arg_run_lm == 0) {
 		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens, 1, 0, myParam.reverse_input);
 		if (myParam.input_words_file == "") {
-		   	input_vocab.insert_word("<s>");
+		   	//input_vocab.insert_word("<s>");
 			createVocabulary(word_training_input_sent, input_vocab);
 			myParam.input_vocab_size = input_vocab.size();
 		}
@@ -466,13 +468,21 @@ int main(int argc, char** argv)
 	}
 	
 	//Reading output 
-	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1, 0); //We do not reverse the input
-	
+	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1, 0); //We do not reverse the output
+	buildDecoderVocab(word_training_output_sent, 
+							decoder_input_vocab,
+							0,
+							1);
+	buildDecoderVocab(word_training_output_sent, 
+							decoder_output_vocab,
+							1,
+							0);							
+							
 	//If load input model and load output model have been specified
 	//After reading the sentence file, create the input and output vocabulary if it hasn't already been specified
 	if (myParam.output_words_file == ""){
-		output_vocab.insert_word("<s>");
-		output_vocab.insert_word("</s>");
+		//output_vocab.insert_word("<s>");
+		//output_vocab.insert_word("</s>");
 		createVocabulary(word_training_output_sent, output_vocab);	
 		myParam.output_vocab_size = output_vocab.size();
 	}
@@ -480,7 +490,8 @@ int main(int argc, char** argv)
 
 	integerize(word_training_output_sent, 
 					training_output_sent, 
-					output_vocab);		
+					output_vocab);
+							
 								
     //readSentFile(myParam.training_sequence_cont_file, training_sequence_cont_sent, myParam.minibatch_size, total_training_sequence_tokens);
 	
@@ -580,6 +591,7 @@ int main(int argc, char** argv)
 	
 	
     vector<data_size_t> unigram_counts(myParam.output_vocab_size);
+	/*
     for (data_size_t train_id=0; train_id < training_output_sent.size(); train_id++)
     {
 		for (int j=0; j<training_output_sent[train_id].size(); j++) {
@@ -587,8 +599,8 @@ int main(int argc, char** argv)
 			unigram_counts[output_word] += 1;
 		}
     }
-	
-	
+	*/
+	//vector<data_size_t> unigram_counts(myParam.output_words.size())
 	/*
 	for (int i=0; i<unigram_counts.size(); i++)
 		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
