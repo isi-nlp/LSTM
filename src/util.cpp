@@ -203,6 +203,18 @@ void readSentFile(const string &filename,
   DATAIN.close();
 }
 
+//Builds both decoder input and output vocabulary
+void buildDecoderVocab(std::vector<std::vector<std::string> > word_training_output_sent, 
+						vocabulary &vocab,
+						int start_index,
+						int output_offset){
+	for (int sent_id=0; sent_id<word_training_output_sent.size(); sent_id++){
+		for (int word_id=start_index; word_id<word_training_output_sent.size()-output_offset; word_id++){
+			vocab.insert_word(word_training_output_sent.at(sent_id).at(word_id));
+		}
+	}
+}
+
 void miniBatchify(const std::vector<std::vector <int> > &sentences, 
 				 std::vector<int > &minibatch_sentences,
 				const int minibatch_start_index,
@@ -322,6 +334,23 @@ void integerize(vector<vector<string> > &word_sentences,
 		int_sentences.push_back(int_sent);
 	}
 }
+
+void integerize(vector<vector<string> > &word_sentences, 
+				vector<vector<int> > &int_sentences, 
+				vocabulary &vocab,
+				int start_index,
+				int end_offset){
+	//Go over all the string sentences and then integerize them.
+	for (int sent_id=0; sent_id<word_sentences.size(); sent_id++){
+		vector<int> int_sent;
+		for (int word_id=start_index; word_id<word_sentences[sent_id].size()-end_offset; word_id++){
+			//vocab.insert_word(word_sentences[sent_id][word_id]);
+			int_sent.push_back(vocab.lookup_word(word_sentences[sent_id][word_id]));
+		}
+		int_sentences.push_back(int_sent);
+	}
+}
+
 // The same function will be used to create the sentence continuation vectors for the decoder
 // and the minibatch . The sentence continuation vectors contain only 0 or 1. The 
 // data_or_sentence_vector flag indicate if its data or sentence continuation. data_or_sentence_vector = 1
