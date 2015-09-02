@@ -422,11 +422,11 @@ int main(int argc, char** argv)
 	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
 	
 	if (arg_beam_size > decoder_vocab.size()) {
-		cerr<<"Warning: The beam size cannot be larger than the output vocabulary."<<endl;
+		cerr<<"Warning: The beam size is larger than the output vocabulary."<<endl;
 		cerr<<"User specified beam size: "<<arg_beam_size<<endl;
 		cerr<<"Output vocabulary size: "<<decoder_vocab.size()<<endl;
-		arg_beam_size  = decoder_vocab.size();
-		cerr<<"New beam size :"<<arg_beam_size<<endl;
+		//arg_beam_size  = decoder_vocab.size();
+		//cerr<<"New beam size :"<<arg_beam_size<<endl;
 	}
 
 	decoder_input.read(myParam.decoder_model_file);
@@ -760,8 +760,16 @@ int main(int argc, char** argv)
 					file << encoder_vocab.get_word(testing_input_sent_data(word_index,0))<<" ";
 				}
 				file<<endl;
-				
-				for (int sent_id=0; sent_id<arg_beam_size; sent_id++){
+				//PRINT if the FINAL K BEST LIST SIZE WAS LESS THAN K!!
+				//if (final_k_best_seq_list.size() < arg_beam_size) {
+
+				//}
+
+				//for (int sent_id=0; sent_id<arg_beam_size && ; sent_id++){
+				for (int sent_id=0; sent_id<final_k_best_seq_list.size() && sent_id < arg_beam_size ; sent_id++){	
+					if (final_k_best_seq_list.size() < arg_beam_size) {
+						cerr<<"The n-best list for sentence "<<sent_id<<" has "<<final_k_best_seq_list.size()<<" items"<<endl;
+					}
 					file<<"Hyp"<<sent_id<<"\t\t:";
 					for(int word_id=0; word_id<final_k_best_seq_list.at(sent_id).seq.size(); word_id++){
 						if (final_k_best_seq_list.at(sent_id).seq.at(word_id) == arg_output_end_symbol) {
@@ -771,7 +779,9 @@ int main(int argc, char** argv)
 						}	
 					}
 					file<<"Sequence probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
+					//file<<endl;
 				}
+				file<<endl;
 			}
 			if (arg_score || generate_hidden_states ) {
 			    prop.fPropDecoder(testing_output_sent_data,

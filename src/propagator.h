@@ -508,6 +508,8 @@ namespace nplm
 				const int output_end_symbol,
 				const int beam_size) {
 					int k = beam_size;
+					int current_beam_size, previous_beam_size;
+					current_beam_size = previous_beam_size = k;
 					//int current_minibatch_size = input_data.cols();
 					int current_minibatch_size = 1;
 					//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
@@ -531,6 +533,8 @@ namespace nplm
 									const_current_c.leftCols(1));
 				decoder_lstm_nodes[0].fProp(predicted_output.row(0));
 				//Get the k-best items from the list first
+				//Note that if vocab size < k, then the initial k-best list will have less than
+				//k items.
 				vector<beam_item> initial_k_best_list;
 				output_layer_node.param->fProp(decoder_lstm_nodes[0].h_t.leftCols(1), 
 									scores.leftCols(1));
@@ -539,11 +543,13 @@ namespace nplm
 		                   probs);					
 				vector<k_best_seq_item> k_best_seq_list;		   					
 				getKBest(probs.leftCols(1), initial_k_best_list, k_best_seq_list, k);
+				//Initial k-best list might have less than k items.
+				current_beam_size = initial_k_best_list.size();
 				//cerr<<"probs.leftCols(1) "<<probs.leftCols(1)<<endl;
 				//Now populate the k-best sequences with the initial k best list
-
-				assert(initial_k_best_list.size() == k);
-				for (int i=0; i<k; i++)	{
+				
+				assert(initial_k_best_list.size() <= k);
+				for (int i=0; i<initial_k_best_list.size(); i++)	{
 					k_best_seq_item seq_item;
 					seq_item.seq.push_back(initial_k_best_list.at(i).row); //Row indicates the word index in the probability matrix
 					//cerr<<"initial_k_best_list.at(i).row "<<initial_k_best_list.at(i).row<<endl;
@@ -555,10 +561,10 @@ namespace nplm
 				//Now create a new predicted output from the k_best list and also transfer the hidden states
 				//For the 1st position, all the hidden states will come from the same hidden state of just seeing 
 				//<s>
-				vector<int> k_best_state_copy_indices = vector<int>(k,0);
+				vector<int> k_best_state_copy_indices = vector<int>(initial_k_best_list.size(),0);
 				//Resizing predicted output to now contain 12 items in the k-best list
 				predicted_output.resize(101,k); // I can produce at most 100 output symbols
-				for (int i=0; i<k;  i++){
+				for (int i=0; i<initial_k_best_list.size();  i++){
 					predicted_output(1,i) = initial_k_best_list.at(i).row;
 					//cerr<<"predicted_output(1,i) "<<predicted_output(1,i)<<endl;
 				}
@@ -572,6 +578,7 @@ namespace nplm
 				*/
 
 				for (int i=1; i<100 ; i++){
+					//previous_beam_size = current_beam_size;
 					//cerr<<"Predicted output is "<<predicted_output.row(i)<<endl;
 					//current_minibatch_size = current_words.size();
 					//predicted_output = Map< Matrix<int,Dynamic,Dynamic> >(current_words.data(), 1, current_minibatch_size);
@@ -596,8 +603,9 @@ namespace nplm
 
 					//cerr<<"ht is   "<<decoder_lstm_nodes[i].h_t<<endl;
 					//cerr<<"ht -1 is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(k), 
-										scores.leftCols(k));
+					//cerr<<"Current beam size is "<<current_beam_size<<endl;
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_beam_size), 
+										scores.leftCols(current_beam_size));
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
@@ -605,20 +613,24 @@ namespace nplm
 	
 			        //precision_type minibatch_log_likelihood;
 			        start_timer(5);
-			        SoftmaxLogLoss().computeProbs(scores.leftCols(k), 
+			        SoftmaxLogLoss().computeProbs(scores.leftCols(current_beam_size), 
 			                   predicted_output.row(i), 
 			                   probs);	
 					//cerr<<"probs is "<<probs<<endl;
 					vector<beam_item> k_best_list;
-					getKBest(probs.leftCols(k), k_best_list, k_best_seq_list, 2*k);  //Extracting 2k best items because we could have k
-																	//items with end symbols
+					//Extracting at most 2k best items because we could have k
+					//items with end symbols
 					//Now that we have the k-best list, we add to the k_best_seq_list and remove 
-					//the previous items.
+					//the previous items.					
+					getKBest(probs.leftCols(current_beam_size), k_best_list, k_best_seq_list, 2*k);
+					//cerr<<"The k best list size was "<<k_best_list.size()<<endl;
+					assert(k_best_list.size() <= 2*k);
 					//cerr<<"probs.leftCols(k) "<<probs.leftCols(k)<<endl;
 					int new_k = 0;
 					k_best_state_copy_indices.clear();
 					//cerr<<"K best seq list size is "<<k_best_seq_list.size()<<endl;
-					for (int item_index=0; new_k<k; item_index++){
+					//cerr<<"K best list size is "<<k_best_list.size()<<endl;
+					for (int item_index=0; new_k<k && item_index < k_best_list.size() ; item_index++){
 						//cerr<<"item_index"<<item_index<<endl;
 						//cerr<<"k_best_list.at(item_index).value "<<k_best_list.at(item_index).value<<endl;
 						k_best_seq_item seq_item;
@@ -671,9 +683,11 @@ namespace nplm
 						}
 					}
 					//k = new_k;
-					//The k_best_seq_list has expanded now and the initial k-items should be deleted
-					assert (k_best_seq_list.size() == 2*k);
-					k_best_seq_list.erase(k_best_seq_list.begin(), k_best_seq_list.begin()+k);
+					//The k_best_seq_list has expanded now and the previou previous_beam_size-items should be deleted
+					previous_beam_size = current_beam_size;
+					current_beam_size = new_k;
+					assert (k_best_seq_list.size() <= 2*k);
+					k_best_seq_list.erase(k_best_seq_list.begin(), k_best_seq_list.begin()+previous_beam_size);
 					//cerr<<"After erasing the k best seq list size is "<<k_best_seq_list.size()<<endl;
 					//assert(k_best_list.size() == k);
 				}

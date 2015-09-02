@@ -169,13 +169,22 @@ void getKBest(const Eigen::MatrixBase<DerivedValue> &values,
 	//getchar();
 	//create k elements in the priority queue, 
 	//vector<beam_item> k_best_list;
-	for (int i=0; i<k; i++) {
+	int size = rows*cols;
+	int current_beam_index=0;
+	//std::cerr<<"k_best_seq_list.size() "<<k_best_seq_list.size()<<std::endl;
+	//std::cerr<<"values.cols() "<<values.cols()<<" values.rows() "<<values.rows()<<std::endl;
+	for (; current_beam_index<k && current_beam_index<size; current_beam_index++) {
 		beam_item item;
-		//tem.value = *(values.derived().data()+k);
-		item.row = i%rows;
-		item.col = i/rows;
+		//item.value = *(values.derived().data()+k);
+		item.row = current_beam_index%rows;
+		item.col = current_beam_index/rows;
 		item.value = values(item.row, item.col);
-		if (k_best_seq_list.size() > 0) {
+		//std::cerr<<"item.row "<<item.row<<std::endl;
+		//std::cerr<<"item.col "<<item.col<<std::endl;
+		//std::cerr<<"item.value "<<item.value<<std::endl;
+		//If we are getting the initial k best list, then the k-best list will be empty.
+		//Else, we should get the score of the n-1 words of the sequence (prefix ?)
+		if (k_best_seq_list.size() > 0) { 
 			//We have to add the probability of the previous subsequence as well
 			item.value = values(item.row, item.col) + k_best_seq_list.at(item.col).value;
 		}
@@ -186,10 +195,10 @@ void getKBest(const Eigen::MatrixBase<DerivedValue> &values,
 	}
 	make_heap(k_best_list.begin(), k_best_list.end(), comparator<beam_item>());
 	//Now go over all the elements of the list
-	for (int i=k; i<rows*cols; i++){
+	for (; current_beam_index<size; current_beam_index++){
 		beam_item item;
-		item.row = i%rows;
-		item.col = i/rows;
+		item.row = current_beam_index%rows;
+		item.col = current_beam_index/rows;
 		item.value = values(item.row,item.col);
 		if (k_best_seq_list.size() > 0) {
 			//We have to add the probability of the previous subsequence as well
