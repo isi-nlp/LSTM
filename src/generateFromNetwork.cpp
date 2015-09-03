@@ -663,6 +663,8 @@ int main(int argc, char** argv)
 															
 			vector<Matrix<precision_type, Dynamic, Dynamic> > output_hiddens;
 			if (arg_run_lm == 0) {		
+				//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+				//cerr<<"testing_input_sent_data is "<<testing_input_sent_data<<endl;
 				prop.fPropEncoder(testing_input_sent_data,
 							0,
 							max_input_sent_len-1,

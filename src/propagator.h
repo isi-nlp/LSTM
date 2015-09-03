@@ -252,6 +252,8 @@ namespace nplm
 				const MatrixBase<DerivedH> &const_current_h,
 				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
 	    {
+			//cerr<<"input_data.rows() "<<input_data.rows()<<endl;
+			//cerr<<"input_data "<<input_data<<endl;
 			UNCONST(DerivedC, const_current_c, current_c);
 			UNCONST(DerivedH, const_current_h, current_h);
 
@@ -596,8 +598,11 @@ namespace nplm
 										  decoder_lstm_nodes[i].c_t_minus_one,
 										  k_best_state_copy_indices);	
 	  				//cerr<<"decoder_lstm_nodes[i].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
-	  				//cerr<<"decoder_lstm_nodes[i].c_t "<<decoder_lstm_nodes[i].c_t<<endl;										  			
-					decoder_lstm_nodes[i].fProp(predicted_output.row(i));//,
+	  				//cerr<<"decoder_lstm_nodes[i].c_t "<<decoder_lstm_nodes[i].c_t<<endl;	
+					//cerr<<"predicted_output.row(i) "<<cerr<<predicted_output.row(i)<<endl;
+					decoder_lstm_nodes[i].fProp(predicted_output.row(i).leftCols(current_beam_size));//,
+					//cerr<<"predicted_output.row(i)"
+					//	<<predicted_output.row(i)<<endl;
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
 
