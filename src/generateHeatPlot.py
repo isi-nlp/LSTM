@@ -10,9 +10,10 @@ import seaborn as sns
 import sys
 import fileinput
 import argparse
-parser = argparse.ArgumentParser(description='Generate visualization from Decoder trace')
+parser = argparse.ArgumentParser(description='Generate visualization from Decoder trace.\n A heatplot will be generated for the encoder and dedoder hidden and cell states. \n The plot has to be read bottom-to-top')
 if (len(sys.argv) < 2):
   parser.print_help()
+  #print 'You did not supply the required arguments!'
   sys.exit()
 
 parser.add_argument('--decoder_trace_file', metavar='file', dest='decoder_trace_file', help='Decoder trace file. Required argument')
@@ -41,6 +42,7 @@ row_labels = []
 diagram_counter = 0
 
 for line in data:
+  #print 'line is ',line
   if line.startswith("input_symbol:"):
     row_labels.append(line.split()[1])
   if line.startswith("h_t:"):
@@ -55,9 +57,11 @@ for line in data:
     np_c_t  = np.array(c_t)
     #np_c_t /= np.max(np.abs(np_c_t),axis=0)
     #print np_c_t
+    #raw_input()  
+    num_hidden = np_h_t.shape[1]
+    #print 'num hidden',num_hidden
+    #print 'row labels are ',row_labels
     #raw_input()
-    num_hidden = np_h_t.shape[0]
-    
     for i in range(num_hidden):
       h_column_labels.append('h'+str(i+1))
       c_column_labels.append('c'+str(i+1))
@@ -68,18 +72,23 @@ for line in data:
     #print 'Generated heat map for example',diagram_counter,'in',diagram_name
     fig, ax = ppl.subplots(1,2)
     fig.suptitle('Sequence pair number '+str(diagram_counter), fontsize=12)
-    ax[0].set_title("Hidden State Values")
-    sns.heatmap(h_t,ax=ax[0], 
+    #ax[0].set_title("Hidden State Values")
+    sns.heatmap(np.flipud(h_t),ax=ax[0], 
                xticklabels=h_column_labels, 
                yticklabels=row_labels,
-                annot=False)
+                #annot=False,
+                #cbar=False,
+                linewidths=0.)
     ax[0].set_yticklabels(row_labels,rotation=0)
     ax[1].set_title("Cell Values")
-    sns.heatmap(c_t,ax=ax[1],
+    sns.heatmap(np.flipud(c_t),ax=ax[1],
                xticklabels=c_column_labels, 
                yticklabels=row_labels,
-              annot=False)
+              #annot=False,
+              #cbar=True,
+              linewidths=0.)
     ax[1].set_yticklabels(row_labels,rotation=0)
+    #ppl.yticks(rotation=0)
 
     #ax[1].yticks(rotation=0) 
     #fig.yticks(rotation=0) 
