@@ -208,9 +208,13 @@ void buildDecoderVocab(std::vector<std::vector<std::string> > word_training_outp
 						vocabulary &vocab,
 						int start_index,
 						int output_offset){
+	//cerr<<"in build decoder vocab"<<endl;
 	for (int sent_id=0; sent_id<word_training_output_sent.size(); sent_id++){
-		for (int word_id=start_index; word_id<word_training_output_sent.size()-output_offset; word_id++){
+		//cerr<<"sent id is "<<sent_id<<" and sentence size is "<<word_training_output_sent.at(sent_id).size()<<endl;
+		for (int word_id=start_index; word_id<word_training_output_sent.at(sent_id).size()-output_offset; word_id++){
 			vocab.insert_word(word_training_output_sent.at(sent_id).at(word_id));
+			//cerr<<"The original word is "<<word_training_output_sent.at(sent_id).at(word_id)<<" and the id is "<<
+			//	vocab.lookup_word(word_training_output_sent.at(sent_id).at(word_id))<<endl;			
 		}
 	}
 }
@@ -345,7 +349,9 @@ void integerize(vector<vector<string> > &word_sentences,
 		vector<int> int_sent;
 		for (int word_id=start_index; word_id<word_sentences[sent_id].size()-end_offset; word_id++){
 			//vocab.insert_word(word_sentences[sent_id][word_id]);
-			int_sent.push_back(vocab.lookup_word(word_sentences[sent_id][word_id]));
+			int_sent.push_back(vocab.lookup_word(word_sentences.at(sent_id).at(word_id)));
+			//cerr<<"The original word is "<<word_sentences.at(sent_id).at(word_id)<<" and the id is "<<
+			//	vocab.lookup_word(word_sentences.at(sent_id).at(word_id))<<endl;
 		}
 		int_sentences.push_back(int_sent);
 	}
@@ -395,7 +401,58 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 		//Now padding the rest with -1
 		for (;sent_index<max_sent_len; sent_index++){
 			//If its the output sentence, then set the output label to -1
-			minibatch_sentences.push_back(0);
+			minibatch_sentences.push_back((data_or_sentence_vector)? -1:0);
+		}
+	}
+}
+
+
+// The same function will be used to create the sentence continuation vectors for the decoder
+// and the minibatch . The sentence continuation vectors contain only 0 or 1. The 
+// data_or_sentence_vector flag indicate if its data or sentence continuation. data_or_sentence_vector = 1
+// indicates it's data
+void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				unsigned int &minibatch_tokens,
+				bool data_or_sentence_vector,
+				int pad_value){
+	//cerr<<"minibatch start index is "<<minibatch_start_index<<endl;
+	//cerr<<"minibatch end index is "<<minibatch_end_index<<endl;
+	//First go over all the sentences and get the longest sentence
+	max_sent_len = 0;
+	//cerr<<"max sent len boefore is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//cerr<<"sent len "<<sentences[index].size()<<endl;
+		//cerr<<"max sent len in loop is "<<max_sent_len<<endl;
+		//cerr<<max_sent_len < sentences[index].size()<<endl;
+		if (max_sent_len < sentences[index].size()) {
+			//cerr<<"Ths is true"<<endl;
+			max_sent_len = sentences[index].size();
+			//cerr<<"max_sent_len is now"<<max_sent_len<<endl;
+		}
+	}
+	//Now createing the vector of vectors which is the minibatch size
+	//Note that I could do this already with the training data. 
+	//for ()
+	//cerr<<"max sent len is "<<max_sent_len<<endl;
+	for (int index=minibatch_start_index; index<= minibatch_end_index; index++){
+		//vector<int> extended_sent(max_sent_len,-1);
+		int sent_index=0;
+		for (;sent_index<sentences[index].size(); sent_index++){
+			//minibatch_sentences.push_back(sentences[index][sent_index]);
+			minibatch_sentences.push_back(
+				(data_or_sentence_vector) ? 
+						sentences[index][sent_index] :
+						1);
+			minibatch_tokens++;
+		}
+		//Now padding the rest with -1
+		for (;sent_index<max_sent_len; sent_index++){
+			//If its the output sentence, then set the output label to -1
+			minibatch_sentences.push_back((data_or_sentence_vector)? pad_value:0);
 		}
 	}
 }

@@ -114,25 +114,7 @@ int main(int argc, char** argv)
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 100, "int", cmd);
 
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
-      //ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 100. All gates, cells, hidden layers, \n \
-		  							input and output embedding dimension are set to this value", false, 100, "int", cmd);
-
-      //ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      //ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      //ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
-
-      //ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-	  //ValueArg<int> output_start_symbol("", "output_start_symbol", "The integer id of the output start symbol. Default: 0.", false, 0, "int", cmd);
-	  //ValueArg<int> output_end_symbol("", "output_end_symbol", "The integer id of the output end symbol Default: 1.", false, 1, "int", cmd);
-      //ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      //ValueArg<int> output_vocab_size("", "output_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
-      //ValueArg<int> ngram_size("", "ngram_size", "Size of n-grams. Default: auto.", false, 0, "int", cmd);
-
-
-      //ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
-      //ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
-	  //ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , false, "", "string", cmd);
-	  //ValueArg<string> output_sent_file("", "output_sent_file", "Input sentences file." , false, "", "string", cmd);
+ 
 	  ValueArg<string> testing_sent_file("", "testing_sent_file", "Input sentences file." , true, "", "string", cmd);
 	  //ValueArg<string> testing_sequence_cont_file("", "testing_sequence_cont_file", "Testing sequence continuation file" , false, "", "string", cmd);
 
@@ -182,23 +164,7 @@ int main(int argc, char** argv)
 	  arg_beam_size = beam_size.getValue();
 	  do_beam_search = (arg_beam_size > 0);
 	  arg_reverse_input = reverse_input.getValue();
-	  
-	  /*
-	  if (arg_greedy == 0 && arg_stochastic == 0 && arg_score == 0){
-		  cerr<<"You have to choose either stocastic or greedy generation or to score"<<endl;
-		  exit(0);
-	  }
-	  if (arg_greedy == 1 && arg_stochastic == 1){
-	  	cerr<<"You have to choose either stocastic or greedy generation, not both"<<endl;
-		exit(1);
-	  }
-	  if (arg_greedy == 1){
-		  arg_stochastic = 0;
-	  }
-	  if (arg_stochastic == 1){
-		  arg_greedy = 0;
-	  }
-	  */
+
 	  
 	  if (arg_hidden_states_file != "")
 		  generate_hidden_states = 1;
@@ -217,32 +183,10 @@ int main(int argc, char** argv)
 		  exit(1);
 	  }
 
-	  //myParam.testing_sequence_cont_file = testing_sequence_cont_file.getValue();
-	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
-	  /*
-      if (words_file.getValue() != "")
-	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
-	  */
-      //myParam.model_prefix = model_prefix.getValue();
 
-      //myParam.ngram_size = ngram_size.getValue();
-      //myParam.vocab_size = vocab_size.getValue();
-      //myParam.input_vocab_size = input_vocab_size.getValue();
-      //myParam.output_vocab_size = output_vocab_size.getValue();
 	  myParam.num_threads = num_threads.getValue();
 	  
-	  /*
-      if (vocab_size.getValue() >= 0) {
-	      myParam.input_vocab_size = myParam.output_vocab_size = vocab_size.getValue();
-      }
-      myParam.num_hidden = num_hidden.getValue();
 
-      myParam.input_embedding_dimension = input_embedding_dimension.getValue();
-      myParam.output_embedding_dimension = output_embedding_dimension.getValue();
-      if (embedding_dimension.getValue() >= 0) {
-	      myParam.input_embedding_dimension = myParam.output_embedding_dimension = embedding_dimension.getValue();
-      }
-	  */
 	  
       myParam.minibatch_size = minibatch_size.getValue();
 	  if (do_beam_search) {
@@ -304,6 +248,7 @@ int main(int argc, char** argv)
     vector<int> training_data_flat;
 	vector< vector<int> > testing_input_sent, testing_sequence_cont_sent;
 	vector< vector<int> > testing_output_sent , validation_sequence_cont_sent;
+	vector< vector<int> > decoder_testing_output_sent, decoder_testing_input_sent;
 	
 	vector< vector<string> > word_testing_input_sent, word_testing_output_sent;
     vec * training_data_flat_mmap;
@@ -367,6 +312,7 @@ int main(int argc, char** argv)
 	
     //Matrix<int,Dynamic,Dynamic> testing_data;
 	Matrix<int,Dynamic,Dynamic> testing_input_sent_data, testing_output_sent_data;
+	Matrix<int,Dynamic,Dynamic> decoder_testing_output_sent_data, decoder_testing_input_sent_data;
 	//Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
 	//Array<int,Dynamic,Dynamic> testing_sequence_cont_sent_data;
 	Array<int,Dynamic,Dynamic> testing_input_sequence_cont_sent_data;
@@ -403,7 +349,7 @@ int main(int argc, char** argv)
 	
     model encoder_nn,decoder_nn;
 	google_input_model encoder_input, decoder_input;
-	vocabulary encoder_vocab, decoder_vocab;
+	vocabulary encoder_vocab, decoder_vocab, decoder_input_vocab, decoder_output_vocab;
 	//if (arg_run_lm == 0) {
 		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
 		encoder_input.read(myParam.encoder_model_file);
@@ -413,10 +359,11 @@ int main(int argc, char** argv)
 	
 	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
 	//vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
-	decoder_vocab.build_vocab(decoder_output_words);
+	decoder_input_vocab.build_vocab(decoder_input_words);
+	decoder_output_vocab.build_vocab(decoder_output_words);
 	
-	arg_output_start_symbol = decoder_vocab.lookup_word("<s>");
-	arg_output_end_symbol = decoder_vocab.lookup_word("</s>");
+	arg_output_start_symbol = decoder_input_vocab.lookup_word("<s>");
+	arg_output_end_symbol = decoder_output_vocab.lookup_word("</s>");
 	
 	//cerr<<"The symbol <s> has id "<<arg_output_start_symbol<<endl;
 	//cerr<<"The symbol </s> has id "<<arg_output_end_symbol<<endl;
@@ -450,6 +397,16 @@ int main(int argc, char** argv)
 		integerize(word_testing_output_sent, 
 						testing_output_sent, 
 						decoder_vocab);	
+		integerize(word_testing_output_sent, 
+				   decoder_testing_output_sent,
+				   decoder_output_vocab,
+				   1,
+				   0);
+	   	integerize(word_testing_output_sent, 
+	   			   decoder_testing_input_sent,
+	   			   decoder_input_vocab,
+	   			   0,
+	   			   1);								
 	}
 	//cerr<<"Num hidden is "<<myParam.num_hidden<<endl;
 	//cerr<<"minibatch size is "<<myParam.minibatch_size<<endl;
@@ -582,6 +539,8 @@ int main(int argc, char** argv)
 			//Getting a minibatch of sentences
 			vector<int> minibatch_input_sentences, 
 				minibatch_output_sentences, 
+				minibatch_decoder_output_sentences,
+				minibatch_decoder_input_sentences,
 				minibatch_input_sequence_cont_sentences,
 				minibatch_output_sequence_cont_sentences;
 			unsigned int max_input_sent_len, max_output_sent_len;
@@ -622,6 +581,31 @@ int main(int argc, char** argv)
 																				current_minibatch_size);
 			}																
 			if (arg_score == 1 || generate_hidden_states == 1) {
+				miniBatchifyDecoder(decoder_testing_output_sent, 
+								minibatch_decoder_output_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_output_sent_len,
+								minibatch_output_tokens,
+								1,
+								-1);		
+				minibatch_output_tokens =0;						
+				miniBatchifyDecoder(decoder_testing_input_sent, 
+								minibatch_decoder_input_sentences,
+								minibatch_start_index,
+								minibatch_end_index,
+								max_output_sent_len,
+								minibatch_output_tokens,
+								1,
+								0);									
+				decoder_testing_output_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_output_sentences.data(),
+																							max_output_sent_len,
+																							current_minibatch_size);
+				decoder_testing_input_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_input_sentences.data(),
+																							max_output_sent_len,
+																							current_minibatch_size);	
+				/*	
+				minibatch_output_tokens =0;																				
 				miniBatchifyDecoder(testing_output_sent, 
 								minibatch_output_sentences,
 								minibatch_start_index,
@@ -630,21 +614,24 @@ int main(int argc, char** argv)
 								minibatch_output_tokens,
 								1);
 			
+				
+
+				testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
+																				max_output_sent_len,
+																				current_minibatch_size);
+				*/
 				minibatch_output_tokens =0;
-				miniBatchifyDecoder(testing_output_sent, 
+				miniBatchifyDecoder(decoder_testing_input_sent, 
 								minibatch_output_sequence_cont_sentences,
 								minibatch_start_index,
 								minibatch_end_index,
 								max_output_sent_len,
 								minibatch_output_tokens,
 								0);		
-				testing_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-																				max_output_sent_len,
-																				current_minibatch_size);
-
 				testing_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
 																			max_output_sent_len,
-																			current_minibatch_size);											
+																			current_minibatch_size);
+																														
 			}																			
 																																			
 			init_c = current_c;
@@ -727,6 +714,8 @@ int main(int argc, char** argv)
 			if (arg_greedy) {
 				//cerr<<"Generating greedy output"<<endl;
 				prop.generateGreedyOutput(testing_input_sent_data,
+								decoder_input_vocab,
+								decoder_output_vocab,
 								current_c,
 								current_h,		
 								predicted_sequence,
@@ -735,6 +724,8 @@ int main(int argc, char** argv)
 			}
 			if (arg_stochastic){
 				prop.generateStochasticOutput(testing_input_sent_data,
+								decoder_input_vocab,
+								decoder_output_vocab,				
 								current_c,
 								current_h,		
 								predicted_sequence,
@@ -747,6 +738,8 @@ int main(int argc, char** argv)
 				prop.resize(arg_beam_size);
 				vector<k_best_seq_item> final_k_best_seq_list;
 				prop.beamDecoding(testing_input_sent_data,
+					decoder_input_vocab,
+					decoder_output_vocab,
 					current_c,
 					current_h,
 					final_k_best_seq_list,
@@ -777,7 +770,7 @@ int main(int argc, char** argv)
 						if (final_k_best_seq_list.at(sent_id).seq.at(word_id) == arg_output_end_symbol) {
 							break;
 						} else {
-							file << decoder_vocab.get_word(final_k_best_seq_list.at(sent_id).seq.at(word_id))<<" ";
+							file << decoder_output_vocab.get_word(final_k_best_seq_list.at(sent_id).seq.at(word_id))<<" ";
 						}	
 					}
 					file<<"Sequence probability: "<<exp(final_k_best_seq_list.at(sent_id).value)<<endl;
@@ -786,10 +779,16 @@ int main(int argc, char** argv)
 				file<<endl;
 			}
 			if (arg_score || generate_hidden_states ) {
+				/*
 			    prop.fPropDecoder(testing_output_sent_data,
 						current_c,
 						current_h,
 						testing_output_sequence_cont_sent_data);
+				*/
+			    prop.fPropDecoder(decoder_testing_input_sent_data,
+						current_c,
+						current_h,
+						testing_output_sequence_cont_sent_data);						
 					if (generate_hidden_states) {
 						//cerr<<"Getting hiddens from decoder"<<endl;
 						for(int minibatch_index=0; minibatch_index<current_minibatch_size; minibatch_index++) {
@@ -841,9 +840,14 @@ int main(int argc, char** argv)
 				sentence_probabilities = vector<precision_type> (current_minibatch_size,0.);
 		 		//prop.computeProbsLog(testing_output_sent_data,
 		 		// 			  	minibatch_log_likelihood);
+				/*
 		 		prop.computeProbsLog(testing_output_sent_data,
 		 		 			  	minibatch_log_likelihood,
 								sentence_probabilities);	
+				*/
+		 		prop.computeProbsLog(decoder_testing_output_sent_data,
+		 		 			  	minibatch_log_likelihood,
+								sentence_probabilities);									
 				cerr<<endl;
 				for (int sent_id=0; sent_id<current_minibatch_size; sent_id++){
 					cerr<<"Sequence "<<minibatch_start_index+sent_id<<" probability: "<<exp(sentence_probabilities[sent_id])<<endl;
@@ -860,7 +864,7 @@ int main(int argc, char** argv)
 				for (int sent_id = 0; sent_id<predicted_sequence.size(); sent_id++) {
 					for (int seq_id=0; seq_id<predicted_sequence[sent_id].size()-1 /*we dont want to print </s>*/; seq_id++){
 						//cerr<<"sequence word is "<<decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<endl;
-						file << decoder_vocab.get_word(predicted_sequence[sent_id][seq_id])<<" ";	
+						file << decoder_output_vocab.get_word(predicted_sequence[sent_id][seq_id])<<" ";	
 					}
 					file<<endl;
 				}
@@ -902,11 +906,23 @@ int main(int argc, char** argv)
 					}
 					//cerr<<"current sentence length is "<<current_sentence_length<<endl;
 					current_sentence_length--; //this is because the last word in the output sentence is </s> 
-					for (int word_index=0; word_index<current_sentence_length; word_index++){
+					//The first symbol will be '<s>
+					hidden_states_file << "input_symbol: <s>" << endl;
+					writeStates(hidden_states_file,
+								decoder_h_t,
+								decoder_c_t,
+								decoder_f_t,
+								decoder_i_t,
+								decoder_o_t,
+								minibatch_index,
+								0);						
+					for (int word_index=1; word_index<current_sentence_length; word_index++){
 						//cerr<<"testing_output_sequence_cont_sent_data("<<word_index<<","<<minibatch_index<<") "
 						//		<<testing_output_sequence_cont_sent_data(word_index,minibatch_index)<<endl;
+		
+						
 						if (testing_output_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
-						hidden_states_file << "input_symbol: " << decoder_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<endl;
+						hidden_states_file << "input_symbol: " << decoder_output_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<endl;
 						writeStates(hidden_states_file,
 									decoder_h_t,
 									decoder_c_t,

@@ -84,7 +84,14 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 				unsigned int &max_sent_len,
 				unsigned int &minibatch_tokens,
 				bool data_or_sentence_vector);	
-				
+void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences, 
+				 std::vector<int > &minibatch_sentences,
+				const int minibatch_start_index,
+				const int minibatch_end_index,
+				unsigned int &max_sent_len,
+				unsigned int &minibatch_tokens,
+				bool data_or_sentence_vector,
+				int pad_value);				
 void createVocabulary(std::vector<std::vector<std::string> > &sentences, vocabulary &vocab);
 
 void integerize(std::vector<std::vector<std::string> > &word_sentences, 
