@@ -888,13 +888,7 @@ int main(int argc, char** argv)
 										encoder_o_t,
 										minibatch_index,
 										word_index);																											
-							/*
-							for (int hdim=0; hdim < myParam.num_hidden; hdim++){
-								hidden_states_file<<input_hiddens[minibatch_index](hdim,word_index)<<" ";
-								
-							}
-							hidden_states_file<<endl;	
-							*/
+
 						}						
 					}
 
@@ -907,6 +901,7 @@ int main(int argc, char** argv)
 					//cerr<<"current sentence length is "<<current_sentence_length<<endl;
 					current_sentence_length--; //this is because the last word in the output sentence is </s> 
 					//The first symbol will be '<s>
+					/*
 					hidden_states_file << "input_symbol: <s>" << endl;
 					writeStates(hidden_states_file,
 								decoder_h_t,
@@ -915,31 +910,27 @@ int main(int argc, char** argv)
 								decoder_i_t,
 								decoder_o_t,
 								minibatch_index,
-								0);						
-					for (int word_index=1; word_index<current_sentence_length; word_index++){
+								0);				
+					*/		
+					for (int word_index=0; word_index<=current_sentence_length; word_index++){
 						//cerr<<"testing_output_sequence_cont_sent_data("<<word_index<<","<<minibatch_index<<") "
 						//		<<testing_output_sequence_cont_sent_data(word_index,minibatch_index)<<endl;
 		
-						
+						//cerr<<"testing_output_sent_data "<<testing_output_sent_data<<endl;
 						if (testing_output_sequence_cont_sent_data(word_index,minibatch_index) == 1){																		
-						hidden_states_file << "input_symbol: " << decoder_output_vocab.get_word(testing_output_sent_data(word_index,minibatch_index))<<endl;
-						writeStates(hidden_states_file,
-									decoder_h_t,
-									decoder_c_t,
-									decoder_f_t,
-									decoder_i_t,
-									decoder_o_t,
-									minibatch_index,
-									word_index);		
-																													
-						/*
-						for (int hdim=0; hdim < myParam.num_hidden; hdim++){
-							hidden_states_file<<output_hiddens[minibatch_index](hdim,word_index)<<" ";
-						}
-						hidden_states_file<<endl;	
-						*/
+							hidden_states_file << "input_symbol: " << decoder_input_vocab.get_word(decoder_testing_input_sent_data(word_index,minibatch_index))<<endl;
+							writeStates(hidden_states_file,
+										decoder_h_t,
+										decoder_c_t,
+										decoder_f_t,
+										decoder_i_t,
+										decoder_o_t,
+										minibatch_index,
+										word_index);		
+						}																							
+
 					}														
-				}
+					//}
 				hidden_states_file<<"<<<<<<<<<NEW SENTENCE>>>>>>>>>"<<endl;
 			  }	
 			}
