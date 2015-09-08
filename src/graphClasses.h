@@ -19,30 +19,6 @@ namespace nplm
 typedef Matrix<int,Dynamic,Dynamic> IndexMatrix;
 typedef Matrix<precision_type,Dynamic,Dynamic> DoubleMatrix;
 
-/*
-//Virtual class that specifies the skeleton for the different input nodes
-class Input_node{
-	Input_node();
-
-	//template <typename Derived>
-	virtual void fProp(const IndexMatrix &data) { throw std::logic_error("attempted to use IndexMatrix"); }
-	virtual void fProp(const DoubleMatrix &data) { throw std::logic_error("attempted to use DoubleMatrix"); }
-
-	//template<typename DerivedData, typename DerivedDIn>
-	virtual void bProp(const IndexMatrix &data,
-				const DoubleMatrix &o_t_node_bProp_matrix,
-				const DoubleMatrix &i_t_node_bProp_matrix,
-				const DoubleMatrix &f_t_node_bProp_matrix,
-				const DoubleMatrix &tanh_c_prime_t_node_bProp_matrix) {throw std::logic_error("attempted to use IndexMatrix");}
-			
-	virtual void bProp(const DoubleMatrix &data,
-				const DoubleMatrix &o_t_node_bProp_matrix,
-				const DoubleMatrix &i_t_node_bProp_matrix,
-				const DoubleMatrix &f_t_node_bProp_matrix,
-				const DoubleMatrix &tanh_c_prime_t_node_bProp_matrix) {throw std::logic_error("attempted to use IndexMatrix");}
-};
-
-*/
 
 
 template <class X>
@@ -116,7 +92,7 @@ class LSTM_node {
 	int minibatch_size;
 public:
 	//Each LSTM node has a bunch of nodes and temporary data structures
-    Node<Input_word_embeddings> input_layer_node,W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
+    //Node<Input_word_embeddings> input_layer_node,W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
     //Node<Linear_layer> W_x_to_i_node, W_x_to_f_node, W_x_to_c_node, W_x_to_o_node;
 	Node<Linear_layer> W_h_to_i_node, W_h_to_f_node, W_h_to_c_node, W_h_to_o_node;
 	Node<Linear_diagonal_layer> W_c_to_i_node, W_c_to_f_node, W_c_to_o_node;
@@ -145,10 +121,10 @@ public:
 	input_node_type *input_node;
 	
 	LSTM_node(): 
-		W_x_to_i_node(),
-		W_x_to_f_node(),
-		W_x_to_c_node(),
-		W_x_to_o_node(),
+		//W_x_to_i_node(),
+		//W_x_to_f_node(),
+		//W_x_to_c_node(),
+		//W_x_to_o_node(),
 		W_h_to_i_node(),
 		W_h_to_f_node(),
 		W_h_to_c_node(),
@@ -161,14 +137,14 @@ public:
 		o_t_node(),
 		tanh_c_prime_t_node(),
 		tanh_c_t_node(),
-		input_layer_node(),
+		//input_layer_node(),
 		input_node(NULL) {}
 
 	LSTM_node(model &lstm, int minibatch_size): 
-		W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
-		W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
-		W_x_to_c_node(&lstm.W_x_to_c, minibatch_size),
-		W_x_to_o_node(&lstm.W_x_to_o, minibatch_size),
+		//W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
+		//W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
+		//W_x_to_c_node(&lstm.W_x_to_c, minibatch_size),
+		//W_x_to_o_node(&lstm.W_x_to_o, minibatch_size),
 		W_h_to_i_node(&lstm.W_h_to_i, minibatch_size),
 		W_h_to_f_node(&lstm.W_h_to_f, minibatch_size),
 		W_h_to_c_node(&lstm.W_h_to_c, minibatch_size),
@@ -181,7 +157,7 @@ public:
 		o_t_node(&lstm.o_t,minibatch_size),
 		tanh_c_prime_t_node(&lstm.tanh_c_prime_t,minibatch_size),
 		tanh_c_t_node(&lstm.tanh_c_t,minibatch_size),
-		input_layer_node(&lstm.input_layer,minibatch_size),
+		//input_layer_node(&lstm.input_layer,minibatch_size),
 		input_node(NULL)
 		 {
 			this->minibatch_size = minibatch_size;
@@ -189,10 +165,10 @@ public:
 	//Resizing all the parameters
 	void resize(int minibatch_size){
 		this->minibatch_size = minibatch_size;
-		W_x_to_i_node.resize(minibatch_size);
-		W_x_to_f_node.resize(minibatch_size);
-		W_x_to_c_node.resize(minibatch_size);
-		W_x_to_o_node.resize(minibatch_size);
+		//W_x_to_i_node.resize(minibatch_size);
+		//W_x_to_f_node.resize(minibatch_size);
+		//W_x_to_c_node.resize(minibatch_size);
+		//W_x_to_o_node.resize(minibatch_size);
 		W_h_to_i_node.resize(minibatch_size);
 		W_h_to_f_node.resize(minibatch_size);
 		W_h_to_c_node.resize(minibatch_size);
@@ -204,13 +180,14 @@ public:
 		f_t_node.resize(minibatch_size);
 		o_t_node.resize(minibatch_size);
 		tanh_c_prime_t_node.resize(minibatch_size);
-		input_layer_node.resize(minibatch_size);
+		//input_layer_node.resize(minibatch_size);
 		
 		//Resizing all the local node matrices
 		h_t.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
 		c_t.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
 		h_t_minus_one.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
 		c_t_minus_one.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
 		d_Err_t_to_n_d_h_t.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_c_t.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_o_t.resize(o_t_node.param->n_outputs(),minibatch_size);
@@ -218,7 +195,7 @@ public:
 		d_Err_t_to_n_d_i_t.resize(i_t_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_tanh_c_t.resize(tanh_c_t_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_tanh_c_prime_t.resize(tanh_c_prime_t_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_x_t.resize(input_layer_node.param->n_outputs(),minibatch_size);
+		//d_Err_t_to_n_d_x_t.resize(input_layer_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_h_tMinusOne.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_c_tMinusOne.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
 		i_t_input_matrix.resize(i_t_node.param->n_inputs(),minibatch_size);
@@ -469,6 +446,8 @@ public:
 		//computing c_prime_t
 		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
+		cerr<<"input_node->W_x_to_c_node.fProp_matrix "<<input_node->W_x_to_c_node.fProp_matrix<<endl;
+		cerr<<"W_h_to_c_node.fProp_matrix "<<W_h_to_c_node.fProp_matrix<<endl;
 		tanh_c_prime_t_input_matrix.noalias() = input_node->W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
 										tanh_c_prime_t_node.fProp_matrix);
@@ -924,12 +903,15 @@ public:
 				
 	template <typename Derived>
 	void fProp(const MatrixBase<Derived> &data){
-		//cerr<<"Data is "<<data<<endl;
+		cerr<<"Data is "<<data<<endl;
+		cerr<<" before W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
 		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
 		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
-		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);				
+		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);	
+		cerr<<" W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
+					
 			
 	}	
 	

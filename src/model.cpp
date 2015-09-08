@@ -216,7 +216,7 @@ void model::initialize(mt19937 &init_engine,
 	
 	
 }
-
+/*
 void model::premultiply()
 {
     // Since input and first_hidden_linear are both linear,
@@ -230,7 +230,7 @@ void model::premultiply()
     input_layer.W.resize(1,1); // try to save some memory
     premultiplied = true;
 }
-
+*/
 void model::readConfig(ifstream &config_file)
 {
     string line;

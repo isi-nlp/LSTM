@@ -59,7 +59,7 @@ public:
 	//template <class input_model_type>
 class model {
 public:
-    Input_word_embeddings input_layer, W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
+    //Input_word_embeddings input_layer, W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
     Linear_layer first_hidden_linear;
     Activation_function first_hidden_activation;
     Linear_layer second_hidden_linear;
@@ -184,7 +184,7 @@ public:
 	
 		tanh_c_t.set_activation_function(Tanh);
     }
-    void premultiply();
+    //void premultiply();
 
     // Since the vocabulary is not essential to the model,
     // we need a version with and without a vocabulary.
