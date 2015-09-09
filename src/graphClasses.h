@@ -187,7 +187,7 @@ public:
 		c_t.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
 		h_t_minus_one.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
 		c_t_minus_one.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
-		cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
+		//cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
 		d_Err_t_to_n_d_h_t.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_c_t.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_o_t.resize(o_t_node.param->n_outputs(),minibatch_size);
@@ -446,8 +446,8 @@ public:
 		//computing c_prime_t
 		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_h_to_c_node.param->fProp(h_t_minus_one,W_h_to_c_node.fProp_matrix);	
-		cerr<<"input_node->W_x_to_c_node.fProp_matrix "<<input_node->W_x_to_c_node.fProp_matrix<<endl;
-		cerr<<"W_h_to_c_node.fProp_matrix "<<W_h_to_c_node.fProp_matrix<<endl;
+		//cerr<<"input_node->W_x_to_c_node.fProp_matrix "<<input_node->W_x_to_c_node.fProp_matrix<<endl;
+		//cerr<<"W_h_to_c_node.fProp_matrix "<<W_h_to_c_node.fProp_matrix<<endl;
 		tanh_c_prime_t_input_matrix.noalias() = input_node->W_x_to_c_node.fProp_matrix + W_h_to_c_node.fProp_matrix;
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
 										tanh_c_prime_t_node.fProp_matrix);
@@ -903,14 +903,14 @@ public:
 				
 	template <typename Derived>
 	void fProp(const MatrixBase<Derived> &data){
-		cerr<<"Data is "<<data<<endl;
-		cerr<<" before W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
+		//cerr<<"Data is "<<data<<endl;
+		//cerr<<" before W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
 		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
 		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
 		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
 		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);	
-		cerr<<" W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
+		//cerr<<" W_x_to_c_node.fProp_matrix "<<W_x_to_c_node.fProp_matrix<<endl;
 					
 			
 	}	
