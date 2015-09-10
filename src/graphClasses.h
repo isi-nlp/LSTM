@@ -183,25 +183,25 @@ public:
 		//input_layer_node.resize(minibatch_size);
 		
 		//Resizing all the local node matrices
-		h_t.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
-		c_t.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
-		h_t_minus_one.resize(W_h_to_i_node.param->n_inputs(),minibatch_size);
-		c_t_minus_one.resize(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		h_t.setZero(W_h_to_i_node.param->n_inputs(),minibatch_size);
+		c_t.setZero(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		h_t_minus_one.setZero(W_h_to_i_node.param->n_inputs(),minibatch_size);
+		c_t_minus_one.setZero(W_c_to_i_node.param->n_inputs(),minibatch_size);
 		//cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
-		d_Err_t_to_n_d_h_t.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_c_t.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_o_t.resize(o_t_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_f_t.resize(f_t_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_i_t.resize(i_t_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_tanh_c_t.resize(tanh_c_t_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_tanh_c_prime_t.resize(tanh_c_prime_t_node.param->n_outputs(),minibatch_size);
-		//d_Err_t_to_n_d_x_t.resize(input_layer_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_h_tMinusOne.resize(W_h_to_i_node.param->n_outputs(),minibatch_size);
-		d_Err_t_to_n_d_c_tMinusOne.resize(W_c_to_i_node.param->n_outputs(),minibatch_size);
-		i_t_input_matrix.resize(i_t_node.param->n_inputs(),minibatch_size);
-		f_t_input_matrix.resize(f_t_node.param->n_inputs(),minibatch_size);
-		o_t_input_matrix.resize(o_t_node.param->n_inputs(),minibatch_size);
-		tanh_c_prime_t_input_matrix.resize(tanh_c_prime_t_node.param->n_inputs(),minibatch_size);
+		d_Err_t_to_n_d_h_t.setZero(W_h_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_c_t.setZero(W_c_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_o_t.setZero(o_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_f_t.setZero(f_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_i_t.setZero(i_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_tanh_c_t.setZero(tanh_c_t_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_tanh_c_prime_t.setZero(tanh_c_prime_t_node.param->n_outputs(),minibatch_size);
+		//d_Err_t_to_n_d_x_t.setZero(input_layer_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_h_tMinusOne.setZero(W_h_to_i_node.param->n_outputs(),minibatch_size);
+		d_Err_t_to_n_d_c_tMinusOne.setZero(W_c_to_i_node.param->n_outputs(),minibatch_size);
+		i_t_input_matrix.setZero(i_t_node.param->n_inputs(),minibatch_size);
+		f_t_input_matrix.setZero(f_t_node.param->n_inputs(),minibatch_size);
+		o_t_input_matrix.setZero(o_t_node.param->n_inputs(),minibatch_size);
+		tanh_c_prime_t_input_matrix.setZero(tanh_c_prime_t_node.param->n_inputs(),minibatch_size);
 		
 	} 
 	
