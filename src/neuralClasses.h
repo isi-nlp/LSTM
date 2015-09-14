@@ -674,7 +674,7 @@ class Output_word_embeddings
     void write_weights(std::ofstream &W_file) { writeMatrix(W, W_file); }
     void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
     void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
-
+	
     template <typename Engine>
     void initialize(Engine &engine,
         bool init_normal,
@@ -722,7 +722,10 @@ class Output_word_embeddings
 
 	  }
 
-
+	//Scaling is used for dropout
+	void scale(precision_type scaling_constant) {
+		W *= scaling_constant;
+	}
 	// Sparse output version
     template <typename DerivedIn, typename DerivedOutI, typename DerivedOutV>
     void fProp(const MatrixBase<DerivedIn> &input,
