@@ -1064,6 +1064,7 @@ int main(int argc, char** argv)
 		//scale the model before writing it
 		input.scale(1.-myParam.dropout_probability);
 		decoder_input.scale(1.-myParam.dropout_probability);
+		nn_decoder.scale(1.-myParam.dropout_probability);
 		
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
@@ -1221,6 +1222,7 @@ int main(int argc, char** argv)
 			//scale the model before writing it
 			input.scale(1./(1.-myParam.dropout_probability));
 			decoder_input.scale(1./(1-myParam.dropout_probability));
+			nn_decoder.scale(1./(1-myParam.dropout_probability));
 			//if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 			if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
 	        { 
