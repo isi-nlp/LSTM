@@ -189,7 +189,7 @@ public:
 						bool norm_clipping,
 						precision_type norm_threshold);
 	void resetGradient();			
-
+	void scale(precision_type scaling_constant);
  private:
     void readConfig(std::ifstream &config_file);
     void readConfig(const std::string &filename);

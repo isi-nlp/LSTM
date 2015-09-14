@@ -704,6 +704,11 @@ void model::resetGradient(){
 	input->resetGradient();
 }	
 
+//Scaling weight if using dropout at decode time
+void model::scale(precision_type scaling_constant) {
+	output_layer.scale(scaling_constant);
+}
+
 void google_input_model::resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden)
