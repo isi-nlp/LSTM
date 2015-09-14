@@ -167,6 +167,8 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
       //ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
+	  ValueArg<precision_type> dropout_probability("", "dropout_probability", "Dropout probability. Default 0: No dropout", false,0., "precision_type", cmd);
+	  
 
       cmd.parse(argc, argv);
 
@@ -238,6 +240,7 @@ int main(int argc, char** argv)
 	  myParam.gradient_check = gradient_check.getValue();
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
+	  myParam.dropout_probability = dropout_probability.getValue();
 	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
 	  arg_seed = seed.getValue();
@@ -262,6 +265,7 @@ int main(int argc, char** argv)
      // cerr << mmap_file.getDescription() << sep << mmap_file.getValue() << endl;
 	  cerr << norm_clipping.getDescription() << sep << norm_clipping.getValue() <<endl;
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
+	  cerr << dropout_probability.getDescription() << sep << dropout_probability.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
 	  //cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
@@ -343,11 +347,6 @@ int main(int argc, char** argv)
     vocabulary input_vocab, output_vocab;
 	vocabulary decoder_input_vocab, decoder_output_vocab;
     int start, stop;
-	
-
- 
-
-	
 
     vec * training_data_flat_mmap;
     data_size_t training_data_size, validation_data_size; //num_tokens;
@@ -639,11 +638,18 @@ int main(int argc, char** argv)
     }
     loss_function_type loss_function = string_to_loss_function(myParam.loss_function);
 
-    propagator<Google_input_node, google_input_model> prop(nn, nn_decoder, myParam.minibatch_size);
+    propagator<Google_input_node, google_input_model> prop(nn, 
+														nn_decoder, 
+														myParam.minibatch_size);
+	if (myParam.dropout_probability > 0 ){
+		prop.resizeDropout(myParam.minibatch_size, myParam.dropout_probability);
+	}
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
-    propagator<Google_input_node, google_input_model> prop_validation(nn, nn_decoder, myParam.validation_minibatch_size);
+    propagator<Google_input_node, google_input_model> prop_validation(nn, 
+															nn_decoder, 
+															myParam.validation_minibatch_size);
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}
@@ -896,17 +902,31 @@ int main(int argc, char** argv)
 						training_sequence_cont_sent_data);	
 			*/
 			if (arg_run_lm == 0) {
-				prop.fPropEncoder(training_input_sent_data,
-							0,
-							max_input_sent_len-1,
-							current_c,
-							current_h,
-							training_input_sequence_cont_sent_data);						
+				if (myParam.dropout_probability > 0.) {
+					prop.fPropEncoderDropout(training_input_sent_data,
+								current_c,
+								current_h,
+								training_input_sequence_cont_sent_data,
+								rng);					
+				} else {
+					prop.fPropEncoder(training_input_sent_data,
+								current_c,
+								current_h,
+								training_input_sequence_cont_sent_data);
+				}						
 			}
-		    prop.fPropDecoder(decoder_training_input_sent_data,
-					current_c,
-					current_h,
-					training_output_sequence_cont_sent_data);
+			if (myParam.dropout_probability > 0.) {
+			    prop.fPropDecoderDropout(decoder_training_input_sent_data,
+						current_c,
+						current_h,
+						training_output_sequence_cont_sent_data,
+						rng);				
+			} else {
+			    prop.fPropDecoder(decoder_training_input_sent_data,
+						current_c,
+						current_h,
+						training_output_sequence_cont_sent_data);
+			}
 					
 		  	precision_type adjusted_learning_rate = current_learning_rate;
 			if (!myParam.norm_clipping){
@@ -931,16 +951,30 @@ int main(int argc, char** argv)
 					 rng,
 					 softmax_nce_loss); //, 
 				//Calling backprop
-			    prop.bPropDecoder(training_input_sent_data,
-					decoder_training_input_sent_data,
-					 myParam.gradient_check,
-					 myParam.norm_clipping); //, 
+				if (myParam.dropout_probability > 0.) {
+				    prop.bPropDecoderDropout(training_input_sent_data,
+						decoder_training_input_sent_data,
+						 myParam.gradient_check,
+						 myParam.norm_clipping); //,
+				} else {
+				    prop.bPropDecoder(training_input_sent_data,
+						decoder_training_input_sent_data,
+						 myParam.gradient_check,
+						 myParam.norm_clipping); //,					
+				}
 					 
 				if (arg_run_lm == 0) { 
-	 			    prop.bPropEncoder(training_input_sent_data,
-	 					 myParam.gradient_check,
-	 					 myParam.norm_clipping,
-						 training_input_sequence_cont_sent_data); 					 
+					if (myParam.dropout_probability > 0.){ 
+		 			    prop.bPropEncoderDropout(training_input_sent_data,
+		 					 myParam.gradient_check,
+		 					 myParam.norm_clipping,
+							 training_input_sequence_cont_sent_data); 	
+					} else {
+		 			    prop.bPropEncoder(training_input_sent_data,
+		 					 myParam.gradient_check,
+		 					 myParam.norm_clipping,
+							 training_input_sequence_cont_sent_data); 						
+					}				 
 				 }
 					 //init_c,
 					 //init_h,
@@ -965,7 +999,8 @@ int main(int argc, char** argv)
 								 softmax_nce_loss,
 								 training_input_sequence_cont_sent_data,
 								 training_output_sequence_cont_sent_data,
-								 arg_run_lm);
+								 arg_run_lm,
+								 myParam.dropout_probability);
 					//for the next minibatch, we want the range to be updated as well
 					rng_grad_check = rng;
 				}
@@ -1017,7 +1052,9 @@ int main(int argc, char** argv)
 	cerr << endl;
 	#endif
 	
-		
+		//scale the model before writing it
+		input.scale(1.-myParam.dropout_probability);
+		decoder_input.scale(1.-myParam.dropout_probability);
 		
         if (epoch % 1 == 0 && validation_data_size > 0)
         {
@@ -1086,31 +1123,7 @@ int main(int argc, char** argv)
 																					max_input_sent_len,
 																					current_minibatch_size);										
 				}				
-				/*
-				miniBatchifyDecoder(validation_output_sent, 
-								minibatch_output_sentences,
-								minibatch_start_index,
-								minibatch_end_index,
-								max_output_sent_len,
-								minibatch_output_tokens,
-								1);
-			
-				minibatch_output_tokens =0;
-				miniBatchifyDecoder(validation_output_sent, 
-								minibatch_output_sequence_cont_sentences,
-								minibatch_start_index,
-								minibatch_end_index,
-								max_output_sent_len,
-								minibatch_output_tokens,
-								0);		
-				validation_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-																				max_output_sent_len,
-																				current_minibatch_size);
 
-				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
-																			max_output_sent_len,
-																			current_minibatch_size);
-				*/
 
 				miniBatchifyDecoder(decoder_validation_output_sent, 
 								minibatch_decoder_output_sentences,
@@ -1149,36 +1162,9 @@ int main(int argc, char** argv)
 				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
 																			max_output_sent_len,
 																			current_minibatch_size);																																																																													
-				//cerr<<"validation_output_sequence_cont_sent_data "<<validation_output_sequence_cont_sent_data<<endl;
-				//if (arg_run_lm == 0) {
 
-				//}						
-																			
-				//validation_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
-				//																	max_sent_len,
-				//																	current_minibatch_size);
-			    //validation_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	()	;																
-				//cerr<<"Validation input sent data "<<validation_input_sent_data<<endl;
-				//cerr<<"Validation output sent data "<<validation_output_sent_data<<endl;
-																			
-				//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
-				//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
-				//exit(0);
-				//Calling fProp. Note that it should not matter for fProp if we're doing log 
-				//or NCE loss		
-				/*																												
-				prop_validation.fProp(validation_input_sent_data,
-										validation_output_sent_data,
-										0,
-										max_input_sent_len-1, 
-										current_validation_c, 
-										current_validation_h,
-										validation_input_sequence_cont_sent_data);	
-				*/															
 				if (arg_run_lm == 0) {																
 					prop_validation.fPropEncoder(validation_input_sent_data,
-								0,
-								max_input_sent_len-1,
 								current_validation_c,
 								current_validation_h,
 								validation_input_sequence_cont_sent_data);	
@@ -1218,17 +1204,14 @@ int main(int argc, char** argv)
 					nn_decoder.write(myParam.model_prefix + ".decoder.best", decoder_input_vocab.words(), decoder_output_vocab.words());
 					if (arg_run_lm == 0) 
 						nn.write(myParam.model_prefix + ".encoder.best" , input_vocab.words(), output_vocab.words());					
-					/*		
-				    if (myParam.input_words_file != "") {
-				        nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
-						nn_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());	
-					}
-				    else
-				        nn.write(myParam.model_prefix + "." + lexical_cast<string>(epoch+1));
-					*/
+
 					best_model = epoch+1;
 				}				
 			}
+			//scale the model back for training
+			//scale the model before writing it
+			input.scale(1./(1.-myParam.dropout_probability));
+			decoder_input.scale(1./(1-myParam.dropout_probability));
 			//if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
 			if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
 	        { 

@@ -43,7 +43,76 @@ struct Clipper{
   }
 };
 
+class Dropout_layer
+{
+	private:
+		Matrix<precision_type, Dynamic, Dynamic> dropout_mask;
+		precision_type keep_probability;
+		
+	public:
+		
+	Dropout_layer():
+		dropout_mask(Matrix<precision_type, Dynamic, Dynamic>()),
+		keep_probability(1.) {}
+	
+	Dropout_layer(int rows, int cols, precision_type keep_probability) :
+		dropout_mask(Matrix<precision_type, Dynamic, Dynamic>()),
+		keep_probability(keep_probability) {
+		resize(rows, cols);
+	}
+	
+	void resize(int rows, int cols){
+		dropout_mask.setZero(rows, cols);
+	}
+	template<typename Engine> 
+	void createMask(Engine &eng){
+		//Setting up the dropout sampler
+		boost::random::uniform_real_distribution<> real_01(0, 1);
+		for (int i=0; i<dropout_mask.rows(); i++){
+			for (int j=0; j<dropout_mask.cols(); j++){
+				dropout_mask(i,j) = 
+					( real_01(eng) <1.0 - keep_probability ) ? 0: 1;
+			}
+		}
+	}
+	template<typename Derived, typename Engine>
+	void fProp(const MatrixBase<Derived> &input,
+				Engine &eng) {
+		createMask(eng);
+		//cerr<<"Created the dropout mask "<<endl;
+		//cerr<<"The mask dimensions are "<<this->dropout_mask.rows()<<","<<this->dropout_mask.cols()<<endl;
+		//getchar();
+		//cerr<<"Before dropout the fProp input is"<<input<<endl;
+		dropout(input,
+				this->dropout_mask);		
+		//cerr<<"After dropout the fProp input is"<<input<<endl;
+		//UNCONST(Derived, input, my_input);
+		//my_input.array().noalias() *= dropout_mask.array();
+		
+	}
+	
+	//Its possible that this might just want to be used a function by itself
+	template<typename Derived, typename DropMask>
+	static void dropout(const MatrixBase<Derived> &input,
+							const MatrixBase<DropMask> &dropout_mask){
 
+		UNCONST(Derived, input, my_input);
+		//cerr<<"Dropping out"<<endl;
+		//cerr<<"dropout_mask "<<dropout_mask<<endl;
+		my_input.array() *= dropout_mask.array();
+	}
+	
+	template<typename DerivedGOut>
+	void bProp(const MatrixBase<DerivedGOut> &input) {
+		//cerr<<"Before dropout the bProp input is "<<input<<endl;		
+		dropout(input,
+				this->dropout_mask);
+		//cerr<<"After dropout the bProp input is "<<input<<endl;				
+				
+		//UNCONST(DerivedGOut, input, my_input);
+		//my_input.noalias().array() *= dropout_mask.array();
+	}
+};
 class Linear_layer
 {
     private: 
@@ -257,40 +326,26 @@ class Linear_layer
       }
       else
       {
-		  //cerr<<"learning rate is "<<learning_rate<<endl;
-		  //cerr<<"U gradient is "<<U_gradient<<endl;
-		  //cerr<<"U before is "<<endl;
-		  //cerr<<U<<endl;
-          //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
-		  /*
-		  U_gradient /= current_minibatch_size;
-		  precision_type grad_norm = U_gradient.norm();
-		  if (U_gradient.norm() >= 5.) {
-			  U_gradient *= 5./grad_norm;
-		  }
-		  U += learning_rate*U_gradient;
-		  */
+
 		  if (norm_clipping){
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
 			  				   norm_threshold);
 		  }
 		  U += learning_rate * U_gradient;
-		  //cerr<<"U after update is"<<endl;
-		  //cerr<<U<<endl;
-          //b += learning_rate * b_gradient;
-		  
-		  /*
-          U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
-          b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
-		  */
-		  
+
       } 	
   }
   void resetGradient(){
 	  U_gradient.setZero();
 	  //b_gradient.setZero();
   }
+  
+  //Scaling for dropout at test time
+  void scale(const precision_type scaling_constant) {
+  	  U *= scaling_constant;
+  }
+  
   template <typename DerivedGOut, typename DerivedIn>
   void computeGradientAdagrad(const MatrixBase<DerivedGOut> &bProp_input, 
       const MatrixBase<DerivedIn> &fProp_input, 
@@ -1256,29 +1311,29 @@ class Input_word_embeddings
         {
             int embedding_dimension = W.cols();
 
-	    // W      is vocab_size                        x embedding_dimension
-	    // input  is ngram_size*vocab_size             x minibatch_size
-	    // output is ngram_size*embedding_dimension x minibatch_size
+		    // W      is vocab_size                        x embedding_dimension
+		    // input  is ngram_size*vocab_size             x minibatch_size
+		    // output is ngram_size*embedding_dimension x minibatch_size
 
-	    /* 
-	    // Dense version:
-	    for (int ngram=0; ngram<context_size; ngram++)
-	        output.middleRows(ngram*embedding_dimension, embedding_dimension) = W.transpose() * input.middleRows(ngram*vocab_size, vocab_size);
-	    */
+		    /* 
+		    // Dense version:
+		    for (int ngram=0; ngram<context_size; ngram++)
+		        output.middleRows(ngram*embedding_dimension, embedding_dimension) = W.transpose() * input.middleRows(ngram*vocab_size, vocab_size);
+		    */
 
-	    UNCONST(DerivedOut, output, my_output);
-	    my_output.setZero();
-	    for (int ngram=0; ngram<context_size; ngram++)
-	    {
-	        // input might be narrower than expected due to a short minibatch,
-	        // so narrow output to match
-			//cerr<<"W is "
-			//cerr<<"W rows is "<<W.rows()<<endl;
-	        uscgemm(1.0,
-            W.transpose(), 
-            USCMatrix<precision_type>(W.rows(),input.middleRows(ngram, 1),Matrix<precision_type,1,Dynamic>::Ones(input.cols())),
-            my_output.block(ngram*embedding_dimension, 0, embedding_dimension, input.cols()));
-	    }
+		    UNCONST(DerivedOut, output, my_output);
+		    my_output.setZero();
+		    for (int ngram=0; ngram<context_size; ngram++)
+		    {
+		        // input might be narrower than expected due to a short minibatch,
+		        // so narrow output to match
+				//cerr<<"W is "
+				//cerr<<"W rows is "<<W.rows()<<endl;
+		        uscgemm(1.0,
+	            W.transpose(), 
+	            USCMatrix<precision_type>(W.rows(),input.middleRows(ngram, 1),Matrix<precision_type,1,Dynamic>::Ones(input.cols())),
+	            my_output.block(ngram*embedding_dimension, 0, embedding_dimension, input.cols()));
+		    }
         }
 
 	// When model is premultiplied, this layer doesn't get used,

@@ -36,6 +36,9 @@ public:
         string &parameter_udpate,
         precision_type adagrad_epsilon) = 0;
 	
+	virtual void scale(const precision_type scaling_constant) {
+		cerr<<"dropout scaling not implemented"<<endl;
+	}
 	virtual void updateParams(precision_type learning_rate,
 		 					int current_minibatch_size,
 					  		precision_type momentum,
@@ -95,27 +98,7 @@ public:
         int output_embedding_dimension,
         bool share_embeddings) 
     {
-		/*
-        if (share_embeddings){
-          input_and_output_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-          input_layer.set_W(&input_and_output_embedding_matrix);
-          output_layer.set_W(&input_and_output_embedding_matrix);
-        }
-        else {
-          input_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-          output_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-          input_layer.set_W(&input_embedding_matrix);
-          output_layer.set_W(&output_embedding_matrix);
-		  W_x_to_i_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_f_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_o_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_c_embedding_matrix = Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>();
-		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
-		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
-		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
-		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);
-        }
-		*/
+
         resize(ngram_size,
             input_vocab_size,
             output_vocab_size,
@@ -239,7 +222,7 @@ public:
         {
           //input_layer.set_W(&input_embedding_matrix);  
         }
-
+	
     void resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden);
@@ -257,7 +240,7 @@ public:
 							bool norm_clipping,
 							precision_type norm_threshold);
 	void resetGradient();
-	
+	void scale(const precision_type scaling_constant);
 	void write(ofstream &file);
 	void read(const string &filename);
 	void readConfig(ifstream &config_file);

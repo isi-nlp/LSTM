@@ -920,6 +920,14 @@ void google_input_model::read(const string &filename)
     file.close();
 }
 
+//Scaling weight if using dropout at decode time
+void google_input_model::scale(precision_type scaling_constant) {
+	W_x_to_c.scale(scaling_constant);
+	W_x_to_o.scale(scaling_constant);
+	W_x_to_f.scale(scaling_constant);
+	W_x_to_i.scale(scaling_constant);	
+}
+
 void hidden_to_hidden_input_model::resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden)
