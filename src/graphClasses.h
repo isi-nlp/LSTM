@@ -98,6 +98,7 @@ public:
 	Node<Linear_diagonal_layer> W_c_to_i_node, W_c_to_f_node, W_c_to_o_node;
     Node<Hidden_layer> i_t_node,f_t_node,o_t_node,tanh_c_prime_t_node;
 	Node<Activation_function> tanh_c_t_node;
+	Dropout_layer output_dropout_layer;
 	
 
 	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,c_t_minus_one, h_t_minus_one;
@@ -142,10 +143,6 @@ public:
 		input_node(NULL) {}
 
 	LSTM_node(model &lstm, int minibatch_size): 
-		//W_x_to_i_node(&lstm.W_x_to_i, minibatch_size),
-		//W_x_to_f_node(&lstm.W_x_to_f, minibatch_size),
-		//W_x_to_c_node(&lstm.W_x_to_c, minibatch_size),
-		//W_x_to_o_node(&lstm.W_x_to_o, minibatch_size),
 		W_h_to_i_node(&lstm.W_h_to_i, minibatch_size),
 		W_h_to_f_node(&lstm.W_h_to_f, minibatch_size),
 		W_h_to_c_node(&lstm.W_h_to_c, minibatch_size),
@@ -166,10 +163,6 @@ public:
 	//Resizing all the parameters
 	void resize(int minibatch_size){
 		this->minibatch_size = minibatch_size;
-		//W_x_to_i_node.resize(minibatch_size);
-		//W_x_to_f_node.resize(minibatch_size);
-		//W_x_to_c_node.resize(minibatch_size);
-		//W_x_to_o_node.resize(minibatch_size);
 		W_h_to_i_node.resize(minibatch_size);
 		W_h_to_f_node.resize(minibatch_size);
 		W_h_to_c_node.resize(minibatch_size);
@@ -205,7 +198,7 @@ public:
 		tanh_c_prime_t_input_matrix.setZero(tanh_c_prime_t_node.param->n_inputs(),minibatch_size);
 		
 	} 
-	
+
 	void set_input_node(input_node_type &input_node){this->input_node = &input_node;}
 	
 	#ifdef NOPEEP

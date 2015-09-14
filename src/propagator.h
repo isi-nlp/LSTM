@@ -31,6 +31,7 @@ namespace nplm
 		boost::random::uniform_real_distribution<> unif_real;
 		//vector<Matrix<precision_type,Dynamic,Dynamic> > losses;
 		vector<Output_loss_node> losses;
+		vector<Dropout_layer> output_dropout_layers;
 
 	public:
 	    propagator() : minibatch_size(0), 
@@ -43,7 +44,8 @@ namespace nplm
 					num_hidden(0), 
 					fixed_partition_function(0), 
 					losses(vector<Output_loss_node>(105,Output_loss_node())),
-					unif_real(0.0,1.0){ }
+					unif_real(0.0,1.0),
+					output_dropout_layers(vector<Dropout_layer>()){ }
 
 	    propagator (model &encoder_lstm, 
 					model &decoder_lstm,
@@ -58,7 +60,8 @@ namespace nplm
 			decoder_input_nodes(vector<input_node_type >(105,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
 			//losses(vector<Matrix<precision_type,Dynamic,Dynamic> >(100,Matrix<precision_type,Dynamic,Dynamic>()))
 			losses(vector<Output_loss_node>(105,Output_loss_node())),
-			unif_real(0.0,1.0)
+			unif_real(0.0,1.0),
+			output_dropout_layers(vector<Dropout_layer>())
 			{
 				resize(minibatch_size);
 			}
@@ -136,6 +139,18 @@ namespace nplm
 			resizeLosses(minibatch_size);
 			resizeRest(minibatch_size);
 		}
+		
+		void resizeOutputDropoutLayers(int minibatch_size, precision_type dropout_probability) {
+			this->output_dropout_layers = vector<Dropout_layer>(105,Dropout_layer(output_layer_node.param->n_inputs(),
+																		minibatch_size,
+																		1-dropout_probability));
+			/*
+			for (int i=0; i<this->output_dropout_layers.size(); i++){
+				this->output_dropout_layers[i].resize(minibatch_size, 1-dropout_probability);
+			}
+			*/
+		}
+		
 	    void resizeDropout(int minibatch_size, precision_type dropout_probability) {
 			this->minibatch_size = minibatch_size;
 			resizeOutput(minibatch_size);
@@ -145,6 +160,7 @@ namespace nplm
 			resizeDecoderInputsDropout(minibatch_size, dropout_probability);
 			resizeLosses(minibatch_size);
 			resizeRest(minibatch_size);
+			resizeOutputDropoutLayers(minibatch_size, dropout_probability);
 		}		
 
 		
@@ -1011,6 +1027,86 @@ namespace nplm
 	 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;		  		 	
 		}
 
+		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
+		//losses from the next layer
+	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
+		void computeLossesDropout(const MatrixBase<DerivedOut> &output,
+			 precision_type &log_likelihood,
+			 bool gradient_check,
+			 bool norm_clipping,
+			 loss_function_type loss_function,
+			 multinomial<data_type> &unigram,
+			 int num_noise_samples,
+			 boost::random::mt19937 &rng,
+			 SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
+	 			int current_minibatch_size = output.cols();
+	 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+	 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+	 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+	 			//same dimension in and LSTM. this might not be a good idea
+	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+			
+	 			int sent_len = output.rows(); 
+	 			//precision_type log_likelihood = 0.;
+			
+	 			for (int i=sent_len-1; i>=0; i--) {
+	 				//cerr<<"i is "<<i<<endl;
+	 				if (loss_function == LogLoss) {
+						//Applying dropout to the output layer
+						output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+	 					//First doing fProp for the output layer
+	 					//The number of columns in scores will be the current minibatch size
+						
+	 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+
+				
+	 			        precision_type minibatch_log_likelihood;
+	 			        start_timer(5);
+	 			        SoftmaxLogLoss().fProp(scores, 
+	 			                   output.row(i), 
+	 			                   probs, 
+	 			                   minibatch_log_likelihood);
+	 					//cerr<<"probs is "<<probs<<endl;
+						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
+	 			        stop_timer(5);
+	 			        log_likelihood += minibatch_log_likelihood;
+	 					//getchar();
+	 			        ///// Backward propagation
+        
+	 			        start_timer(6);
+	 			        //SoftmaxLogLoss().bProp(output.row(i), 
+	 			        //           probs.leftCols(current_minibatch_size), 
+	 			        //           minibatch_weights);
+	 	   		        SoftmaxLogLoss().bProp(output.row(i), 
+	 	   		                   probs.leftCols(current_minibatch_size), 
+	 	   		                   d_Err_t_d_output);
+						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size)"<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+	 			        stop_timer(6);
+				
+
+
+	 					//Now computing the derivative of the output layer
+	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
+	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
+										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
+
+	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));	
+														   	 		   
+						//Applying dropout to the backpropagated loss
+						output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);
+	 				} else if (loss_function == NCELoss){
+						cerr<<"NOT IMPLEMENTED"<<endl;
+						exit(1);
+	 				}
+
+		   
+	 			}
+ 	
+		}
+		
 	    // Dense version (for standard log-likelihood)
 	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bPropDecoder(const MatrixBase<DerivedIn> &input_data,
@@ -1398,6 +1494,52 @@ namespace nplm
 			//log_likelihood /= sent_len;
 	  }	  
 
+	  template <typename DerivedOut, typename data_type>
+	  void computeProbsDropout(const MatrixBase<DerivedOut> &output,
+						multinomial<data_type> &unigram,
+						int num_noise_samples,
+						boost::random::mt19937 &rng,
+						loss_function_type loss_function,
+						SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
+	  					precision_type &log_likelihood) 
+	  {	
+			
+			//cerr<<"In computeProbs..."<<endl;
+			int current_minibatch_size = output.cols();
+
+			Matrix<precision_type,Dynamic,Dynamic> dummy_zero;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
+
+			int sent_len = output.rows(); 
+			//precision_type log_likelihood = 0.;
+
+			for (int i=sent_len-1; i>=0; i--) {
+				//cerr<<"i in gradient check is "<<i<<endl;
+				//First doing fProp for the output layer
+				if (loss_function == LogLoss) {
+					output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);					
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
+
+	
+			        precision_type minibatch_log_likelihood;
+			        start_timer(5);
+			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
+			                   output.row(i), 
+			                   probs, 
+			                   minibatch_log_likelihood);
+					//cerr<<"probs is "<<probs<<endl;
+			        stop_timer(5);
+			        log_likelihood += minibatch_log_likelihood;		
+				} else if (loss_function == NCELoss) {
+					cerr<<"NOT IMPLEMENTED"<<endl;
+					exit(1);
+				}
+			}
+	  }	  
+	  
 	  template <typename DerivedOut>
 	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
 	  					precision_type &log_likelihood) 
@@ -2157,7 +2299,14 @@ namespace nplm
 							init_c,
 							init_h,
 							output_sequence_cont_indices,
-							init_rng);											
+							init_rng);		
+			 		computeProbsDropout(decoder_output,
+					   			 unigram,
+					   			 num_noise_samples,
+					   			 init_rng,
+					   			 loss_function,	
+								 softmax_nce_loss,
+			 			  		 before_log_likelihood);																					
 				} else {					
 					fPropEncoder(input,
 								init_c,
@@ -2166,18 +2315,18 @@ namespace nplm
 				    fPropDecoder(decoder_input,
 							init_c,
 							init_h,
-							output_sequence_cont_indices);										
+							output_sequence_cont_indices);	
+			 		computeProbs(decoder_output,
+					   			 unigram,
+					   			 num_noise_samples,
+					   			 init_rng,
+					   			 loss_function,	
+								 softmax_nce_loss,
+			 			  		 before_log_likelihood);																
 				}
 				//cerr<<"just before passing const init c is "<<const_init_c<<endl;
 				//cerr<<"just before passing const init h is "<<const_init_h<<endl;			
 
-		 		computeProbs(decoder_output,
-				   			 unigram,
-				   			 num_noise_samples,
-				   			 init_rng,
-				   			 loss_function,	
-							 softmax_nce_loss,
-		 			  		 before_log_likelihood);
 		 		//err<<"before log likelihood is "<<
 		 	    param.changeRandomParam(-2*perturbation, 
 		 								rand_row,
@@ -2197,7 +2346,14 @@ namespace nplm
 							init_c,
 							init_h,
 							output_sequence_cont_indices,
-							init_rng);									
+							init_rng);				
+			 		computeProbsDropout(decoder_output,
+					   			 unigram,
+					   			 num_noise_samples,
+					   			 init_rng,
+					   			 loss_function,	
+								 softmax_nce_loss,
+			 			  		 after_log_likelihood);													
 				} else {					
 					fPropEncoder(input,
 								init_c,
@@ -2208,14 +2364,7 @@ namespace nplm
 							init_h,
 							output_sequence_cont_indices);									
 				}
-						
-		 		computeProbs(decoder_output,
-				   			 unigram,
-				   			 num_noise_samples,
-				   			 init_rng,
-				   			 loss_function,	
-							 softmax_nce_loss,
-		 			  		 after_log_likelihood);		
+	
 		 		//returning the parameter back to its own value
 		 	    param.changeRandomParam(perturbation , 
 		 								rand_row,

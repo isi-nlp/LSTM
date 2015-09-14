@@ -941,27 +941,36 @@ int main(int argc, char** argv)
 		    //{
 				
 				//computing losses
-			    prop.computeLosses(decoder_training_output_sent_data,
-					 data_log_likelihood,
-					 myParam.gradient_check,
-					 myParam.norm_clipping,
-					 loss_function,
-					 unigram,
-					 num_noise_samples,
-					 rng,
-					 softmax_nce_loss); //, 
-				//Calling backprop
-				if (myParam.dropout_probability > 0.) {
-				    prop.bPropDecoderDropout(training_input_sent_data,
-						decoder_training_input_sent_data,
+				if (myParam.dropout_probability > 0) {
+				    prop.computeLossesDropout(decoder_training_output_sent_data,
+						 data_log_likelihood,
 						 myParam.gradient_check,
-						 myParam.norm_clipping); //,
+						 myParam.norm_clipping,
+						 loss_function,
+						 unigram,
+						 num_noise_samples,
+						 rng,
+						 softmax_nce_loss); //, 			
+	 				    prop.bPropDecoderDropout(training_input_sent_data,
+	 						decoder_training_input_sent_data,
+	 						 myParam.gradient_check,
+	 						 myParam.norm_clipping); //,						 		
 				} else {
-				    prop.bPropDecoder(training_input_sent_data,
-						decoder_training_input_sent_data,
+				    prop.computeLosses(decoder_training_output_sent_data,
+						 data_log_likelihood,
 						 myParam.gradient_check,
-						 myParam.norm_clipping); //,					
-				}
+						 myParam.norm_clipping,
+						 loss_function,
+						 unigram,
+						 num_noise_samples,
+						 rng,
+						 softmax_nce_loss); //,
+	 				    prop.bPropDecoder(training_input_sent_data,
+	 						decoder_training_input_sent_data,
+	 						 myParam.gradient_check,						  
+							 myParam.norm_clipping);
+				 }	
+
 					 
 				if (arg_run_lm == 0) { 
 					if (myParam.dropout_probability > 0.){ 
