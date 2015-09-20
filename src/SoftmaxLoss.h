@@ -1,4 +1,4 @@
-	#ifndef SOFTMAXLOSS_H
+#ifndef SOFTMAXLOSS_H
 #define SOFTMAXLOSS_H
 
 #include <Eigen/Dense>
@@ -131,22 +131,23 @@ struct SoftmaxLogLoss
 ///// Note: Unlike SoftmaxLogLoss, does not compute *or* apply precomputed
 ///// normalizations. Currently the caller is expected to do normalization.
 
-template <typename Multinomial>
+//template <typename Multinomial>
 class SoftmaxNCELoss
 {
-    const Multinomial &unigram;
+    const multinomial<data_size_t> *unigram;
 
 public:
 	SoftmaxNCELoss()
 		:unigram(NULL)
 	{
 	}
-    SoftmaxNCELoss(const Multinomial &unigram) 
-      : unigram(unigram)
+    SoftmaxNCELoss( const multinomial<data_size_t> *unigram) 
+		: unigram(unigram)
     {
+		//this->unigram = &unigram;
     }
-	void set_unigram(const Multinomial &unigram){
-		this->unigram = unigram;
+	void set_unigram( const multinomial<data_size_t> *unigram) {
+			this->unigram = unigram;
 	}
     template <typename DerivedI, typename DerivedW, typename DerivedO>
     void fProp(const MatrixBase<DerivedI> &scores, 
@@ -163,6 +164,7 @@ public:
         #pragma omp parallel for reduction(+:log_likelihood) schedule(static)
 		for (int train_id = 0; train_id < scores.cols(); train_id++)
 		{
+			precision_type local_log_likelihood = 0;
 			//If the output word is -1, continue
 			if (minibatch_samples(0, train_id) == -1) {
 				output.col(train_id).setZero();
@@ -176,14 +178,15 @@ public:
 					// never take exp of score without normalizing first,
 					// even if it's a little slower...
 					precision_type score = scores(sample_id, train_id);
-					precision_type score_noise = log_num_noise_samples + unigram.logprob(sample);
+					precision_type score_noise = log_num_noise_samples + unigram->logprob(sample);
 					precision_type z = logadd(double(score), double(score_noise));
 					precision_type logprob = score - z;
 					precision_type logprob_noise = score_noise - z;
 					output(sample_id, train_id) = std::exp(logprob);
-					log_likelihood += sample_id == 0 ? logprob : logprob_noise;
+					local_log_likelihood += sample_id == 0 ? logprob : logprob_noise;
 			    }
 			}
+			log_likelihood += local_log_likelihood;
 		}
 		loss = log_likelihood;
 	 }

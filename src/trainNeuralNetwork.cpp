@@ -310,7 +310,7 @@ int main(int argc, char** argv)
       cerr << num_threads.getDescription() << sep << num_threads.getValue() << endl;
 	  
 	  /*
-      if (unigram_probs_file.getValue() != "")
+      if ( _probs_file.getValue() != "")
       {
 	      cerr << "Note: --unigram_probs_file is deprecated and ignored." << endl;
       }
@@ -412,6 +412,9 @@ int main(int argc, char** argv)
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
 	cerr<<"Decoder input vocab size is "<<decoder_input_vocab_size<<endl;
 	cerr<<"Decoder output vocab size is "<<decoder_output_vocab_size<<endl;
+	
+
+    //vector<data_size_t> unigram_counts(myParam.output_vocab_size);
 	/*
 	integerize(word_training_output_sent, 
 					training_output_sent, 
@@ -535,8 +538,7 @@ int main(int argc, char** argv)
 	
     ///// Construct unigram model and sampler that will be used for NCE
 	
-	
-    vector<data_size_t> unigram_counts(myParam.output_vocab_size);
+
 	/*
     for (data_size_t train_id=0; train_id < training_output_sent.size(); train_id++)
     {
@@ -551,7 +553,7 @@ int main(int argc, char** argv)
 	for (int i=0; i<unigram_counts.size(); i++)
 		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
 	*/
-    multinomial<data_size_t> unigram (unigram_counts);
+    
 	/*
 	//generating 10 noise samples for testing
 	for (int i=0; i<20; i++){
@@ -644,16 +646,29 @@ int main(int argc, char** argv)
 	if (myParam.dropout_probability > 0 ){
 		prop.resizeDropout(myParam.minibatch_size, myParam.dropout_probability);
 	}
-	//IF we're using NCE, then the minibatches have different sizes
-	if (loss_function == NCELoss)
-		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function);
+
     propagator<Google_input_node, google_input_model> prop_validation(nn, 
 															nn_decoder, 
 															myParam.validation_minibatch_size);
+														    vector<data_size_t> unigram_counts;
+	multinomial<data_size_t> unigram;																
+	if (loss_function == NCELoss){
+	    vector<data_size_t> unigram_counts = vector<data_size_t>(decoder_output_vocab_size,0);
+		for (int index=0; index<decoder_output_vocab_size; index++){
+			unigram_counts[index] = 1; //Currently using uniform noise
+		}
+		unigram = multinomial<data_size_t> (unigram_counts);
+	}
+
+	
+	//IF we're using NCE, then the minibatches have different sizes
+	if (loss_function == NCELoss)
+		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function, unigram);
+																
 	//if (loss_function == NCELoss){
 	//	propagator.
 	//}
-    SoftmaxNCELoss<multinomial<data_size_t> > softmax_nce_loss(unigram);
+    //SoftmaxNCELoss<multinomial<data_size_t> > softmax_nce_loss(unigram);
     // normalization parameters
     //vector_map c_h, c_h_running_gradient;
     
@@ -839,49 +854,7 @@ int main(int argc, char** argv)
 																		current_minibatch_size);
 			//cerr<<"training_output_sequence_cont_sent_data "<<training_output_sequence_cont_sent_data<<endl;		
 																																
-			/*
-			miniBatchifyDecoder(training_output_sent, 
-							minibatch_output_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_output_sent_len,
-							minibatch_output_tokens,
-							1);		
-																	
-			minibatch_output_tokens =0;
-			
-			
-			miniBatchifyDecoder(training_output_sent, 
-							minibatch_output_sequence_cont_sentences,
-							minibatch_start_index,
-							minibatch_end_index,
-							max_output_sent_len,
-							minibatch_output_tokens,
-							0);	
-			
-			training_output_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_output_sentences.data(),
-																			max_output_sent_len,
-																			current_minibatch_size);			
-							
-			*/
-			
-						
-			
-			//training_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_sequence_cont_sentences.data(),
-			//																max_sent_len,
-			//																current_minibatch_size);
-																	
-			//cerr<<"training input sent data is "<<training_input_sent_data<<endl;
-			//cerr<<"training output sent data is "<<training_output_sent_data<<endl;
-			//getchar();
-			//cerr<<"training input sequence cont data is "<<training_input_sequence_cont_sent_data<<endl;
-			//cerr<<"training output sequence cont data is "<<training_output_sequence_cont_sent_data<<endl;
-			//exit(0);
-			
-			//training_sequence_cont_sent_data = Array<int,Dynamic,Dynamic>	();
-			//cerr<<"training_input_sent_data "<<training_input_sent_data<<endl;
-			//cerr<<"training_output_sent_data"<<training_output_sent_data<<endl;
-			//exit(0);
+
 			//Calling fProp. Note that it should not matter for fProp if we're doing log 
 			//or NCE loss													
 			if (myParam.gradient_check) {
@@ -949,8 +922,8 @@ int main(int argc, char** argv)
 						 loss_function,
 						 unigram,
 						 num_noise_samples,
-						 rng,
-						 softmax_nce_loss); //, 			
+						 rng);
+						 //softmax_nce_loss); //, 			
 	 				    prop.bPropDecoderDropout(training_input_sent_data,
 	 						decoder_training_input_sent_data,
 	 						 myParam.gradient_check,
@@ -963,8 +936,8 @@ int main(int argc, char** argv)
 						 loss_function,
 						 unigram,
 						 num_noise_samples,
-						 rng,
-						 softmax_nce_loss); //,
+						 rng);
+						 //softmax_nce_loss); //,
 	 				    prop.bPropDecoder(training_input_sent_data,
 	 						decoder_training_input_sent_data,
 	 						 myParam.gradient_check,						  
@@ -1001,11 +974,10 @@ int main(int argc, char** argv)
 								 decoder_training_output_sent_data,
 								 current_c_for_gradCheck,
 								 current_h_for_gradCheck,
-								 unigram,
+								 //unigram,
 								 num_noise_samples,
 					   			 rng_grad_check,
 					   			 loss_function,
-								 softmax_nce_loss,
 								 training_input_sequence_cont_sent_data,
 								 training_output_sequence_cont_sent_data,
 								 arg_run_lm,
