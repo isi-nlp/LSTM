@@ -1011,7 +1011,7 @@ int main(int argc, char** argv)
 		//cerr<<"The cross entopy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
 		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
 		//log_likelihood /= sent_len;		
-		cerr << "Per symbol training probability      " << exp(data_log_likelihood/total_output_tokens) << endl;
+		cerr << "Per symbol training probability      " << exp(data_log_likelihood)/total_output_tokens << endl;
 	    cerr << "Training log-likelihood base e:      " << data_log_likelihood << endl;
 		cerr << "Training log-likelihood base 2:      " << data_log_likelihood/log(2.) << endl;
 		cerr << "Training cross entropy in base 2 is  " <<data_log_likelihood/(log(2.)*total_output_tokens)<< endl;
@@ -1164,7 +1164,7 @@ int main(int argc, char** argv)
 				
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-			cerr << "		Per symbol validation probability           "<<epoch<<":      " << exp(log_likelihood/total_validation_output_tokens) << endl;
+			cerr << "		Per symbol validation probability           "<<epoch<<":      " << exp(log_likelihood)/total_validation_output_tokens << endl;
 		    cerr << "		Validation log-likelihood base e in epoch   "<<epoch<<":      " << log_likelihood << endl;
 			cerr << "		Validation log-likelihood base 2 in epoch   "<<epoch<<":      " << log_likelihood/log(2.) << endl;
 			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":      "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
