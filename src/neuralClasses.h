@@ -1017,13 +1017,13 @@ template <typename DerivedIn, typename DerivedGOut>
 			  */
 	          W.row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
-			  b(update_item) += learning_rate*b_gradient(update_item);
+			      b(update_item) += learning_rate*b_gradient(update_item);
 	          //GRADIENT CLIPPING
 	          //W.row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
 	          //SETTING THE GRADIENT TO ZERO
 	          W_gradient.row(update_item).setZero();
-			  b_gradient(update_item) = 0;
+			      b_gradient(update_item) = 0;
 	      }
 		//we have to clear the update map
 		this->update_map.clear();

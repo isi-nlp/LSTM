@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 
       //ValueArg<precision_type> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "precision_type", cmd);
       //ValueArg<precision_type> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
-          Default: 10E-3", false, 10E-3, "precision_type", cmd);
+      //    Default: 10E-3", false, 10E-3, "precision_type", cmd);
       ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 128.", false, 128, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 128.", false, 128, "int", cmd);
 
@@ -139,8 +139,8 @@ int main(int argc, char** argv)
 	  //ValueArg<string> load_decoder_file("", "init_decoder_file", "Loading a pre-trained decoder" , false, "", "string", cmd);
       //ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
       //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
-          ADAGRAD(ADA)\n \
-          ADADELTA(ADAD)" , false, "SGD", "string", cmd);
+       //   ADAGRAD(ADA)\n \
+       //   ADADELTA(ADAD)" , false, "SGD", "string", cmd);
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  //ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
@@ -163,8 +163,8 @@ int main(int argc, char** argv)
 	  ValueArg<bool> reverse_input("", "reverse", "Reverse the input sentence before training, \n \
 		  			1 = yes. Default: 0 (No reversing).", false, 0, "bool", cmd);		    
 	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
-		  Default: 1 = yes, \n \
-		  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
+	//	  Default: 1 = yes, \n \
+	//	  			0 = gradient clipping. Default: 0.", false, 0, "bool", cmd);	  
       //ValueArg<string> model_file("", "model_file", "Model file.", false, "", "string", cmd);
 	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 	  ValueArg<precision_type> dropout_probability("", "dropout_probability", "Dropout probability. Default 0: No dropout", false,0., "precision_type", cmd);

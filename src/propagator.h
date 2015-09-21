@@ -1012,17 +1012,17 @@ namespace nplm
 	 					//Oh wow, i have not even been updating the gradient of the output embeddings
 	 					//Now computing the derivative of the output layer
 	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
-	 	   		        //output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-						//				losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
+										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
 									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
 	 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
 	 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
 	 					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
 	 					//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
-	 	   		        //output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	 	   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
+	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
 	 					//cerr<<" i is "<<i<<endl;
-	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;
+	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
 	 				} else if (loss_function == NCELoss){
 						cerr<<"NOT IMPLEMENTED"<<endl;
 						exit(1);
@@ -1037,27 +1037,27 @@ namespace nplm
 								minibatch_samples_no_negative(0,col) = 0;
 							}
 						}
+
+						output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+														minibatch_samples_no_negative,
+														scores);
+
 						nce_loss.fProp(scores, 
-	       			 				  minibatch_samples_no_negative,
+	       			 				  minibatch_samples,
 	       						   	  probs, 
 		   						  	  minibatch_log_likelihood);
 						log_likelihood += minibatch_log_likelihood;
+						nce_loss.bProp(probs.leftCols(current_minibatch_size),
+										d_Err_t_d_output);
+			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative,
+			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
+													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+													     minibatch_samples_no_negative,
+													     d_Err_t_d_output.leftCols(current_minibatch_size))) 
 	 				}
 					
- 					//Oh wow, i have not even been updating the gradient of the output embeddings
- 					//Now computing the derivative of the output layer
- 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
- 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-									losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-								   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
- 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
- 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
- 					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
- 					//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
- 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
- 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
- 					//cerr<<" i is "<<i<<endl;
- 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   
+
 	 			}
 	 			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
 	 			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
@@ -1456,6 +1456,12 @@ namespace nplm
 		} else if (loss_function == NCELoss){
 			cerr<<"NOT IMPLEMENTED"<<endl;
 			exit(1);
+			decoder_plstm->output_layer.updateParamsNCE(earning_rate,
+								current_minibatch_size,
+								momentum,
+								L2_reg,
+								norm_clipping,
+								pnorm_threshold);	
 		} else {
 			cerr<<loss_function<<" is an invalid loss function type"<<endl;
 			exit(0);
@@ -1530,8 +1536,29 @@ namespace nplm
 			        stop_timer(5);
 			        log_likelihood += minibatch_log_likelihood;		
 				} else if (loss_function == NCELoss) {
-					cerr<<"NOT IMPLEMENTED"<<endl;
-					exit(1);
+					//cerr<<"NOT IMPLEMENTED"<<endl;
+					//exit(1);
+					precision_type minibatch_log_likelihood;
+					generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
+					minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+					
+					//preparing the minbatch with no zeros for fprop nce
+					minibatch_samples_no_negative = minibatch_samples;
+					for (int col=0; col<current_minibatch_size; col++){ 
+						if(minibatch_samples_no_negative(0,col) == -1){
+							minibatch_samples_no_negative(0,col) = 0;
+						}
+					}
+
+					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+													minibatch_samples_no_negative,
+													scores);
+
+					nce_loss.fProp(scores, 
+       			 				  minibatch_samples,
+       						   	  probs, 
+	   						  	  minibatch_log_likelihood);
+					log_likelihood += minibatch_log_likelihood;					
 				}
 			}
 			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
