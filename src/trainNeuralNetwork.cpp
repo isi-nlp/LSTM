@@ -655,8 +655,13 @@ int main(int argc, char** argv)
 	multinomial<data_size_t> unigram;																
 	if (loss_function == NCELoss){
 	    vector<data_size_t> unigram_counts = vector<data_size_t>(decoder_output_vocab_size,0);
-		for (int index=0; index<decoder_output_vocab_size; index++){
-			unigram_counts[index] = 1; //Currently using uniform noise
+		//for (int index=0; index<decoder_output_vocab_size; index++){
+		//	unigram_counts[index] = 1; //Currently using uniform noise
+		//}
+		for (int sent_index=0; sent_index<decoder_training_output_sent.size(); sent_index++){
+			for (int word_index=0; word_index<decoder_training_output_sent[sent_index].size(); word_index++){
+				unigram_counts[decoder_training_output_sent[sent_index][word_index]] += 1;
+			}
 		}
 		unigram = multinomial<data_size_t> (unigram_counts);
 	}
