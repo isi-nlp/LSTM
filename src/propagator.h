@@ -180,6 +180,7 @@ namespace nplm
 			cerr<<"Size of scores is "<<scores.cols()<<" "<<scores.rows()<<endl;
 			this->fixed_partition_function = fixed_partition_function;
 			this->nce_loss.set_unigram(&unigram);
+			d_Err_t_d_output.resize(num_noise_samples+1,minibatch_size);	
 			//this->nce_loss = SoftmaxNCELoss(unigram);
 		}
 	    void resize() { resize(minibatch_size); }
@@ -1024,11 +1025,15 @@ namespace nplm
 	 					//cerr<<" i is "<<i<<endl;
 	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
 	 				} else if (loss_function == NCELoss){
-						cerr<<"NOT IMPLEMENTED"<<endl;
-						exit(1);
+						//cerr<<"NOT IMPLEMENTED"<<endl;
+						//exit(1);
 						
 						generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
-						minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+						//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
+						//cerr<<"output "<<output<<endl;
+						//cerr<<" output.row(0)" <<output.row(0)<<endl;
+						//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+						minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(0);
 						
 						//preparing the minbatch with no zeros for fprop nce
 						minibatch_samples_no_negative = minibatch_samples;
@@ -1037,9 +1042,10 @@ namespace nplm
 								minibatch_samples_no_negative(0,col) = 0;
 							}
 						}
-
+						//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
+						//getchar();
 						output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-														minibatch_samples_no_negative,
+														minibatch_samples_no_negative.leftCols(current_minibatch_size),
 														scores);
 
 						nce_loss.fProp(scores, 
@@ -1047,14 +1053,18 @@ namespace nplm
 	       						   	  probs, 
 		   						  	  minibatch_log_likelihood);
 						log_likelihood += minibatch_log_likelihood;
+						//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
+							
 						nce_loss.bProp(probs.leftCols(current_minibatch_size),
 										d_Err_t_d_output);
-			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative,
+						//cerr<<"d_Err_t_d_output "<<d_Err_t_d_output<<endl;
+			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
 													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+						//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
 			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-													     minibatch_samples_no_negative,
-													     d_Err_t_d_output.leftCols(current_minibatch_size))) 
+													     minibatch_samples_no_negative.leftCols(current_minibatch_size),
+													     d_Err_t_d_output.leftCols(current_minibatch_size));
 	 				}
 					
 
@@ -1454,14 +1464,14 @@ namespace nplm
 							norm_clipping,
 							norm_threshold);			
 		} else if (loss_function == NCELoss){
-			cerr<<"NOT IMPLEMENTED"<<endl;
-			exit(1);
-			decoder_plstm->output_layer.updateParamsNCE(earning_rate,
+			//cerr<<"NOT IMPLEMENTED"<<endl;
+			//exit(1);
+			decoder_plstm->output_layer.updateParamsNCE(learning_rate,
 								current_minibatch_size,
 								momentum,
 								L2_reg,
 								norm_clipping,
-								pnorm_threshold);	
+								norm_threshold);	
 		} else {
 			cerr<<loss_function<<" is an invalid loss function type"<<endl;
 			exit(0);
@@ -1494,11 +1504,12 @@ namespace nplm
 										norm_threshold);												
 	  }
 	  
-	  template <typename DerivedOut>
+	  template <typename DerivedOut, typename data_type>
 	  void computeProbs(const MatrixBase<DerivedOut> &output,
-						//multinomial<data_type> &unigram,
+	  				  	multinomial<data_type> &unigram,
 						int num_noise_samples,
 						boost::random::mt19937 &rng,
+						//multinomial<data_type> &unigram,
 						loss_function_type loss_function,
 						//SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 	  					precision_type &log_likelihood) 
@@ -1540,7 +1551,11 @@ namespace nplm
 					//exit(1);
 					precision_type minibatch_log_likelihood;
 					generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
-					minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+					//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
+					//cerr<<"output "<<output<<endl;
+					//cerr<<" output.row(0)" <<output.row(0)<<endl;
+					//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+					minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(0);
 					
 					//preparing the minbatch with no zeros for fprop nce
 					minibatch_samples_no_negative = minibatch_samples;
@@ -1549,16 +1564,17 @@ namespace nplm
 							minibatch_samples_no_negative(0,col) = 0;
 						}
 					}
-
+					//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
+					//getchar();
 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-													minibatch_samples_no_negative,
+													minibatch_samples_no_negative.leftCols(current_minibatch_size),
 													scores);
 
 					nce_loss.fProp(scores, 
        			 				  minibatch_samples,
        						   	  probs, 
 	   						  	  minibatch_log_likelihood);
-					log_likelihood += minibatch_log_likelihood;					
+					log_likelihood += minibatch_log_likelihood;		
 				}
 			}
 			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
@@ -1710,13 +1726,13 @@ namespace nplm
   	}	
 	
 	//Use finite differences to do gradient check
-	template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
     void gradientCheck(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &decoder_input,
 			 const MatrixBase<DerivedOut> &decoder_output,
 			 const MatrixBase<DerivedC> &const_init_c,
 			 const MatrixBase<DerivedH> &const_init_h,
-			 //multinomial<data_type> &unigram,
+			 multinomial<data_type> &unigram,
 			 int num_noise_samples,
 			 boost::random::mt19937 &rng,
 			 loss_function_type loss_function,
@@ -1743,7 +1759,7 @@ namespace nplm
 							 "output_layer", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -1759,7 +1775,7 @@ namespace nplm
 							 "Decoder: W_h_to_c", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1775,7 +1791,7 @@ namespace nplm
 							 "Decoder: W_h_to_f", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1791,7 +1807,7 @@ namespace nplm
 							 "Decoder: W_h_to_o", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1809,7 +1825,7 @@ namespace nplm
 							 "Decoder: W_h_to_i", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1828,7 +1844,7 @@ namespace nplm
 							 "Decoder: W_c_to_o", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1846,7 +1862,7 @@ namespace nplm
 							 "Decoder: W_c_to_f", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1863,7 +1879,7 @@ namespace nplm
 							 "Decoder: W_c_to_i", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1881,7 +1897,7 @@ namespace nplm
 							 "Decoder: o_t",  
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1899,7 +1915,7 @@ namespace nplm
 							 "Decoder: f_t",
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1917,7 +1933,7 @@ namespace nplm
 							 "Decoder: i_t",
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1935,7 +1951,7 @@ namespace nplm
 							 "Decoder: tanh_c_prime_t", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1953,7 +1969,7 @@ namespace nplm
 							 (dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_i,"Decoder: Standard_input_node: W_x_to_i", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -1969,7 +1985,7 @@ namespace nplm
 							 "Decoder: Standard_input_node: W_x_to_f", 
   							 init_c,
   							 init_h,
-  							 //unigram,
+  							 unigram,
   							 num_noise_samples,
   				   			 rng,
   				   			 loss_function,
@@ -1987,7 +2003,7 @@ namespace nplm
 						 "Decoder: Standard_input_node: W_x_to_c", 
 						 init_c,
 						 init_h,
-						 //unigram,
+						 unigram,
 						 num_noise_samples,
 			   			 rng,
 			   			 loss_function,
@@ -2002,7 +2018,7 @@ namespace nplm
 						 "Decoder: Standard_input_node: W_x_to_o", 
  						 init_c,
  						 init_h,
- 						 //unigram,
+ 						 unigram,
  						 num_noise_samples,
  			   			 rng,
  			   			 loss_function,
@@ -2023,7 +2039,7 @@ namespace nplm
 							 "Encoder: W_h_to_c", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2041,7 +2057,7 @@ namespace nplm
 							 "Encoder: W_h_to_f", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2059,7 +2075,7 @@ namespace nplm
 							 "Encoder: W_h_to_o", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2077,7 +2093,7 @@ namespace nplm
 							 "Encoder: W_h_to_i", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2096,7 +2112,7 @@ namespace nplm
 							 "Encoder: W_c_to_o", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2114,7 +2130,7 @@ namespace nplm
 							 "Encoder: W_c_to_f", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2131,7 +2147,7 @@ namespace nplm
 							 "Encoder: W_c_to_i", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2149,7 +2165,7 @@ namespace nplm
 							 "Encoder: o_t",  
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2167,7 +2183,7 @@ namespace nplm
 							 "Encoder: f_t",
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2184,7 +2200,7 @@ namespace nplm
 							 "Encoder: i_t",
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2201,7 +2217,7 @@ namespace nplm
 							 "Encoder: tanh_c_prime_t", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2218,7 +2234,7 @@ namespace nplm
 							 "Encoder: Standard_input_node: W_x_to_i", 
 							 init_c,
 							 init_h,
-							 //unigram,
+							 unigram,
 							 num_noise_samples,
 				   			 rng,
 				   			 loss_function,
@@ -2234,7 +2250,7 @@ namespace nplm
 							 "Encoder: Standard_input_node: W_x_to_f", 
  							 init_c,
  							 init_h,
- 							 //unigram,
+ 							 unigram,
  							 num_noise_samples,
  				   			 rng,
  				   			 loss_function,
@@ -2251,7 +2267,7 @@ namespace nplm
 							 "Encoder: Standard_input_node: W_x_to_c", 
   							 init_c,
   							 init_h,
-  							 //unigram,
+  							 unigram,
   							 num_noise_samples,
   				   			 rng,
   				   			 loss_function,
@@ -2266,7 +2282,7 @@ namespace nplm
 						 "Encoder: Standard_input_node: W_x_to_o", 
 						 init_c,
 						 init_h,
-						 //unigram,
+						 unigram,
 						 num_noise_samples,
 			   			 rng,
 			   			 loss_function,
@@ -2279,7 +2295,7 @@ namespace nplm
 		
 						 
 	}
-	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
 	void paramGradientCheck(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &decoder_input,
 			 const MatrixBase<DerivedOut> &decoder_output,
@@ -2287,7 +2303,7 @@ namespace nplm
 			 const string param_name,
 			 const MatrixBase<DerivedC> &init_c,
 			 const MatrixBase<DerivedH> &init_h, 
-			 //multinomial<data_type> &unigram,
+			 multinomial<data_type> &unigram,
 			 int num_noise_samples,
 			 boost::random::mt19937 &rng,
 			 loss_function_type loss_function,			 
@@ -2307,7 +2323,7 @@ namespace nplm
 							col, 
 							init_c, 
 							init_h,
-				   			//unigram,
+				   			unigram,
 				   			num_noise_samples,
 				   			rng,
 				   			loss_function,
@@ -2319,7 +2335,7 @@ namespace nplm
 		}
 	}
 	
-	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS>
+	template <typename DerivedIn, typename DerivedOut, typename testParam, typename DerivedC, typename DerivedH, typename DerivedS, typename data_type>
     void getFiniteDiff(const MatrixBase<DerivedIn> &input,
 			 const MatrixBase<DerivedOut> &decoder_input,
 			 const MatrixBase<DerivedOut> &decoder_output,
@@ -2329,7 +2345,7 @@ namespace nplm
 			 int col,
 			 const MatrixBase<DerivedC> &const_init_c,
 			 const MatrixBase<DerivedH> &const_init_h,
-			 //multinomial<data_type> &unigram,
+			 multinomial<data_type> &unigram,
 			 int num_noise_samples,
 			 boost::random::mt19937 &rng,
 			 loss_function_type loss_function,
@@ -2359,6 +2375,7 @@ namespace nplm
 		 		//fProp(input, output, 0, input.rows()-1, init_c, init_h, sequence_cont_indices);
 				//cerr<<"const init c is "<<const_init_c<<endl;
 				//cerr<<"const init h is "<<const_init_h<<endl;
+				cerr<<"first perturbing"<<endl;
 				if (dropout_probability > 0) {
 					fPropEncoderDropout(input,
 								init_c,
@@ -2387,7 +2404,7 @@ namespace nplm
 							init_h,
 							output_sequence_cont_indices);	
 			 		computeProbs(decoder_output,
-					   			 //unigram,
+								 unigram,
 					   			 num_noise_samples,
 					   			 init_rng,
 					   			 loss_function,	
@@ -2404,7 +2421,8 @@ namespace nplm
 				init_c = const_init_c;
 				init_h = const_init_h;
 				init_rng = rng;
-		 		precision_type after_log_likelihood = 0;						
+		 		precision_type after_log_likelihood = 0;	
+				cerr<<"second perturbing"<<endl;					
 		 		//fProp(input,output, 0, input.rows()-1, init_c, init_h, input_sequence_cont_indices);	
 				if (dropout_probability > 0) {
 					fPropEncoderDropout(input,
@@ -2435,7 +2453,7 @@ namespace nplm
 							init_h,
 							output_sequence_cont_indices);	
  			 		computeProbs(decoder_output,
- 					   			 //unigram,
+								 unigram,
  					   			 num_noise_samples,
  					   			 init_rng,
  					   			 loss_function,	

@@ -95,12 +95,12 @@ int main(int argc, char** argv)
 
       //ValueArg<bool> arg_randomize("", "randomize", "Randomize training instances for better training. 1 = yes, 0 = no. Default: 1.", false, true, "bool", cmd);
 
-      //ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
+      ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
 
       ValueArg<precision_type> L2_reg("", "L2_reg", "L2 regularization strength (hidden layer weights only). Default: 0.", false, 0.0, "precision_type", cmd);
 
       ValueArg<precision_type> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "precision_type", cmd);
-	  //ValueArg<precision_type> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "precision_type", cmd);
+	  ValueArg<precision_type> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "precision_type", cmd);
 
       //ValueArg<precision_type> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "precision_type", cmd);
 
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
 
       myParam.num_threads = num_threads.getValue();
 
-      //myParam.num_noise_samples = num_noise_samples.getValue();
+      myParam.num_noise_samples = num_noise_samples.getValue();
 
       //myParam.input_embedding_dimension = input_embedding_dimension.getValue();
       //myParam.output_embedding_dimension = output_embedding_dimension.getValue();
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
       myParam.learning_rate = learning_rate.getValue();
 
 	  myParam.adagrad_epsilon = 0;
-	  //myParam.fixed_partition_function = fixed_partition_function.getValue();
+	  myParam.fixed_partition_function = fixed_partition_function.getValue();
       //myParam.use_momentum = use_momentum.getValue();
 	  myParam.use_momentum = 0;
 
@@ -271,6 +271,7 @@ int main(int argc, char** argv)
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
 	  cerr << reverse_input.getDescription() <<sep <<reverse_input.getValue() <<endl;
 	  cerr << seed.getDescription() << sep << seed.getValue() <<endl;
+	  cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
 	  //cerr << load_encoder_file.getDescription() <<sep <<load_encoder_file.getValue() <<endl;
 	  //cerr << load_decoder_file.getDescription() <<sep <<load_decoder_file.getValue() <<endl;
 	  if (arg_run_lm == 1) {
@@ -279,7 +280,7 @@ int main(int argc, char** argv)
 		  cerr<<"Running as a LSTM sequence to sequence model"<<endl;
 	  }
 	  //exit(0);
-	  //cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
+	  cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
 	  
 
       cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
@@ -974,7 +975,7 @@ int main(int argc, char** argv)
 								 decoder_training_output_sent_data,
 								 current_c_for_gradCheck,
 								 current_h_for_gradCheck,
-								 //unigram,
+								 unigram,
 								 num_noise_samples,
 					   			 rng_grad_check,
 					   			 loss_function,

@@ -150,6 +150,9 @@ void uscgemm_masked(precision_type alpha,
 		    const MatrixBase<DerivedB> &b,
 		    USCMatrix<ScalarC,Index> &c)
 {
+	//std::cerr<<"a "<<a<<std::endl;
+	//std::cerr<<"b "<<b<<std::endl;
+	//cerr<<"c "<<c<<endl;
     eigen_assert(a.rows() == c.rows());
     eigen_assert(a.cols() == b.rows());
     eigen_assert(b.cols() == c.cols());
