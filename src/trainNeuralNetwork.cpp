@@ -662,7 +662,7 @@ int main(int argc, char** argv)
 		//}
 		for (int sent_index=0; sent_index<decoder_training_output_sent.size(); sent_index++){
 			for (int word_index=0; word_index<decoder_training_output_sent[sent_index].size(); word_index++){
-				unigram_counts[decoder_training_output_sent[sent_index][word_index]] = 1;
+				unigram_counts[decoder_training_output_sent[sent_index][word_index]] += 1;
 			}
 		}
 		unigram = multinomial<data_size_t> (unigram_counts);
