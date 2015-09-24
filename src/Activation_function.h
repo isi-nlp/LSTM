@@ -44,6 +44,10 @@ inline std::string activation_function_to_string (activation_function_type f)
         return "hardtanh";
     else if (f == Sigmoid)
         return "sigmoid";
+    else {
+        std::cerr<< "InvalidFunction"<<std::endl;
+		exit(1);
+	}
 }
 
 struct hardtanh_functor {
@@ -100,14 +104,15 @@ class Activation_function
         {
 	    UNCONST(DerivedOut, output, my_output);
 
-	    switch (f)
-	    {
-	    case Identity: my_output = input; break;
-	    case Rectifier: my_output = input.unaryExpr(rectifier_functor()); break;
-	    case Tanh: my_output = input.unaryExpr(tanh_functor()); break;
-		case Sigmoid: my_output = 1./(1.+(-1*input.array()).exp()); break;//input.unaryExpr(sigmoid_functor()); break;
-	    case HardTanh: my_output = input.unaryExpr(hardtanh_functor()); break;
-	    }
+		    switch (f)
+		    {
+			    case Identity: my_output = input; break;
+			    case Rectifier: my_output = input.unaryExpr(rectifier_functor()); break;
+			    case Tanh: my_output = input.unaryExpr(tanh_functor()); break;
+				case Sigmoid: my_output = 1./(1.+(-1*input.array()).exp()); break;//input.unaryExpr(sigmoid_functor()); break;
+			    case HardTanh: my_output = input.unaryExpr(hardtanh_functor()); break;
+				case InvalidFunction: std::cerr<<"Invalid function"<<std::endl; exit(1); break;
+		    }
         }
 
         template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
@@ -118,14 +123,15 @@ class Activation_function
         {
 	    UNCONST(DerivedGIn, output, my_output);
 
-	    switch (f)	
-	    {
-	    case Identity: my_output = input; break;
-	    case Rectifier: my_output = finput.array().unaryExpr(drectifier_functor()) * input.array(); break;
-	    case Tanh: my_output = (1.-foutput.array().square()) * input.array(); break; //foutput.array().unaryExpr(dtanh_functor()) * input.array(); break;
-		case Sigmoid: my_output = foutput.array()*(1.-foutput.array()) * input.array(); break; //foutput.array().unaryExpr(dsigmoid_functor()) * input.array(); break;
-	    case HardTanh: my_output = finput.array().unaryExpr(dhardtanh_functor()) * input.array(); break;
-	    }
+		    switch (f)	
+		    {
+			    case Identity: my_output = input; break;
+			    case Rectifier: my_output = finput.array().unaryExpr(drectifier_functor()) * input.array(); break;
+			    case Tanh: my_output = (1.-foutput.array().square()) * input.array(); break; //foutput.array().unaryExpr(dtanh_functor()) * input.array(); break;
+				case Sigmoid: my_output = foutput.array()*(1.-foutput.array()) * input.array(); break; //foutput.array().unaryExpr(dsigmoid_functor()) * input.array(); break;
+			    case HardTanh: my_output = finput.array().unaryExpr(dhardtanh_functor()) * input.array(); break;
+				case InvalidFunction: std::cerr<<"Invalid function"<<std::endl; exit(1); break;
+		    }
         }
 };
 

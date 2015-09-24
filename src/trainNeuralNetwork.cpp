@@ -271,7 +271,9 @@ int main(int argc, char** argv)
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
 	  cerr << reverse_input.getDescription() <<sep <<reverse_input.getValue() <<endl;
 	  cerr << seed.getDescription() << sep << seed.getValue() <<endl;
+	  cerr << loss_function.getDescription() << sep << loss_function.getValue() << endl;
 	  cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
+	  cerr << fixed_partition_function.getDescription() << sep << fixed_partition_function.getValue() << endl;
 	  //cerr << load_encoder_file.getDescription() <<sep <<load_encoder_file.getValue() <<endl;
 	  //cerr << load_decoder_file.getDescription() <<sep <<load_decoder_file.getValue() <<endl;
 	  if (arg_run_lm == 1) {
@@ -280,7 +282,7 @@ int main(int argc, char** argv)
 		  cerr<<"Running as a LSTM sequence to sequence model"<<endl;
 	  }
 	  //exit(0);
-	  cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
+	  //cerr << fixed_partition_function.getDescription() <<sep <<fixed_partition_function.getValue() <<endl;
 	  
 
       cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
@@ -660,7 +662,7 @@ int main(int argc, char** argv)
 		//}
 		for (int sent_index=0; sent_index<decoder_training_output_sent.size(); sent_index++){
 			for (int word_index=0; word_index<decoder_training_output_sent[sent_index].size(); word_index++){
-				unigram_counts[decoder_training_output_sent[sent_index][word_index]] += 1;
+				unigram_counts[decoder_training_output_sent[sent_index][word_index]] = 1;
 			}
 		}
 		unigram = multinomial<data_size_t> (unigram_counts);
@@ -841,8 +843,13 @@ int main(int argc, char** argv)
 																						current_minibatch_size);
 			decoder_training_input_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_input_sentences.data(),
 																						max_output_sent_len,
-																						current_minibatch_size);																						
-			//cerr<<"decoder_training_output_sent_data "<<decoder_training_output_sent_data<<endl;
+																						current_minibatch_size);	
+			/*																			
+			for (int sent_id=0; sent_id<decoder_training_output_sent_data.cols(); sent_id++){
+				cerr<<"decoder_training_output_sent_data.col(sent_id) "<<decoder_training_output_sent_data.col(sent_id)<<endl;					
+			}															
+			getchar();	
+			*/
 			//cerr<<"decoder_training_input_sent_data "<<decoder_training_input_sent_data<<endl;		
 								
 			minibatch_output_tokens =0;	

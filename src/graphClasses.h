@@ -631,7 +631,8 @@ public:
    		d_Err_t_to_n_d_c_tMinusOne = (d_Err_t_to_n_d_c_t.array()*f_t_node.fProp_matrix.array()).matrix()+
    									W_c_to_f_node.bProp_matrix +
    									W_c_to_i_node.bProp_matrix;
-   		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
+		 
+		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
 
    		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
    		//nonlinearities. This is done if there is no norm clipping
@@ -780,6 +781,7 @@ public:
 								//cerr<<"this->h_t_minus_one "<<this->h_t_minus_one<<endl;
 								//cerr<<"this->c_t_minus_one "<<this->c_t_minus_one<<endl;
 							} else {
+								//cerr<<"sequence_cont_indices(index) was "<<sequence_cont_indices(index)<<endl;
 								//cerr<<"copying"<<endl;
 								//cerr<<"to_h_matrix.col(index) "<<to_h_matrix.col(index)<<endl;
 								//cerr<<"from_h_matrix.col(index)" <<from_h_matrix.col(index)<<endl;

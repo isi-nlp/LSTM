@@ -453,6 +453,7 @@ void miniBatchifyDecoder(const std::vector<std::vector <int> > &sentences,
 		for (;sent_index<max_sent_len; sent_index++){
 			//If its the output sentence, then set the output label to -1
 			minibatch_sentences.push_back((data_or_sentence_vector)? pad_value:0);
+			//cerr<<"padding with -1"<<endl;
 		}
 	}
 }

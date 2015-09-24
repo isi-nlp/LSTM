@@ -177,7 +177,7 @@ namespace nplm
 			minibatch_samples_no_negative.setZero(num_noise_samples+1,minibatch_size);
 			scores.setZero(num_noise_samples+1,minibatch_size);
 			probs.setZero(num_noise_samples+1,minibatch_size);
-			cerr<<"Size of scores is "<<scores.cols()<<" "<<scores.rows()<<endl;
+			//cerr<<"Size of scores is "<<scores.cols()<<" "<<scores.rows()<<endl;
 			this->fixed_partition_function = fixed_partition_function;
 			this->nce_loss.set_unigram(&unigram);
 			d_Err_t_d_output.resize(num_noise_samples+1,minibatch_size);	
@@ -235,7 +235,7 @@ namespace nplm
 																decoder_lstm_nodes[i-1].c_t,
 																decoder_lstm_nodes[i].h_t_minus_one,
 																decoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));						
+																sequence_cont_indices.row(i));					
 																
 					decoder_lstm_nodes[i].fProp(output_data.row(i));//,
 					
@@ -949,6 +949,13 @@ namespace nplm
 
 		}
 		
+		template<typename Derived>
+		void printHiddenStates(const MatrixBase<Derived> &matrix, const string &type){
+			for (int i=0; i<matrix.cols(); i++){
+				cerr<<"state "<<type<<":"<<i<<" has norm "<<matrix.col(i).norm()<<endl;
+			}
+		}
+			
 		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
 		//losses from the next layer
 	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
@@ -968,13 +975,20 @@ namespace nplm
 	 			//same dimension in and LSTM. this might not be a good idea
 	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-			
+				
 	 			int sent_len = output.rows(); 
 	 			//precision_type log_likelihood = 0.;
 			
 	 			for (int i=sent_len-1; i>=0; i--) {
 	 				//cerr<<"i is "<<i<<endl;
 					precision_type minibatch_log_likelihood;
+					/*
+					string state_type = "h_t";
+					printHiddenStates(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), state_type);
+					state_type = "c_t";
+					printHiddenStates(decoder_lstm_nodes[i].c_t.leftCols(current_minibatch_size), state_type);
+					//getchar();
+					*/
 	 				if (loss_function == LogLoss) {
 	 					//First doing fProp for the output layer
 	 					//The number of columns in scores will be the current minibatch size
@@ -986,7 +1000,6 @@ namespace nplm
 	 					//cerr<<"Score is"<<endl;
 	 					//cerr<<scores<<endl;
 				
-	 			       
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
 	 			                   output.row(i), 
@@ -1033,8 +1046,12 @@ namespace nplm
 						//cerr<<"output "<<output<<endl;
 						//cerr<<" output.row(0)" <<output.row(0)<<endl;
 						//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
-						minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(0);
-						
+						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+						//cerr<<"output.row(0) "<<output.row(0)<<endl;
+						//getchar();
+						minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
+						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+						//getchar();
 						//preparing the minbatch with no zeros for fprop nce
 						minibatch_samples_no_negative = minibatch_samples;
 						for (int col=0; col<current_minibatch_size; col++){ 
@@ -1044,14 +1061,17 @@ namespace nplm
 						}
 						//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
 						//getchar();
+						//cerr<<"Score is "<<scores<<endl;
+						scores.setZero();
 						output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
 														minibatch_samples_no_negative.leftCols(current_minibatch_size),
 														scores);
-
+						//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
 						nce_loss.fProp(scores, 
 	       			 				  minibatch_samples,
 	       						   	  probs, 
-		   						  	  minibatch_log_likelihood);
+		   						  	  minibatch_log_likelihood,
+									  this->fixed_partition_function);
 						log_likelihood += minibatch_log_likelihood;
 						//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
 							
@@ -1061,7 +1081,9 @@ namespace nplm
 			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
 													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
 						//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
+						//getchar();
 			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
 													     minibatch_samples_no_negative.leftCols(current_minibatch_size),
 													     d_Err_t_d_output.leftCols(current_minibatch_size));
@@ -1196,7 +1218,6 @@ namespace nplm
 				//cerr<<"losses[i].d_Err_t_d_h_t "<<losses[i].d_Err_t_d_h_t<<endl;
 				//getchar();
 				if (i==0 && output_sent_len-1 > 0) {
-					
 				    decoder_lstm_nodes[i].bProp(output_data.row(i),
 							   //init_h,
 				   			   //init_c,
@@ -1457,6 +1478,7 @@ namespace nplm
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
 		if (loss_function == LogLoss){
+			//cerr<<"updating log output layer"<<endl;
 			decoder_plstm->output_layer.updateParams(learning_rate,
 							current_minibatch_size,
 		  					momentum,
@@ -1466,6 +1488,7 @@ namespace nplm
 		} else if (loss_function == NCELoss){
 			//cerr<<"NOT IMPLEMENTED"<<endl;
 			//exit(1);
+			//cerr<<"updating nce output layer"<<endl;
 			decoder_plstm->output_layer.updateParamsNCE(learning_rate,
 								current_minibatch_size,
 								momentum,
@@ -1555,8 +1578,10 @@ namespace nplm
 					//cerr<<"output "<<output<<endl;
 					//cerr<<" output.row(0)" <<output.row(0)<<endl;
 					//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
-					minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(0);
+					minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
 					
+					//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+					//getchar();
 					//preparing the minbatch with no zeros for fprop nce
 					minibatch_samples_no_negative = minibatch_samples;
 					for (int col=0; col<current_minibatch_size; col++){ 
@@ -1573,7 +1598,8 @@ namespace nplm
 					nce_loss.fProp(scores, 
        			 				  minibatch_samples,
        						   	  probs, 
-	   						  	  minibatch_log_likelihood);
+	   						  	  minibatch_log_likelihood,
+								  this->fixed_partition_function);
 					log_likelihood += minibatch_log_likelihood;		
 				}
 			}
@@ -2375,7 +2401,7 @@ namespace nplm
 		 		//fProp(input, output, 0, input.rows()-1, init_c, init_h, sequence_cont_indices);
 				//cerr<<"const init c is "<<const_init_c<<endl;
 				//cerr<<"const init h is "<<const_init_h<<endl;
-				cerr<<"first perturbing"<<endl;
+				//cerr<<"first perturbing"<<endl;
 				if (dropout_probability > 0) {
 					fPropEncoderDropout(input,
 								init_c,
@@ -2422,7 +2448,7 @@ namespace nplm
 				init_h = const_init_h;
 				init_rng = rng;
 		 		precision_type after_log_likelihood = 0;	
-				cerr<<"second perturbing"<<endl;					
+				//cerr<<"second perturbing"<<endl;					
 		 		//fProp(input,output, 0, input.rows()-1, init_c, init_h, input_sequence_cont_indices);	
 				if (dropout_probability > 0) {
 					fPropEncoderDropout(input,

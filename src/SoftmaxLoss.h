@@ -33,6 +33,10 @@ inline std::string loss_function_to_string (loss_function_type f)
         return "log";
     else if (f == NCELoss)
         return "nce";
+    else {
+        std::cerr<< "InvalidLoss"<<std::endl;
+		exit(1);
+	}
 }
 
 /// Note: Outputs log-probabilities.
@@ -153,14 +157,17 @@ public:
     void fProp(const MatrixBase<DerivedI> &scores, 
 	       const MatrixBase<DerivedW> &minibatch_samples,
 	       const MatrixBase<DerivedO> &output_const, 
-		   precision_type &loss)
+		   precision_type &loss,
+		   precision_type &fixed_partition_function)
     {
         UNCONST(DerivedO, output_const, output);
 		//UNCONST(DerivedW, const_minibatch_samples, minibatch_samples);
 		precision_type log_likelihood = 0.0;
 		int num_noise_samples = minibatch_samples.rows()-1;
+		//std::cerr<<"num noise samples are "<<num_noise_samples<<std::endl;
 		precision_type log_num_noise_samples = std::log(num_noise_samples);
-		//td::cerr<<"minibatch samples are "<<minibatch_samples<<std::endl;
+		//std::cerr<<"minibatch samples are "<<minibatch_samples<<std::endl;
+		//getchar();
         #pragma omp parallel for reduction(+:log_likelihood) schedule(static)
 		for (int train_id = 0; train_id < scores.cols(); train_id++)
 		{
@@ -169,6 +176,7 @@ public:
 			if (minibatch_samples(0, train_id) == -1) {
 				output.col(train_id).setZero();
 				output(0,train_id) = 1; //Setting this to 1 because it will be set to 0 in the backprop phase, which implies 0 gradient
+				//std::cerr<<"item was -1"<<std::endl;
 				continue;
 			} else {
 			    for (int sample_id = 0;sample_id < minibatch_samples.rows(); sample_id++)
@@ -177,7 +185,7 @@ public:
 					// To avoid zero or infinite probabilities,
 					// never take exp of score without normalizing first,
 					// even if it's a little slower...
-					precision_type score = scores(sample_id, train_id);
+					precision_type score = scores(sample_id, train_id)-fixed_partition_function;
 					precision_type score_noise = log_num_noise_samples + unigram->logprob(sample);
 					precision_type z = logadd(double(score), double(score_noise));
 					precision_type logprob = score - z;

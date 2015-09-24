@@ -294,6 +294,7 @@ class Linear_layer
 		//cerr<<"bProp input is "<<bProp_input<<endl;
 		//cerr<<"fProp_input is "<<fProp_input<<endl;
         U_gradient += bProp_input*fProp_input.transpose();
+		//cerr<<"the U gradient norm is "<<U_gradient.norm()<<endl;
 		//cerr<<"current U gradient is "<<U_gradient<<endl;
       
         // get the bias gradient for all dimensions in parallel
@@ -326,7 +327,7 @@ class Linear_layer
       }
       else
       {
-
+		  //cerr<<"the U gradient norm is "<<U_gradient.norm()<<endl;
 		  if (norm_clipping){
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
@@ -821,6 +822,8 @@ template <typename DerivedIn, typename DerivedGOut>
 	
     W_gradient += bProp_input * predicted_embeddings.transpose();
     b_gradient += bProp_input.rowwise().sum();
+	//cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
+	//getchar();
 	//cerr<<"W_gradient in output layer is "<<W_gradient<<endl
 	
     /*
@@ -848,6 +851,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	  } 
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array().unaryExpr(Clipper());
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
+	  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	  if (norm_clipping){
 		  scaleAndNormClip(W_gradient,
 		  				   current_minibatch_size,
@@ -954,7 +958,8 @@ template <typename DerivedIn, typename DerivedGOut>
 	{
 		
 		//ACCUMULATING gradient
-	
+		//cerr<<"W gradient is "<<W_gradient<<endl;
+		//getchar();
 	    USCMatrix<precision_type> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
 	      gradient_output,
@@ -966,7 +971,8 @@ template <typename DerivedIn, typename DerivedGOut>
 		      Matrix<precision_type,Dynamic,1>::Ones(weights.cols()),
 	      b_gradient);
 		  
-		  
+	  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
+	  //getchar();
 	  //int_map update_map; //stores all the parameters that have been updated
 	  for (int sample_id=0; sample_id<samples.rows(); sample_id++)
 	        for (int train_id=0; train_id<samples.cols(); train_id++)
@@ -984,6 +990,8 @@ template <typename DerivedIn, typename DerivedGOut>
 						precision_type norm_threshold){
 					
 	    // Convert to std::vector for parallelization
+		  //cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+		  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;					
 	      std::vector<int> update_items;
 	      for (int_map::iterator it = this->update_map.begin(); it != this->update_map.end(); ++it)
 	      {
@@ -991,10 +999,12 @@ template <typename DerivedIn, typename DerivedGOut>
 	      }
 	      int num_items = update_items.size();
 		  if (norm_clipping) {
+			//cerr<<"scaling output W"<<endl;
 			scaleAndNormClip(W_gradient,
 							 update_items,
 			  				 current_minibatch_size,
 			  				 norm_threshold);
+			//cerr<<"Scaling output b"<<endl;
  			scaleAndNormClip(b_gradient,
  							 update_items,
  			  				 current_minibatch_size,
@@ -1667,7 +1677,7 @@ class Hidden_layer
 		Activation_function hidden_activation;
 		int size;
 	public:
-	Hidden_layer(): hidden_activation(Activation_function()), size(size){}
+	Hidden_layer(): hidden_activation(Activation_function()), size(0){}
 	
 	void resize(int size)
 	{ 
