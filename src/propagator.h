@@ -1098,13 +1098,21 @@ namespace nplm
 		}
 		
 		template <typename Derived, typename Engine> 
-		void generateSamples(MatrixBase<Derived> const &minibatch, multinomial<data_size_t> &unigram, Engine &eng){
+		void generateSamples(MatrixBase<Derived> const &minibatch, multinomial<data_size_t> &unigram, Engine &eng){	
+			
 			UNCONST(Derived, minibatch, my_minibatch);
-			for (int row=0; row<my_minibatch.rows(); row++){
-				for (int col=0; col<my_minibatch.cols(); col++){
-					my_minibatch(row,col) = unigram.sample(eng);
+			#ifdef SHARE_SAMPLES			
+				for (int row=0; row<my_minibatch.rows(); row++){
+					int sample = unigram.sample(eng);
+					my_minibatch.row(row).fill(sample);
+				}	
+			#else 		
+				for (int row=0; row<my_minibatch.rows(); row++){
+					for (int col=0; col<my_minibatch.cols(); col++){
+						my_minibatch(row,col) = unigram.sample(eng);
+					}
 				}
-			}
+			#endif				
 		}
 		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
 		//losses from the next layer
