@@ -113,8 +113,8 @@ public:
 														i_t_input_matrix,
 														f_t_input_matrix,
 														o_t_input_matrix,
-														tanh_c_prime_t_input_matrix,
-														tanh_c_t_input_matrix;
+														tanh_c_prime_t_input_matrix;
+														//tanh_c_t_input_matrix;
 														
 														
 	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic>	d_Err_t_to_n_d_h_tMinusOne,
@@ -324,6 +324,7 @@ public:
 							  tanh_c_prime_t_node.fProp_matrix);	
 		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;									
 
+		/*	
   		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
   		//nonlinearities 
   		if (!gradient_check && !norm_clipping){
@@ -339,7 +340,8 @@ public:
   			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
   			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
   		}
-						
+		*/
+							  	
 		//Error derivatives for h_t_minus_one
 		W_h_to_o_node.param->bProp(o_t_node.bProp_matrix,
 						 W_h_to_o_node.bProp_matrix);
@@ -633,7 +635,8 @@ public:
    									W_c_to_i_node.bProp_matrix;
 		 
 		//cerr<<"d_Err_t_to_n_d_c_tMinusOne "<<d_Err_t_to_n_d_c_tMinusOne<<endl;
-
+		
+		/*
    		//For stability, the gradient of the inputs of the loss to the LSTM is clipped, that is before applying the tanh and sigmoid
    		//nonlinearities. This is done if there is no norm clipping
    		if (!gradient_check && !norm_clipping){
@@ -649,6 +652,8 @@ public:
    			//d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array() =
    			//							d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size).array().unaryExpr(gradClipper());
    		}
+		*/
+		
    		//cerr<<"d_Err_t_to_n_d_x_t "<<d_Err_t_to_n_d_x_t<<endl; 
    		//Computing gradients of the paramters
    		//Derivative of weights out of h_t
@@ -769,7 +774,11 @@ public:
 						int current_minibatch_size = sequence_cont_indices.cols();	
 						UNCONST(DerivedC, const_to_c_matrix, to_c_matrix);
 						UNCONST(DerivedH, const_to_h_matrix, to_h_matrix);
-						//int current_minibatch_size = h_t_minus_one.cols();	
+						//cerr<<"from_c_matrix "<<from_c_matrix.rows()<<","<<from_c_matrix.cols()<<endl;
+						//cerr<<"from_h_matrix "<<from_h_matrix.rows()<<","<<from_h_matrix.cols()<<endl;
+						//int current_minibatch_size = h_t_minus_one.cols();
+						//cerr<<"from_h_matrix "<<from_h_matrix<<endl;
+						//cerr<<"from_c_matrix "<<from_c_matrix<<endl;
 						#pragma omp parallel for 
 						for (int index=0; index<current_minibatch_size; index++){ 
 							//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		

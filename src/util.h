@@ -24,6 +24,12 @@
 #include "maybe_omp.h"
 #include "vocabulary.h"
 
+// Functions that take non-const matrices as arguments
+// are supposed to declare them const and then use this
+// to cast away constness.
+#define UNCONST(t,c,uc) Eigen::MatrixBase<t> &uc = const_cast<Eigen::MatrixBase<t>&>(c);
+
+
 // Make matrices hashable
 
 typedef long long int data_size_t; // training data can easily exceed 2G instances
@@ -52,6 +58,17 @@ struct gradClipper{
   }
 };
 
+struct updateClipper{
+	precision_type operator()(precision_type x) const{
+		return std::min(0.01, std::max(double(x),-0.01));
+	}
+};
+
+struct paramClipper{
+	precision_type operator()(precision_type x) const{
+		return std::min(0.5, std::max(double(x),-0.5));
+	}	
+};
 typedef boost::unordered_map<int,bool> int_map;
 
 void splitBySpace(const std::string &line, std::vector<std::string> &items);
@@ -113,6 +130,13 @@ template<typename dType>
 void allocate_Matrix_CPU(dType **h_matrix,int rows,int cols) {
 	*h_matrix = (dType *)malloc(rows*cols*sizeof(dType));
 }						
+
+template <typename Derived>
+void clipParamMatrix (const Eigen::MatrixBase<Derived> &const_param_matrix){
+	UNCONST(Derived, const_param_matrix, param_matrix);
+	param_matrix.array().unaryExpr(paramClipper());
+	
+}
 
 //Aug-27-2015
 //Structure for saving decoder trace. The current decoder trace assumes so much about the LSTM model. 
@@ -378,10 +402,7 @@ inline void intgerize(std::vector<std::string> &ngram,std::vector<int> &int_ngra
         int_ngram.push_back(boost::lexical_cast<int>(ngram[i]));
 }
 
-// Functions that take non-const matrices as arguments
-// are supposed to declare them const and then use this
-// to cast away constness.
-#define UNCONST(t,c,uc) Eigen::MatrixBase<t> &uc = const_cast<Eigen::MatrixBase<t>&>(c);
+
 
 template <typename Derived>
 void initMatrix(boost::random::mt19937 &engine,

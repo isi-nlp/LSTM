@@ -268,9 +268,10 @@ void model::readConfig(ifstream &config_file)
 		exit(1);
 	    }
 	}
-	else
-	    cerr << "warning: unrecognized field in config: " << fields[0] << endl;
-    }
+	else {
+	    //cerr << "warning: unrecognized field in config: " << fields[0] << endl;
+		}
+   }
     resize(1,
         input_vocab_size,
         output_vocab_size,
@@ -410,7 +411,7 @@ void model::read(const string &filename, vector<string> &input_words, vector<str
 	    continue;
 	else
 	{
-	    cerr << "warning: unrecognized section: " << line << endl;
+	    //cerr << "warning: unrecognized section: " << line << endl;
 	    // skip over section
 	    while (getline(file, line) && line != "") { }
 	}
@@ -873,9 +874,10 @@ void google_input_model::readConfig(ifstream &config_file)
 			exit(1);
 		    }
 		}
-		else
-		    cerr << "warning: unrecognized field in config: " << fields[0] << endl;
-	    }
+		else {
+		    //cerr << "warning: unrecognized field in config: " << fields[0] << endl;
+		}
+	  }
 	    resize(input_vocab_size,
 		    input_embedding_dimension,
 		    num_hidden);	
@@ -884,7 +886,7 @@ void google_input_model::readConfig(ifstream &config_file)
 
 void google_input_model::read(const string &filename)
 {
-	cerr<<"Reading google input model"<<endl;
+	//cerr<<"Reading google input model"<<endl;
     ifstream file(filename.c_str());
     if (!file) throw runtime_error("Could not open file " + filename);
     
@@ -921,7 +923,7 @@ void google_input_model::read(const string &filename)
 	    while (getline(file, line) && line != "") { }
 	}
     }
-	cerr<<"Just finished reading the google input model"<<endl;
+	//cerr<<"Just finished reading the google input model"<<endl;
     file.close();
 }
 

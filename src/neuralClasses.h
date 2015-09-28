@@ -308,6 +308,7 @@ class Linear_layer
                       precision_type momentum,
 					  precision_type L2_reg,
 					  bool norm_clipping,
+					  //bool update_clipping,
 					  precision_type norm_threshold){
 						  
       // get the bias gradient for all dimensions in parallel
@@ -332,8 +333,12 @@ class Linear_layer
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
 			  				   norm_threshold);
+			  U += learning_rate * U_gradient;			   
+		  } else {
+			 U += (learning_rate * U_gradient).unaryExpr(updateClipper());
+			 clipParamMatrix(U);
 		  }
-		  U += learning_rate * U_gradient;
+		  
 
       } 	
   }
@@ -620,10 +625,16 @@ class Linear_diagonal_layer
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
 			  				   norm_threshold);
-		  }		  	  
+			 U += learning_rate * U_gradient;				   
+		  }	else {
+ 			 U += (learning_rate * U_gradient).unaryExpr(updateClipper());
+ 			 clipParamMatrix(U);		  	
+		  }  
           //U.array() += learning_rate * (U_gradient/current_minibatch_size).array().unaryExpr(Clipper());
-		  U += learning_rate * U_gradient;
+		  
           //b += learning_rate * b_gradient;
+	
+	
 		  
 		  /*
           U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
@@ -853,15 +864,25 @@ template <typename DerivedIn, typename DerivedGOut>
 	  //(*W).array() += learning_rate*(W_gradient/current_minibatch_size).array();
 	  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	  if (norm_clipping){
+					   
+	  }	 
+	  if (norm_clipping){
 		  scaleAndNormClip(W_gradient,
 		  				   current_minibatch_size,
 		  				   norm_threshold);
 		  scaleAndNormClip(b_gradient,
 		  				   current_minibatch_size,
-		  				   norm_threshold);						   
-	  }	  
-	  W += learning_rate*W_gradient;
-	  b += learning_rate*b_gradient;
+		  				   norm_threshold);	
+	 	  W += learning_rate*W_gradient;
+	 	  b += learning_rate*b_gradient;						   
+			   
+	  }	else {
+		 W += (learning_rate * W_gradient).unaryExpr(updateClipper());
+		 b += (learning_rate * b_gradient).unaryExpr(updateClipper());
+		 clipParamMatrix(W);
+		 clipParamMatrix(b);		  	
+	  } 	   
+
   }
   
   void resetGradient(){
@@ -1009,31 +1030,34 @@ template <typename DerivedIn, typename DerivedGOut>
  							 update_items,
  			  				 current_minibatch_size,
  			  				 norm_threshold);
-		 }
+		 } 
+	 	
 	      #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
 	      {
 	          int update_item = update_items[item_id];
-			//cerr<<"the update item is "<<update_item<<endl;
-	          //UPDATE CLIPPING
-	          //W.row(update_item).array() += learning_rate*
-	          //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
-			  /*
-	  		if (norm_clipping){
-	  			scaleAndNormClip(W_gradient.row(update_item),
-	  			  				 current_minibatch_size,
-	  			  				 norm_threshold);
-	  		}
-			  */
-	          W.row(update_item) += learning_rate*
-	              W_gradient.row(update_item);
-			      b(update_item) += learning_rate*b_gradient(update_item);
+
+			  if (norm_clipping == 0){
+				  W.row(update_item) += (learning_rate * 
+					  					W_gradient.row(update_item)).unaryExpr(updateClipper());
+				  		  
+				  clipParamMatrix(W.row(update_item));
+				  precision_type update_value = learning_rate * 
+					  					b_gradient(update_item);
+				  b(update_item) += std::min(0.01, std::max(double(update_value),-0.01));
+				  b(update_item) = std::min(0.5, std::max(double(b(update_item)),-0.5));				  
+			  } else {
+		          W.row(update_item) += learning_rate*
+		              W_gradient.row(update_item);
+				  b(update_item) += learning_rate*b_gradient(update_item);
+			  }
 	          //GRADIENT CLIPPING
 	          //W.row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
 	          //SETTING THE GRADIENT TO ZERO
 	          W_gradient.row(update_item).setZero();
 			      b_gradient(update_item) = 0;
+				  
 	      }
 		//we have to clear the update map
 		this->update_map.clear();
@@ -1503,19 +1527,18 @@ class Input_word_embeddings
         for (int item_id=0; item_id<num_items; item_id++)
         {
             int update_item = update_items[item_id];
-			//cerr<<"the update item is "<<update_item<<endl;
-            //UPDATE CLIPPING
-            //W.row(update_item).array() += learning_rate*
-            //   (W_gradient.row(update_item)/current_minibatch_size).array().unaryExpr(Clipper());
-			/*
-	  		if (norm_clipping){
-	  			scaleAndNormClip(W_gradient.row(update_item),
-	  			  				 current_minibatch_size,
-	  			  				 norm_threshold);
-	  		}
-			*/
-            W.row(update_item) += learning_rate*
-                W_gradient.row(update_item);
+
+  
+			  if (norm_clipping == 0){
+				  W.row(update_item) += (learning_rate * 
+					  					W_gradient.row(update_item)).unaryExpr(updateClipper());
+			  		  
+				  clipParamMatrix(W.row(update_item));
+		  
+			  } else {
+		          W.row(update_item) += learning_rate*
+		              W_gradient.row(update_item);
+			  }			
             //GRADIENT CLIPPING
             //W.row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();

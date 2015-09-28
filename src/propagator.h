@@ -215,7 +215,8 @@ namespace nplm
 					//cerr<<"Current c is "<<current_c<<endl;
 					//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
 					//decoder_lstm_nodes[i].copyToHiddenStates(const_current_h,const_current_c);//,sequence_cont_indices.row(i));
-					
+					//cerr<<"const_current_c"<<const_current_c<<endl;
+					//cerr<<"const_current_h"<<const_current_h<<endl;
 					decoder_lstm_nodes[i].filterStatesAndErrors(const_current_h,
 																const_current_c,
 																decoder_lstm_nodes[i].h_t_minus_one,
@@ -1101,7 +1102,8 @@ namespace nplm
 		void generateSamples(MatrixBase<Derived> const &minibatch, multinomial<data_size_t> &unigram, Engine &eng){	
 			
 			UNCONST(Derived, minibatch, my_minibatch);
-			#ifdef SHARE_SAMPLES			
+			#ifdef SHARE_SAMPLES
+			
 				for (int row=0; row<my_minibatch.rows(); row++){
 					int sample = unigram.sample(eng);
 					my_minibatch.row(row).fill(sample);
@@ -1859,8 +1861,8 @@ namespace nplm
 		Matrix<precision_type,Dynamic,Dynamic> init_c = const_init_c;
 		Matrix<precision_type,Dynamic,Dynamic> init_h = const_init_h;
 		//boost::random::mt19937 init_rng = rng;
-		cerr<<"init c is "<<init_c<<endl;
-		cerr<<"init h is "<<init_h<<endl;
+		//cerr<<"init c is "<<init_c<<endl;
+		//cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
 		//cerr<<"In gradient check"<<endl;
 
@@ -2496,6 +2498,8 @@ namespace nplm
 								init_h,
 								input_sequence_cont_indices,
 								init_rng);	
+					//cerr<<"init_c"<<init_c<<endl;
+					//cerr<<"init_h"<<init_h<<endl;
 				    fPropDecoderDropout(decoder_input,
 							init_c,
 							init_h,

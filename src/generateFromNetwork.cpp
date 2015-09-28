@@ -105,13 +105,13 @@ int main(int argc, char** argv)
 	
     try {
       // program options //
-      CmdLine cmd("Trains a LSTM.", ' ' , "0.3\n","");
+      CmdLine cmd("Do search and scoring with a trained LSTM sequence to sequence model or a LSTM language model.", ' ' , "0.1\n","");
 
       // The options are printed in reverse order
 
 
       //ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 64.", false, 64, "int", cmd);
-      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 1000.", false, 100, "int", cmd);
+      ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 128.", false, 128, "int", cmd);
 
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
  
@@ -123,7 +123,7 @@ int main(int argc, char** argv)
 		//  Default: 1 = yes, \n \
 		 // 			0 = gradient clipping. Default: 0.", false, 1, "bool", cmd);	  
       ValueArg<string> encoder_model_file("", "encoder_model_file", "Encoder Model file. Default: empty", false, "", "string", cmd);
-	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file. Default: empty", false, "", "string", cmd);
+	  ValueArg<string> decoder_model_file("", "decoder_model_file", "Decoder Model file. Default: empty", true, "", "string", cmd);
 	  //ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 	  ValueArg<string> predicted_sequence_file("", "predicted_sequence_file", "Predicted sequences file." , false, "", "string", cmd);
 	  ValueArg<bool> greedy("", "greedy", "If yes, then the output will be generated greedily \n \
@@ -350,12 +350,18 @@ int main(int argc, char** argv)
     model encoder_nn,decoder_nn;
 	google_input_model encoder_input, decoder_input;
 	vocabulary encoder_vocab, decoder_vocab, decoder_input_vocab, decoder_output_vocab;
-	//if (arg_run_lm == 0) {
+	if (arg_run_lm == 0) {
 		encoder_nn.read(myParam.encoder_model_file, encoder_input_words, encoder_output_words);
 		encoder_input.read(myParam.encoder_model_file);
 		encoder_nn.set_input(encoder_input);
 		encoder_vocab.build_vocab(encoder_input_words);
-	//}
+	} else {
+		//this is cheating for now
+		encoder_nn.read(myParam.decoder_model_file, encoder_input_words, encoder_output_words);
+		encoder_input.read(myParam.decoder_model_file);
+		encoder_nn.set_input(encoder_input);
+		encoder_vocab.build_vocab(encoder_input_words);		
+	}
 	
 	decoder_nn.read(myParam.decoder_model_file, decoder_input_words, decoder_output_words);
 	//vocabulary encoder_vocab(encoder_input_words), decoder_vocab(decoder_output_words);
@@ -945,7 +951,7 @@ int main(int argc, char** argv)
 	 if(arg_score) {
         //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
         //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
-		cerr << "		Test corpus probability          :   " << exp(log_likelihood) << endl; 
+		//cerr << "		Test corpus probability          :   " << exp(log_likelihood) << endl; 
 	    cerr << "		Testing log-likelihood base e    :   " << log_likelihood << endl;
 		cerr << "		Testing log-likelihood base 2    :   " << log_likelihood/log(2.) << endl;
 		cerr<<  "		Testing cross entropy in base 2  :   "<< log_likelihood/(log(2.)*total_output_tokens)<< endl;
