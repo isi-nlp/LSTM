@@ -29,3 +29,4 @@ SAMPLE SCRIPTS FOR TRAINING A SINGLE LAYER LSTM LANGUAGE MODEL
 ./trainInfernoMLE.sh
 ./testInfernoMLE.sh
 
+NOTE: Beam Search and Greedy search do not work with language models. The next version will have these features. 
