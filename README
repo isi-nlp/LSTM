@@ -1,6 +1,6 @@
-ISI-LSTM
+EUREKA
 
-This toolkit implements a single-layer LSTM encoder-decoder (Stutskever et al., 2014) and a LSTM language model. The models can be trained with Maximum Likelihood Loss and Noise Contrastive Estimation (Gutmann and Hyvärinen, 2010). Noise Contrastive Estimation scales very well with large vocabularies. Portions of the NCE implementation were borrowed from the ISI NPLM toolkit http://nlg.isi.edu/software/nplm/
+The EUREKA toolkit implements a single-layer LSTM encoder-decoder (Stutskever et al., 2014) and a LSTM language model. The models can be trained with Maximum Likelihood Loss and Noise Contrastive Estimation (Gutmann and Hyvärinen, 2010). Noise Contrastive Estimation scales very well with large vocabularies. Portions of the NCE implementation were borrowed from the ISI NPLM toolkit http://nlg.isi.edu/software/nplm/. It has other features such as gradient norm scaling and dropout training (Zaremba et al., 2015).
 
 Prerequisites
 

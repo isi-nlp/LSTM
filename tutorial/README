@@ -1,4 +1,4 @@
-SAMPLE SCRIPTS FOR TRAINING A SINGLE LAYER LSTM SEQUENCE-TO-SEQUENCE-MODEL
+SAMPLE SCRIPTS FOR TRAINING A SINGLE LAYER LSTM SEQUENCE-TO-SEQUENCE-MODEL WITH EUREKA
 
 --train a japanese phoneme to english phoneme sequence model. The validation perplexity should be around 1.6
 ./train_e2j.sh 
