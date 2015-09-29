@@ -1,0 +1,46 @@
+ISI-LSTM
+
+This toolkit implements a single-layer LSTM encoder-decoder (Stutskever et al., 2014) and a LSTM language model. The models can be trained with Maximum Likelihood Loss and Noise Contrastive Estimation (Gutmann and Hyvärinen, 2010). Noise Contrastive Estimation scales very well with large vocabularies. 
+
+Prerequisites
+
+Before compiling, you must have the following:
+
+A C++ compiler and GNU make
+
+Boost 1.47.0 or later http://www.boost.org
+
+Eigen 3.1.x http://eigen.tuxfamily.org
+
+Optional:
+
+Intel MKL 11.x http://software.intel.com/en-us/intel-mkl Recommended for better performance.
+
+Python 2.7.x, not 3.x http://python.org
+
+Cython 0.19.x http://cython.org Needed only for building Python bindings.
+
+Building
+
+To compile, edit the Makefile to reflect the locations of the Boost and Eigen include directories.
+
+If you want to use the Intel MKL library (recommended if you have it), uncomment the line MKL=/path/to/mkl editing it to point to the MKL root directory.
+
+By default, multithreading using OpenMP is enabled. To turn it off, comment out the line OMP=1
+
+To compile:
+
+cd src
+make
+
+Notes on particular configurations:
+
+Intel C++ compiler and OpenMP. With version 12, you may get a "pragma not found" error. This is reportedly fixed in ComposerXE update 9.
+
+Mac OS X and OpenMP. The Clang compiler (/usr/bin/c++) doesn't support OpenMP. If the g++ that comes with XCode doesn't work either, try the one installed by MacPorts (/opt/local/bin/g++ or /opt/local/bin/g++-mp-*).
+
+If you are using brew, you can install clang-omp with 'brew install clang-omp' which will allow you to use OpenMP.
+
+For examples on how to use code, please look at the tutorial/README file. 
+
+If you have any questions or would like to report errors, please contact vaswani@usc.edu.
