@@ -16,10 +16,6 @@ Optional:
 
 Intel MKL 11.x http://software.intel.com/en-us/intel-mkl Recommended for better performance.
 
-Python 2.7.x, not 3.x http://python.org
-
-Cython 0.19.x http://cython.org Needed only for building Python bindings.
-
 Building
 
 To compile, edit the Makefile to reflect the locations of the Boost and Eigen include directories.
