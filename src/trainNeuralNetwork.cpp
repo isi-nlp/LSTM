@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize=0, arg_run_lm=0;
+    bool use_mmap_file, randomize=0, arg_run_lm=0, arg_carry_states=0;
     param myParam;
 	int arg_seed;
     try {
@@ -160,6 +160,9 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  ValueArg<bool> carry_states("", "carry_states", "Carry the hidden states from one minibatch to another. This option is for \n \
+		  			language models only. Carrying hidden states over can improve perplexity. \n \
+						1 = yes. Default: 0 (Do not carry hidden states).", false, 0, "bool", cmd);		  
 	  ValueArg<bool> reverse_input("", "reverse", "Reverse the input sentence before training, \n \
 		  			1 = yes. Default: 0 (No reversing).", false, 0, "bool", cmd);		    
 	  //ValueArg<bool> restart_states("", "restart_states", "If yes, then the hidden and cell values will be restarted after every minibatch \n \
@@ -169,7 +172,8 @@ int main(int argc, char** argv)
 	  ValueArg<precision_type> norm_threshold("", "norm_threshold", "Threshold for gradient norm. Default 5", false,5., "precision_type", cmd);
 	  ValueArg<precision_type> dropout_probability("", "dropout_probability", "Dropout probability. Default 0: No dropout", false,0., "precision_type", cmd);
 	  
-
+      ValueArg<int> max_epoch("", "max_epoch", "After max_epoch, the learning rate is halved for every subsequent epoch. \n \
+		  If not supplied, then the learning rate is modified based on the valdation set. Default: -1", false, -1, "int", cmd);	  
       cmd.parse(argc, argv);
 
       // define program parameters //
@@ -234,6 +238,7 @@ int main(int argc, char** argv)
       myParam.init_normal= init_normal.getValue();
       myParam.init_range = init_range.getValue();
 	  myParam.init_forget = init_forget.getValue();
+	  myParam.max_epoch = max_epoch.getValue();
       //myParam.normalization_init = normalization_init.getValue();
       //myParam.parameter_update = parameter_update.getValue();
 	  myParam.parameter_update = "SGD";
@@ -244,6 +249,11 @@ int main(int argc, char** argv)
 	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
 	  arg_seed = seed.getValue();
+	  arg_carry_states = carry_states.getValue();
+	  if (arg_run_lm == 0 && arg_carry_states == 1){
+		  cerr<<"--carry_states 1 can only be used with --run_lm 1"<<endl;
+		  exit(1);
+	  }
 	  //myParam.load_encoder_file = load_encoder_file.getVale();
 	  //myParam.load_decoder_file = load_decoder_file.getVale();
 
@@ -267,8 +277,10 @@ int main(int argc, char** argv)
 	  cerr << norm_threshold.getDescription() << sep << norm_threshold.getValue() <<endl;
 	  cerr << dropout_probability.getDescription() << sep << dropout_probability.getValue() <<endl;
 	  cerr << gradient_check.getDescription() <<sep <<gradient_check.getValue() <<endl;
+	  cerr << max_epoch.getDescription() << sep << max_epoch.getValue() <<endl;
 	  //cerr << restart_states.getDescription() <<sep <<restart_states.getValue() <<endl;
 	  cerr << run_lm.getDescription() <<sep <<run_lm.getValue() <<endl;
+	  cerr << carry_states.getDescription() <<sep <<carry_states.getValue() <<endl;
 	  cerr << reverse_input.getDescription() <<sep <<reverse_input.getValue() <<endl;
 	  cerr << seed.getDescription() << sep << seed.getValue() <<endl;
 	  cerr << loss_function.getDescription() << sep << loss_function.getValue() << endl;
@@ -731,40 +743,44 @@ int main(int argc, char** argv)
 
         if (myParam.use_momentum) 
 	    cerr << "Current momentum: " << current_momentum << endl;
-	else
-            current_momentum = -1;
+		else
+	            current_momentum = -1;
 
-	cerr << "Training minibatches: ";
+		cerr << "Training minibatches: ";
 
-	precision_type log_likelihood = 0.0;
+		precision_type log_likelihood = 0.0;
 
-	int num_samples = 0;
-	if (loss_function == LogLoss)
-	    num_samples = output_vocab_size;
-	else if (loss_function == NCELoss)
-	    num_samples = 1+num_noise_samples;
-	//Generating 10 samples
+		int num_samples = 0;
+		if (loss_function == LogLoss)
+		    num_samples = output_vocab_size;
+		else if (loss_function == NCELoss)
+		    num_samples = 1+num_noise_samples;
+		//Generating 10 samples
 	
 	
-	//cerr<<"Training data size is"<<training_data_size<<endl;
-    data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
-	precision_type data_log_likelihood=0;	
-	Matrix<precision_type,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
+		//cerr<<"Training data size is"<<training_data_size<<endl;
+	    data_size_t num_batches = (training_data_size-1)/myParam.minibatch_size + 1;
+		precision_type data_log_likelihood=0;	
+		Matrix<precision_type,Dynamic,Dynamic> current_c_for_gradCheck, current_h_for_gradCheck, current_c,current_h, init_c, init_h;
 
-	//init_c.setZero(myParam.num_hidden,minibatch_size);
-	//init_h.setZero(myParam.num_hidden,minibatch_size);
-	//c_last.setZero(numParam.num_hidden, minibatch_size);
-	//h_last.setZero(numParam.num_hidden, minibatch_size);
+		init_c.setZero(myParam.num_hidden,minibatch_size);
+		init_h.setZero(myParam.num_hidden,minibatch_size);
+		current_c.setZero(myParam.num_hidden, minibatch_size);
+		current_h.setZero(myParam.num_hidden, minibatch_size);			
+		//c_last.setZero(numParam.num_hidden, minibatch_size);
+		//h_last.setZero(numParam.num_hidden, minibatch_size);
 	
-	//cerr<<"About to start training "<<endl;
+		//cerr<<"About to start training "<<endl;
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
 			//err<<"batch is "<<batch<<endl;
-			current_c.setZero(myParam.num_hidden, minibatch_size);
-			current_h.setZero(myParam.num_hidden, minibatch_size);			
+			if (arg_carry_states == 0) {
+				current_c.setZero(myParam.num_hidden, minibatch_size);
+				current_h.setZero(myParam.num_hidden, minibatch_size);			
+			}
             if (batch > 0 && batch % 100 == 0)
             {
-	        cerr << batch <<"...";
+	        	cerr << batch <<"...";
             } 
 
             data_size_t minibatch_start_index = minibatch_size * batch;
@@ -1068,8 +1084,10 @@ int main(int argc, char** argv)
 			
             for (int validation_batch =0;validation_batch < num_validation_batches;validation_batch++)
             {
-				current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
-				current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
+				if (arg_carry_states == 0) {
+					current_validation_c.setZero(myParam.num_hidden, validation_minibatch_size);
+					current_validation_h.setZero(myParam.num_hidden, validation_minibatch_size);
+				}
 				precision_type minibatch_log_likelihood = 0.;
 	            data_size_t minibatch_start_index = validation_minibatch_size * validation_batch;
 				data_size_t minibatch_end_index = min(validation_data_size-1, static_cast<data_size_t> (minibatch_start_index+validation_minibatch_size-1));
@@ -1208,11 +1226,12 @@ int main(int argc, char** argv)
 			input.scale(1./(1.-myParam.dropout_probability));
 			decoder_input.scale(1./(1-myParam.dropout_probability));
 			nn_decoder.scale(1./(1-myParam.dropout_probability));
-			//if (epoch > 0 && 1.002*log_likelihood < current_validation_ll && myParam.parameter_update != "ADA") //This is what mikolov does 
-			if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
-	        { 
-	            current_learning_rate /= 2;
-	        }
+			if (myParam.max_epoch > -1 && epoch+1 >= myParam.max_epoch) {
+				current_learning_rate /= 2;
+			} else  if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+		        { 
+		            current_learning_rate /= 2;
+		        }
 	        current_validation_ll = log_likelihood;
 	 
 		}
