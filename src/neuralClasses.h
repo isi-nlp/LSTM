@@ -667,7 +667,7 @@ class Output_word_embeddings
         Matrix<precision_type,Dynamic,1> b_gradient;
         Matrix<precision_type,Dynamic,1> b_running_parameter_update;
 		int_map update_map;
-
+		Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor> shared_noise_embeddings;
     public:
         Output_word_embeddings() { }
         Output_word_embeddings(int rows, int cols) { resize(rows, cols); }
@@ -716,7 +716,12 @@ class Output_word_embeddings
         initMatrix(engine, W, init_normal, init_range);
 		//std::cerr<<*W<<std::endl;e
         b.fill(init_bias);
+		//shared_noise_embeddings.setZero()
     }
+	
+	void resizeNoiseEmbeddings(int num_noise_samples, int minibatch_size){
+		shared_noise_embeddings.setZero(num_noise_samples+minibatch_size,W.cols());
+	}
 
     int n_inputs () const { return W.cols(); }
     int n_outputs () const { return W.rows(); }
@@ -743,11 +748,10 @@ class Output_word_embeddings
     void fProp(const MatrixBase<DerivedIn> &input,
     const MatrixBase<DerivedOutI> &samples,
     const MatrixBase<DerivedOutV> &output) const
-	  {
+	{
         UNCONST(DerivedOutV, output, my_output);
 		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
 		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
-		//THIS LOOP IS ONLY NEEDED IF THE OUTPUT LAYER HAS BIAS, WHICH IT DOES NOT
         #pragma omp parallel for
         for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
         {
@@ -760,12 +764,49 @@ class Output_word_embeddings
           }
         }
 		
-		//THE ISSUE HERE IS THAT BECAUSE THE OUTPUT LABEL MIGHT BE GREATER THAN THE VOCABULARY
         USCMatrix<precision_type> sparse_output(W.rows(), samples, my_output);
         uscgemm_masked(1.0, W, input, sparse_output);
         my_output = sparse_output.values; // too bad, so much copying
-	  }
-
+	}
+	
+	/*
+	//The NCE fprop version if we are sharing noise samples across the minibatch.
+	//If the noise samples are shared, we can densify the gradient computation, at least
+	//for the noise sample
+    template <typename DerivedIn, typename DerivedOutI, typename DerivedOutV>
+    void fPropShared(const MatrixBase<DerivedIn> &input,
+    const MatrixBase<DerivedOutI> &samples,
+    const MatrixBase<DerivedOutV> &output) const
+	{
+		//First LOAD in the embeddings into the matrix that is going to store them. 
+		//the first set are	
+        uscgemm(1.0,
+	        W.transpose(), 
+	        USCMatrix<precision_type>(W.rows(),samples,Matrix<precision_type,1,Dynamic>::Ones(samples.cols())),
+	        my_output.block(ngram*embedding_dimension, 0, embedding_dimension, input.cols()));
+		
+		
+		
+        UNCONST(DerivedOutV, output, my_output);
+		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
+		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
+        #pragma omp parallel for
+        for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
+        {
+		  if (samples(0, instance_id) == -1) 
+			  continue;
+          for (int sample_id = 0; sample_id < samples.rows(); sample_id++)
+          {
+			//cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
+            my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
+          }
+        }
+		
+        USCMatrix<precision_type> sparse_output(W.rows(), samples, my_output);
+        uscgemm_masked(1.0, W, input, sparse_output);
+        my_output = sparse_output.values; // too bad, so much copying
+	}
+	*/
     // Return single element of output matrix
     template <typename DerivedIn>
     precision_type fProp(const MatrixBase<DerivedIn> &input, 
