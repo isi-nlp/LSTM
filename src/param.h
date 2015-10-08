@@ -77,6 +77,8 @@ struct param
 	string load_decoder_file;
 	bool reverse_input; //Reverse input in while training the seq2seq LSTM
 	double dropout_probability; 
+	
+	int max_epoch;
 
 };
 
