@@ -1060,24 +1060,26 @@ template <typename DerivedIn, typename DerivedGOut>
 	          update_items.push_back(it->first);
 	      }
 	      int num_items = update_items.size();
-		  if (norm_clipping) {
-			//cerr<<"scaling output W"<<endl;
-			scaleAndNormClip(W_gradient,
-							 update_items,
-			  				 current_minibatch_size,
-			  				 norm_threshold);
-			//cerr<<"Scaling output b"<<endl;
- 			scaleAndNormClip(b_gradient,
- 							 update_items,
- 			  				 current_minibatch_size,
- 			  				 norm_threshold);
-		 } 
-	 	
+		  #ifdef CLIP_SPARSE
+			  if (norm_clipping) {
+				//cerr<<"scaling output W"<<endl;
+				scaleAndNormClip(W_gradient,
+								 update_items,
+				  				 current_minibatch_size,
+				  				 norm_threshold);
+				//cerr<<"Scaling output b"<<endl;
+	 			scaleAndNormClip(b_gradient,
+	 							 update_items,
+	 			  				 current_minibatch_size,
+	 			  				 norm_threshold);
+			 } 
+		 #endif
+		 
 	      #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
 	      {
 	          int update_item = update_items[item_id];
-
+			  #ifdef CLIP_SPARSE
 			  if (norm_clipping == 0){
 				  W.row(update_item) += (learning_rate * 
 					  					W_gradient.row(update_item)).unaryExpr(updateClipper());
@@ -1092,6 +1094,11 @@ template <typename DerivedIn, typename DerivedGOut>
 		              W_gradient.row(update_item);
 				  b(update_item) += learning_rate*b_gradient(update_item);
 			  }
+			  #endif
+			  
+	          W.row(update_item) += learning_rate*
+	              W_gradient.row(update_item);
+			  b(update_item) += learning_rate*b_gradient(update_item);			  
 	          //GRADIENT CLIPPING
 	          //W.row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
@@ -1557,19 +1564,21 @@ class Input_word_embeddings
             update_items.push_back(it->first);
         }
         int num_items = update_items.size();
+		#ifdef CLIP_SPARSE
 		if (norm_clipping){
 			scaleAndNormClip(W_gradient,
 							 update_items,
 			  				 current_minibatch_size,
 			  				 norm_threshold);
 		}
-
+		#endif 
+		
         #pragma omp parallel for
         for (int item_id=0; item_id<num_items; item_id++)
         {
             int update_item = update_items[item_id];
 
-  
+			  #ifdef CLIP_SPARSE
 			  if (norm_clipping == 0){
 				  W.row(update_item) += (learning_rate * 
 					  					W_gradient.row(update_item)).unaryExpr(updateClipper());
@@ -1580,6 +1589,9 @@ class Input_word_embeddings
 		          W.row(update_item) += learning_rate*
 		              W_gradient.row(update_item);
 			  }			
+			  #endif
+	          W.row(update_item) += learning_rate*
+	              W_gradient.row(update_item); 
             //GRADIENT CLIPPING
             //W.row(update_item) += learning_rate*
             //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
