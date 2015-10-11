@@ -556,7 +556,8 @@ class Linear_diagonal_layer
        const MatrixBase<DerivedIn> &fProp_input)
     {
 		int num_examples = bProp_input.cols();
-		#pragma omp parallel for firstprivate(num_examples)
+		//uncomment the pragma if you want to go hogwild
+		//#pragma omp parallel for firstprivate(num_examples) 
 		for (int i=0; i<num_examples; i++){
         	U_gradient += (bProp_input.col(i).array()*fProp_input.col(i).array()).matrix();
 		}
