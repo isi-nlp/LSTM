@@ -352,7 +352,7 @@ public:
 			   bool norm_clipping,
 			   int current_minibatch_size) {
 				   
-		Matrix<double,Dynamic,Dynamic> dummy_matrix;
+		Matrix<precision_type,Dynamic,Dynamic> dummy_matrix;
 		//int current_minibatch_size = data.cols();
 		
 		//NOTE: d_Err_t_to_n_d_h_t is read as derivative of Error function from time t to n wrt h_t. 
