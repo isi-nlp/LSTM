@@ -290,17 +290,7 @@ class Linear_layer
     void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
        const MatrixBase<DerivedIn> &fProp_input)
     {
-		//std::cout<<typeid(*this).name()<<"\t"<< quote(*this) <<"\n";
-		//cerr<<"bProp input is "<<bProp_input<<endl;
-		//cerr<<"fProp_input is "<<fProp_input<<endl;
         U_gradient += bProp_input*fProp_input.transpose();
-		//cerr<<"the U gradient norm is "<<U_gradient.norm()<<endl;
-		//cerr<<"current U gradient is "<<U_gradient<<endl;
-      
-        // get the bias gradient for all dimensions in parallel
-        //int size = b.size();
-        //b_gradient += bProp_input.rowwise().sum();
-
   	}
 		
     void updateParams(precision_type learning_rate,
@@ -312,7 +302,7 @@ class Linear_layer
 					  precision_type norm_threshold){
 						  
       // get the bias gradient for all dimensions in parallel
-      int size = b.size();
+      //int size = b.size();
       // This used to be multithreaded, but there was no measureable difference
       if (L2_reg > 0.0)
       {
@@ -455,6 +445,7 @@ class Linear_layer
 };
 
 
+
 class Linear_diagonal_layer
 {
     private: 
@@ -532,18 +523,13 @@ class Linear_diagonal_layer
 	  //Can this be sped up with broadcasting ?
 	  //cerr<<"input to linear diagonal layer is "<<input<<endl; 
 	  //cerr<<"U is "<<this->U<<endl;
+	  #pragma omp parallel for firstprivate(num_examples)
 	  for (int i=0; i<num_examples; i++){
 	  	my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
 	  }
 	  //cerr<<"output to linear diagonal layer is "<<my_output<<endl;
       //my_output.leftCols(input.cols()).noalias() = U.array()*input.array();
-	  /*
-      int num_examples = input.cols();
-      for (int example = 0;example < num_examples;example++) 
-      {
-          my_output.leftCols(input.cols()).col(example) += b;
-      }
-	  */
+
   }
    
 
@@ -556,6 +542,7 @@ class Linear_diagonal_layer
 	    UNCONST(DerivedGIn, output, my_output);
   	    int num_examples = input.cols();
 		//Can this be sped up with broadcasting ? 
+		#pragma omp parallel for firstprivate(num_examples)
   	    for (int i=0; i<num_examples; i++){
 		  //cerr<<" i "<<i<<endl;	
   	  	  my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
@@ -569,6 +556,7 @@ class Linear_diagonal_layer
        const MatrixBase<DerivedIn> &fProp_input)
     {
 		int num_examples = bProp_input.cols();
+		#pragma omp parallel for firstprivate(num_examples)
 		for (int i=0; i<num_examples; i++){
         	U_gradient += (bProp_input.col(i).array()*fProp_input.col(i).array()).matrix();
 		}
@@ -613,14 +601,7 @@ class Linear_diagonal_layer
       }
       else
       {
-		  /*
-		  U_gradient /= current_minibatch_size;
-		  precision_type grad_norm = U_gradient.norm();
-		  if (U_gradient.norm() >= 5.) {
-			  U_gradient *= 5./grad_norm;
-		  }
-		  U += learning_rate*U_gradient;	
-		  */
+
 		  if (norm_clipping){
 			  scaleAndNormClip(U_gradient,
 			  				   current_minibatch_size,
@@ -635,12 +616,6 @@ class Linear_diagonal_layer
           //b += learning_rate * b_gradient;
 	
 	
-		  
-		  /*
-          U += (learning_rate*U_gradient).array().unaryExpr(Clipper()).matrix();
-          b += (learning_rate*b_gradient).array().unaryExpr(Clipper()).matrix();
-		  */
-		  
       } 	
   }
   void resetGradient(){
@@ -649,6 +624,168 @@ class Linear_diagonal_layer
   }
 
 };
+
+
+/*
+class Linear_diagonal_layer
+{
+    private: 
+        Eigen::DiagonalMatrix<precision_type,Dynamic> U;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> U_gradient;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> U_velocity;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> U_running_gradient;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> U_running_parameter_update;
+        // Biases
+        Eigen::DiagonalMatrix<precision_type,Dynamic> b;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> b_velocity;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> b_running_gradient;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> b_running_parameter_update;
+        Eigen::DiagonalMatrix<precision_type,Dynamic> b_gradient;
+
+		friend class model;
+
+    public:
+	Linear_diagonal_layer() { }
+        Linear_diagonal_layer(int rows) { resize(rows); }
+
+	void resize(int rows)
+	{
+	    U.setZero(rows);
+        U_gradient.setZero(rows);
+      //U_running_gradient.setZero(rows, cols);
+      //U_running_parameter_updates.setZero(rows, cols);
+      //U_velocity.setZero(rows, cols);
+       //b.resize(rows);
+       //b_gradient.setZero(rows);
+      //b_running_gradient.resize(rows);
+      //b_velocity.resize(rows);
+	}
+
+	void read_weights(std::ifstream &U_file) { readMatrix(U_file, U); }
+	void write_weights(std::ofstream &U_file) { writeMatrix(U, U_file); }
+  void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }
+  void write_biases(std::ofstream &b_file) { writeMatrix(b, b_file); }
+
+
+	template <typename Engine>
+	void initialize(Engine &engine,
+      bool init_normal,
+      precision_type init_range,
+      string &parameter_update,
+      precision_type adagrad_epsilon)
+	{
+	  
+      //if (parameter_update == "ADA") {
+      //  U_running_gradient = Matrix<precision_type,Dynamic,1>::Ones(U.size())*adagrad_epsilon;
+        //b_running_gradient = Matrix<precision_type,Dynamic,1>::Ones(b.size())*adagrad_epsilon;
+      //}
+      //if (parameter_update == "ADAD") {
+      //  U_running_gradient.setZero(U.size());
+        //b_running_gradient.setZero(b.size());
+      //  U_running_parameter_update.setZero(U.size());
+        //b_running_parameter_update.setZero(b.size());
+      //}
+
+	    initMatrix(engine, U, init_normal, init_range);
+		//std::cerr<<U<<std::endl;
+      //initBias(engine, b, init_normal, init_range);
+	}	  
+
+	int n_inputs () const { return U.rows(); }
+	int n_outputs () const { return U.rows(); }
+	
+	int rows() const {return U.rows(); }
+	int cols() const {return U.cols(); }
+  template <typename DerivedIn, typename DerivedOut>
+	void fProp(const MatrixBase<DerivedIn> &input,
+      const MatrixBase<DerivedOut> &output) const
+  {
+      UNCONST(DerivedOut, output, my_output);
+	  int num_examples = input.cols();
+	  //Can this be sped up with broadcasting ?
+	  //cerr<<"input to linear diagonal layer is "<<input<<endl; 
+	  //cerr<<"U is "<<this->U<<endl;
+	  for (int i=0; i<num_examples; i++){
+	  	my_output.col(i).noalias() = (U.array()*input.col(i).array()).matrix();
+	  }
+	  my_output.noalias() = U * input;
+
+  }
+   
+
+  
+    template <typename DerivedGOut, typename DerivedGIn>
+	void bProp(const MatrixBase<DerivedGOut> &input,
+      MatrixBase<DerivedGIn> &output) const
+    {
+		
+	    UNCONST(DerivedGIn, output, my_output);
+		//Can this be sped up with broadcasting ? 
+	    my_output.noalias() = U.transpose()*input;
+	    //my_output.noalias() = U.array()*input.array();
+	}
+	
+	
+    template <typename DerivedGOut, typename DerivedIn>
+    void updateGradient( const MatrixBase<DerivedGOut> &bProp_input, 
+       const MatrixBase<DerivedIn> &fProp_input)
+    {
+        U_gradient += bProp_input*fProp_input.transpose();
+  	}
+	
+	//
+    void changeRandomParam(precision_type offset, 
+							int &rand_row,
+							int &rand_col){
+    	changeRandomParamInMatrix(U, offset, rand_row, rand_col);
+    }		
+
+  	precision_type getGradient(int row,
+  			 int col) { return U_gradient(row,col);}
+				 	
+    void updateParams(precision_type learning_rate,
+					  int current_minibatch_size,
+                      precision_type momentum,
+					  precision_type L2_reg,
+					  bool norm_clipping,
+					  precision_type norm_threshold){
+						  
+      if (L2_reg > 0.0)
+      {
+          U_gradient -=  2*L2_reg*U;
+          //b_gradient -= 2*L2_reg*b;
+      }
+      if (momentum > 0.0)
+      {
+          U_velocity = momentum*U_velocity + U_gradient;
+          U += learning_rate * U_velocity;
+          //b_velocity = momentum*b_velocity + b_gradient;
+          //b += learning_rate * b_velocity;
+      }
+      else
+      {
+		  //cerr<<"the U gradient norm is "<<U_gradient.norm()<<endl;
+		  if (norm_clipping){
+			  scaleAndNormClip(U_gradient,
+			  				   current_minibatch_size,
+			  				   norm_threshold);
+			  U += learning_rate * U_gradient;			   
+		  } else {
+			 U += (learning_rate * U_gradient).unaryExpr(updateClipper());
+			 clipParamMatrix(U);
+		  }
+
+
+      } 	
+  }
+  void resetGradient(){
+	  U_gradient.setZero();
+	  //b_gradient.setZero();
+  }
+
+};
+
+*/
 
 class Output_word_embeddings
 {
