@@ -200,13 +200,103 @@ public:
 	} 
 
 	void set_input_node(input_node_type &input_node){this->input_node = &input_node;}
+
+	template<typename Derived> //, typename DerivedCIn, typename DerivedHIn>
+	void fPropInput(const MatrixBase<Derived> &data) {
+		input_node->fProp(data);
+	}
+	template<typename Derived, typename Engine>
+	void fPropInputDropout(const MatrixBase<Derived> &data,
+					  Engine &eng) {
+		input_node->fPropDropout(data,eng);
+	}	
+	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	void bProp(const MatrixBase<DerivedData> &data,
+			   //const MatrixBase<DerivedIn> c_t,
+			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
+			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
+			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
+			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
+			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   bool gradient_check,
+			   bool norm_clipping){
+				   
+		int current_minibatch_size = data.cols();
+		
+		bPropLSTMBlock(d_Err_t_d_h_t,
+				   d_Err_tPlusOne_to_n_d_c_t,
+				   d_Err_tPlusOne_to_n_d_h_t,
+				   gradient_check,
+				   norm_clipping,
+				   current_minibatch_size);	
+				   		
+		bPropInput(data);	
+	}
 	
+	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	void bPropDropout(const MatrixBase<DerivedData> &data,
+			   //const MatrixBase<DerivedIn> c_t,
+			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
+			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
+			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
+			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
+			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   bool gradient_check,
+			   bool norm_clipping){
+	   		int current_minibatch_size = data.cols();
+	
+	   		bPropLSTMBlock(d_Err_t_d_h_t,
+	   				   d_Err_tPlusOne_to_n_d_c_t,
+	   				   d_Err_tPlusOne_to_n_d_h_t,
+	   				   gradient_check,
+	   				   norm_clipping,
+	   				   current_minibatch_size);	
+			   		
+	   		bPropInputDropout(data);			
+	}
+
+	template<typename Derived>
+    void fProp(const MatrixBase<Derived> &data) { //,	
+
+		fPropInput(data);
+		fPropLSTMBlock();
+
+
+	}
+	
+	template<typename Derived, typename Engine>
+    void fPropDropout(const MatrixBase<Derived> &data,
+					  Engine &eng) { //,	
+
+		fPropInputDropout(data, eng);
+		fPropLSTMBlock();
+
+
+	}
+	template<typename DerivedData>	
+	void bPropInput(const MatrixBase<DerivedData> &data){
+		input_node->bProp(data,
+				o_t_node.bProp_matrix,
+				i_t_node.bProp_matrix,
+				f_t_node.bProp_matrix,
+				tanh_c_prime_t_node.bProp_matrix);		
+	}
+
+	template<typename DerivedData>	
+	void bPropInputDropout(const MatrixBase<DerivedData> &data){
+		input_node->bPropDropout(data,
+				o_t_node.bProp_matrix,
+				i_t_node.bProp_matrix,
+				f_t_node.bProp_matrix,
+				tanh_c_prime_t_node.bProp_matrix);		
+	}
+			
 	#ifdef NOPEEP
 	//fProp without peeps
 	
-	template<typename Derived>
-    void fProp(const MatrixBase<Derived> &data) {
-		input_node->fProp(data);
+	//template<typename Derived>
+    void fPropLSTMBlock() {
+		//input_node->fProp(data);
 		//How much to scale the input
 		//W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
@@ -254,19 +344,16 @@ public:
 		//getchar();
 	}
 
-	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
-	void bProp(const MatrixBase<DerivedData> &data,
-			   //const MatrixBase<DerivedIn> c_t,
-			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
-			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
-			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
+	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	void bPropLSTMBlock(const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
 			   bool gradient_check,
-			   bool norm_clipping) {
+			   bool norm_clipping,
+			   int current_minibatch_size) {
 				   
 		Matrix<double,Dynamic,Dynamic> dummy_matrix;
-		int current_minibatch_size = data.cols();
+		//int current_minibatch_size = data.cols();
 		
 		//NOTE: d_Err_t_to_n_d_h_t is read as derivative of Error function from time t to n wrt h_t. 
 		//Similarly, d_Err_t_to_n_d_h_t is read as derivative of Error function from time t to n wrt c_t. 
@@ -387,28 +474,12 @@ public:
 		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));
-		
-		//updating gradient of input word embeddings input embeddings
-		//input_layer_node.param->updateGradient(d_Err_t_to_n_d_x_t.leftCols(current_minibatch_size),
-		//										data);					
-		input_node->bProp(data,
-				o_t_node.bProp_matrix,
-				i_t_node.bProp_matrix,
-				f_t_node.bProp_matrix,
-				tanh_c_prime_t_node.bProp_matrix);									
+										
 	
 	}	
 	
 	#else
-	template<typename Derived> //, typename DerivedCIn, typename DerivedHIn>
-	void fPropInput(const MatrixBase<Derived> &data) {
-		input_node->fProp(data);
-	}
-	template<typename Derived, typename Engine>
-	void fPropInputDropout(const MatrixBase<Derived> &data,
-					  Engine &eng) {
-		input_node->fPropDropout(data,eng);
-	}	
+
 	void fPropLSTMBlock() {
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
@@ -470,54 +541,7 @@ public:
 		//getchar();		
 	}
 	
-	template<typename Derived>
-    void fProp(const MatrixBase<Derived> &data) { //,	
-		//const MatrixBase<DerivedCIn> &c_t_minus_one,
-		// MatrixBase<DerivedOut> const_c_t,
-		//const MatrixBase<DerivedHIn> &h_t_minus_one) {
-		//const MatrixBase<DerivedOut> const_h_t){
-		
-		//UNCONST(DerivedOut,const_c_t,c_t);
-		//UNCONST(DerivedOut,const_h_t,h_t);
-		
-		//cerr<<"c t -1 is "<<c_t_minus_one<<endl;
-		//cerr<<"h t -1 is "<<h_t_minus_one<<endl;
-		//getchar();
-        //start_timer(0);
-		//cerr<<"data is "<<data<<endl;
-		//input_node->fProp(data);
-		fPropInput(data);
-		fPropLSTMBlock();
 
-
-	}
-	
-	template<typename Derived, typename Engine>
-    void fPropDropout(const MatrixBase<Derived> &data,
-					  Engine &eng) { //,	
-
-		fPropInputDropout(data, eng);
-		fPropLSTMBlock();
-
-
-	}
-	template<typename DerivedData>	
-	void bPropInput(const MatrixBase<DerivedData> &data){
-		input_node->bProp(data,
-				o_t_node.bProp_matrix,
-				i_t_node.bProp_matrix,
-				f_t_node.bProp_matrix,
-				tanh_c_prime_t_node.bProp_matrix);		
-	}
-
-	template<typename DerivedData>	
-	void bPropInputDropout(const MatrixBase<DerivedData> &data){
-		input_node->bPropDropout(data,
-				o_t_node.bProp_matrix,
-				i_t_node.bProp_matrix,
-				f_t_node.bProp_matrix,
-				tanh_c_prime_t_node.bProp_matrix);		
-	}
 		
 	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
 	void bPropLSTMBlock (const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
@@ -685,50 +709,6 @@ public:
    		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));			   	
 	}
 	
-	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
-	void bProp(const MatrixBase<DerivedData> &data,
-			   //const MatrixBase<DerivedIn> c_t,
-			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
-			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
-			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
-			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
-			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
-			   bool gradient_check,
-			   bool norm_clipping){
-				   
-		int current_minibatch_size = data.cols();
-		
-		bPropLSTMBlock(d_Err_t_d_h_t,
-				   d_Err_tPlusOne_to_n_d_c_t,
-				   d_Err_tPlusOne_to_n_d_h_t,
-				   gradient_check,
-				   norm_clipping,
-				   current_minibatch_size);	
-				   		
-		bPropInput(data);	
-	}
-	
-	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
-	void bPropDropout(const MatrixBase<DerivedData> &data,
-			   //const MatrixBase<DerivedIn> c_t,
-			   //const MatrixBase<DerivedHIn> &h_t_minus_one,
-			   //const MatrixBase<DerivedCIn> &c_t_minus_one,
-			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
-			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
-			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
-			   bool gradient_check,
-			   bool norm_clipping){
-	   		int current_minibatch_size = data.cols();
-	
-	   		bPropLSTMBlock(d_Err_t_d_h_t,
-	   				   d_Err_tPlusOne_to_n_d_c_t,
-	   				   d_Err_tPlusOne_to_n_d_h_t,
-	   				   gradient_check,
-	   				   norm_clipping,
-	   				   current_minibatch_size);	
-			   		
-	   		bPropInputDropout(data);			
-	}
 
 	
 	#endif

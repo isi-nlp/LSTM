@@ -1114,7 +1114,9 @@ namespace nplm
 						my_minibatch(row,col) = unigram.sample(eng);
 					}
 				}
-			#endif				
+			#endif	
+			//cerr<<"samples are "<<my_minibatch<<endl;
+			//getchar();
 		}
 		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
 		//losses from the next layer

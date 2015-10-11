@@ -1060,7 +1060,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	          update_items.push_back(it->first);
 	      }
 	      int num_items = update_items.size();
-		  #ifdef CLIP_SPARSE
+		  //#ifdef CLIP_SPARSE
 			  if (norm_clipping) {
 				//cerr<<"scaling output W"<<endl;
 				scaleAndNormClip(W_gradient,
@@ -1073,9 +1073,9 @@ template <typename DerivedIn, typename DerivedGOut>
 	 			  				 current_minibatch_size,
 	 			  				 norm_threshold);
 			 } 
-		 #endif
+		 //#endif
 		 
-	      #pragma omp parallel for
+		  #pragma omp parallel for
 	      for (int item_id=0; item_id<num_items; item_id++)
 	      {
 	          int update_item = update_items[item_id];
@@ -1095,10 +1095,11 @@ template <typename DerivedIn, typename DerivedGOut>
 				  b(update_item) += learning_rate*b_gradient(update_item);
 			  }
 			  #endif
-			  
+			  /*
 	          W.row(update_item) += learning_rate*
 	              W_gradient.row(update_item);
-			  b(update_item) += learning_rate*b_gradient(update_item);			  
+			  b(update_item) += learning_rate*b_gradient(update_item);	
+			  */		  
 	          //GRADIENT CLIPPING
 	          //W.row(update_item) += learning_rate*
 	          //    W_gradient.row(update_item).array().unaryExpr(Clipper()).matrix();
