@@ -1029,7 +1029,7 @@ int main(int argc, char** argv)
 				cerr<<"grad norm is "<<grad_norm<<endl;
 				if (grad_norm  > myParam.norm_threshold) {
 					//Then you have to scale
-					grad_scale = myParam.norm_threshold/grad_norm * minibatch_scale;
+					grad_scale = myParam.norm_threshold/grad_norm;
 				} else {
 					grad_scale = 1./minibatch_scale;
 				}
