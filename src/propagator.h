@@ -1529,6 +1529,24 @@ namespace nplm
    
 	}
 } 
+	 precision_type getGradSqdNorm(precision_type &grad_norm,
+	 								loss_function_type loss_function,
+	 								bool arg_run_lm){
+ 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+ 		//cerr<<"updating params "<<endl;
+ 		//First compute the norm of the gradients for norm scaling
+ 		//precision_type grad_norm = 0;
+										
+ 		grad_norm += decoder_plstm->output_layer.getGradSqdNorm();
+		//cerr<<"Output grad squared norm is "<<grad_norm<<endl;
+ 		if (arg_run_lm == 0) {
+ 		    grad_norm += encoder_plstm->getGradSqdNorm();
+ 		}
+		
+ 		grad_norm += decoder_plstm->getGradSqdNorm();
+		return(grad_norm);
+	 
+	 }
 	 void updateParams(precision_type learning_rate,
 	 					int current_minibatch_size,
 				  		precision_type momentum,
@@ -1539,6 +1557,7 @@ namespace nplm
 						bool arg_run_lm) {
 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
 		//cerr<<"updating params "<<endl;
+		//First compute the norm of the gradients for norm scaling
 		if (loss_function == LogLoss){
 			//cerr<<"updating log output layer"<<endl;
 			decoder_plstm->output_layer.updateParams(learning_rate,
@@ -1563,16 +1582,9 @@ namespace nplm
 		}
 
 
-		/*						
-		//Derivatives of the input embeddings							
-	    encoder_plstm->input_layer.updateParams(learning_rate,
-											current_minibatch_size,
-											momentum,
-											L2_reg,
-											norm_clipping,
-											norm_threshold);		
-		*/
+
 		if (arg_run_lm == 0) {
+			//cerr<<"updating encoder params"<<endl;
 		    encoder_plstm->updateParams(learning_rate,
 												current_minibatch_size,
 												momentum,
@@ -1581,6 +1593,7 @@ namespace nplm
 												norm_threshold);
 		}
 		
+		//cerr<<"updating decoder params"<<endl;
 		decoder_plstm->updateParams(learning_rate,
 										current_minibatch_size,
 										momentum,
@@ -1588,7 +1601,57 @@ namespace nplm
 										norm_clipping,
 										norm_threshold);												
 	  }
-	  
+
+ 	 void updateParams(precision_type learning_rate,
+ 	 					int current_minibatch_size,
+ 				  		precision_type momentum,
+ 						precision_type L2_reg,
+ 						precision_type grad_scale,
+ 						loss_function_type loss_function,
+ 						bool arg_run_lm) {
+ 		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
+ 		//cerr<<"updating params "<<endl;
+ 		//First compute the norm of the gradients for norm scaling
+ 		if (loss_function == LogLoss){
+ 			//cerr<<"updating log output layer"<<endl;
+ 			decoder_plstm->output_layer.updateParams(learning_rate,
+ 							current_minibatch_size,
+ 		  					momentum,
+ 		  					L2_reg,
+ 							grad_scale);			
+ 		} else if (loss_function == NCELoss){
+ 			//cerr<<"NOT IMPLEMENTED"<<endl;
+ 			//exit(1);
+ 			//cerr<<"updating nce output layer"<<endl;
+ 			decoder_plstm->output_layer.updateParamsNCE(learning_rate,
+ 								current_minibatch_size,
+ 								momentum,
+ 								L2_reg,
+ 								grad_scale);	
+ 		} else {
+ 			cerr<<loss_function<<" is an invalid loss function type"<<endl;
+ 			exit(0);
+ 		}
+
+
+
+ 		if (arg_run_lm == 0) {
+ 			//cerr<<"updating encoder params"<<endl;
+ 		    encoder_plstm->updateParams(learning_rate,
+ 												current_minibatch_size,
+ 												momentum,
+ 												L2_reg,
+ 												grad_scale);
+ 		}
+		
+ 		//cerr<<"updating decoder params"<<endl;
+ 		decoder_plstm->updateParams(learning_rate,
+ 										current_minibatch_size,
+ 										momentum,
+ 										L2_reg,
+ 										grad_scale);												
+ 	}
+	  	  
 	  template <typename DerivedOut, typename data_type>
 	  void computeProbs(const MatrixBase<DerivedOut> &output,
 	  				  	multinomial<data_type> &unigram,
@@ -1884,9 +1947,9 @@ namespace nplm
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
 							 dropout_probability);	
-					 		//init_rng = rng;					 
-					 		init_c = const_init_c;
-					 		init_h = const_init_h;
+ 		//init_rng = rng;					 
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;
  		paramGradientCheck(input,decoder_input, 
 							 decoder_output,
 							 decoder_plstm->W_h_to_c,
@@ -1951,7 +2014,7 @@ namespace nplm
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
 							 dropout_probability);
-
+	#ifdef PEEP						 
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;		
@@ -2005,6 +2068,7 @@ namespace nplm
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
 							 dropout_probability);
+	#endif
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;		
@@ -2112,8 +2176,8 @@ namespace nplm
  							 output_sequence_cont_indices,
 							 dropout_probability);
 		 		
- 					   		init_c = const_init_c;
- 					   		init_h = const_init_h;
+   		init_c = const_init_c;
+   		init_h = const_init_h;
 		paramGradientCheck(input,
 						 decoder_input, 
 						 decoder_output,
@@ -2129,7 +2193,8 @@ namespace nplm
 						 input_sequence_cont_indices,
 						 output_sequence_cont_indices,
 							 dropout_probability);
-		 
+		init_c = const_init_c;
+		init_h = const_init_h;		 
  		paramGradientCheck(input,decoder_input, 
 						 decoder_output,
 						 (dynamic_cast<input_model_type*>(decoder_plstm->input))->W_x_to_o,
@@ -2219,7 +2284,7 @@ namespace nplm
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
 							 dropout_probability);
-
+	#ifdef PEEP
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
@@ -2273,6 +2338,7 @@ namespace nplm
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
 							 dropout_probability);
+	#endif
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;		
@@ -2377,8 +2443,8 @@ namespace nplm
 							 output_sequence_cont_indices,
 							 dropout_probability);
 							 		
-					   		init_c = const_init_c;
-					   		init_h = const_init_h;
+   		init_c = const_init_c;
+   		init_h = const_init_h;
    		paramGradientCheck(input,decoder_input, 
 							 decoder_output,
 							 (dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_c,
@@ -2393,7 +2459,8 @@ namespace nplm
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
 							 dropout_probability);
-							 
+  		init_c = const_init_c;
+  		init_h = const_init_h;					 
 		paramGradientCheck(input,decoder_input, 
 						 decoder_output,
 						 (dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_o,

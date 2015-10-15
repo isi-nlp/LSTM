@@ -446,13 +446,15 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 	UNCONST(Derived, const_param, param);
 	int num_items = update_items.size();
 	precision_type squared_param_norm = 0.;
+	precision_type unscaled_squared_param_norm = 0.;
     for (int item_id=0; item_id<num_items; item_id++)
     {
         int update_item = update_items[item_id];
+		unscaled_squared_param_norm += param.row(update_item).squaredNorm();
 		param.row(update_item) /= current_minibatch_size;
 		squared_param_norm += param.row(update_item).squaredNorm();
 	}
-	
+	//std::cerr<<"squared norm is "<<unscaled_squared_param_norm<<std::endl;
 	precision_type param_norm = sqrt(squared_param_norm);
 	//std::cerr<<"sparse param_norm "<<param_norm<<std::endl;
 	if (param_norm > norm_threshold){
@@ -464,6 +466,8 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 			
 		}
 	}
+	
+	/*
 	squared_param_norm = 0.;
     for (int item_id=0; item_id<num_items; item_id++)
     {
@@ -473,6 +477,7 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 	}
 		
 	param_norm = sqrt(squared_param_norm);
+	*/
 	//std::cerr<<"new sparse param_norm "<<param_norm<<std::endl;
 }
 
@@ -482,6 +487,8 @@ void scaleAndNormClip(const Eigen::MatrixBase<Derived> &const_param,
 					 int current_minibatch_size,
 					 precision_type norm_threshold){
 	UNCONST(Derived, const_param, param);
+	//std::cerr<<"current minibatch size "<<current_minibatch_size<<std::endl;
+	//std::cerr<<"squared norm is "<<param.squaredNorm()<<std::endl;
 	param /= current_minibatch_size;
 	precision_type param_norm = param.norm();
 	//std::cerr<<"param_norm "<<param_norm<<std::endl;

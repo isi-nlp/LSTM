@@ -126,35 +126,8 @@ void model::initialize(mt19937 &init_engine,
         parameter_update,
         adagrad_epsilon);
 
-	/*
-	//cerr<<"W_x_to_c init"<<endl;
-	W_x_to_c.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
 	
-	//cerr<<"W_x_to_i init"<<endl;
-	W_x_to_i.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);	
-		
-	//cerr<<"W_x_to_o init"<<endl;
-	W_x_to_o.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-		
-	//cerr<<"W_x_to_f init"<<endl;	
-	W_x_to_f.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);		
-	*/
+	#ifdef PEEP
 	//cerr<<"W_c_to_i init"<<endl;
 	W_c_to_i.initialize(init_engine,
         init_normal,
@@ -174,6 +147,7 @@ void model::initialize(mt19937 &init_engine,
         init_range,
         parameter_update,
         adagrad_epsilon);		
+	#endif
 		
 	//Initializing the biases of the hidden layers and setting their activation functions
 	//cerr<<"o_t init"<<endl;
@@ -581,9 +555,9 @@ void model::updateParams(precision_type learning_rate,
 															L2_reg,
 															norm_clipping,
 															norm_threshold);
-						#ifdef NOPEEP
+						#ifdef PEEP
 															
-						#else										
+									
 						//updating params for weights out of cell
 						W_c_to_f.updateParams(learning_rate,
 															current_minibatch_size,
@@ -605,34 +579,7 @@ void model::updateParams(precision_type learning_rate,
 															norm_threshold);	
 						#endif			
 
-						/*											
-						//Error derivatives for the input word embeddings
-						W_x_to_c.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_o.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_f.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
-						W_x_to_i.updateParams(learning_rate,
-															current_minibatch_size,
-															momentum,
-															L2_reg,
-															norm_clipping,
-															norm_threshold);
 
-						*/
 																										
 						o_t.updateParams(learning_rate,
 															current_minibatch_size,
@@ -668,6 +615,109 @@ void model::updateParams(precision_type learning_rate,
 															norm_threshold);				
 }
 
+void model::updateParams(precision_type learning_rate,
+ 					int current_minibatch_size,
+			  		precision_type momentum,
+					precision_type L2_reg,
+					precision_type grad_scale) {
+						// updating the rest of the parameters
+		
+						//updating params for weights out of hidden layer 
+						//cerr<<"updating params"<<endl;
+						W_h_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+				 		W_h_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+				  		W_h_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+				   		W_h_to_c.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						#ifdef PEEP
+															
+									
+						//updating params for weights out of cell
+						W_c_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						W_c_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						W_c_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);	
+						#endif			
+
+
+																										
+						o_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						f_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						i_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);	
+						tanh_c_prime_t.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);	
+															
+						//Updaging the parameters of the input model
+						input->updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);				
+}
+
+precision_type model::getGradSqdNorm(){
+		precision_type model_grad_squared_norm = 0.;
+		model_grad_squared_norm += W_h_to_o.getGradSqdNorm() + 
+				 		W_h_to_f.getGradSqdNorm() +
+				  		W_h_to_i.getGradSqdNorm() +
+				   		W_h_to_c.getGradSqdNorm() +
+						#ifdef PEEP																				
+						//updating params for weights out of cell
+						W_c_to_f.getGradSqdNorm() + 
+						W_c_to_i.getGradSqdNorm() +
+						W_c_to_o.getGradSqdNorm() +	
+						#endif																						
+						o_t.getGradSqdNorm() +
+						f_t.getGradSqdNorm() +
+						i_t.getGradSqdNorm() +
+						tanh_c_prime_t.getGradSqdNorm() +
+						input->getGradSqdNorm();		
+		//cerr<<endl<<"model grad squared norm is "<<model_grad_squared_norm<<endl;
+		return(model_grad_squared_norm);
+	}
+
+
 void model::resetGradient(){
 	output_layer.resetGradient();
 	// updating the rest of the parameters
@@ -678,19 +728,12 @@ void model::resetGradient(){
 	W_h_to_i.resetGradient();
 	W_h_to_c.resetGradient();
 
+	#ifdef PEEP
 	//updating params for weights out of cell
 	W_c_to_f.resetGradient();
 	W_c_to_i.resetGradient();
 	W_c_to_o.resetGradient();				
-
-	
-	/*
-	//Error derivatives for the input word embeddings
-	W_x_to_c.resetGradient();
-	W_x_to_o.resetGradient();
-	W_x_to_f.resetGradient();
-	W_x_to_i.resetGradient();
-	*/
+	#endif
 
 	//Computing gradients of the paramters
 
@@ -727,6 +770,16 @@ void google_input_model::resize(int input_vocab_size,
 	W_x_to_i.resize(num_hidden,num_hidden);
 	
 
+}
+
+precision_type google_input_model::getGradSqdNorm() {
+	return (
+	//cerr<<"Input word embeddings init"<<endl;
+    input_layer.getGradSqdNorm() +		
+		W_x_to_c.getGradSqdNorm() +
+		W_x_to_i.getGradSqdNorm() +
+		W_x_to_o.getGradSqdNorm() +
+		W_x_to_f.getGradSqdNorm()) ;			
 }
   
 void google_input_model::initialize(mt19937 &init_engine,
@@ -809,6 +862,43 @@ void google_input_model::updateParams(precision_type learning_rate,
 															L2_reg,
 															norm_clipping,
 															norm_threshold);
+
+						
+}
+
+void google_input_model::updateParams(precision_type learning_rate,
+ 					int current_minibatch_size,
+			  		precision_type momentum,
+					precision_type L2_reg,
+					precision_type grad_scale){
+						
+						input_layer.updateParams(learning_rate,
+																	current_minibatch_size,
+																	momentum,
+																	L2_reg,
+																	grad_scale);
+
+						//Error derivatives for the linear layers from the input word embeddings
+						W_x_to_c.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						W_x_to_o.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						W_x_to_f.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
+						W_x_to_i.updateParams(learning_rate,
+															current_minibatch_size,
+															momentum,
+															L2_reg,
+															grad_scale);
 
 						
 }

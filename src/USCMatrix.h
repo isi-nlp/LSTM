@@ -69,8 +69,10 @@ public:
 
 // Dense matrix - sparse matrix product
 // a is presumably very wide
+// Used for fProp in Input_word_embeddings class
 template <typename DerivedA, typename ScalarB, typename Index, typename DerivedC>
-void uscgemm(precision_type alpha, const MatrixBase<DerivedA> &a, 
+void uscgemm(precision_type alpha, 
+		 const MatrixBase<DerivedA> &a, 
 	     const USCMatrix<ScalarB,Index> &b,
 	     const MatrixBase<DerivedC> &c_const)
 {

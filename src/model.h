@@ -45,17 +45,30 @@ public:
 							precision_type L2_reg,
 							bool norm_clipping,
 							precision_type norm_threshold) = 0;
+	virtual void updateParams(precision_type learning_rate,
+		 					int current_minibatch_size,
+					  		precision_type momentum,
+							precision_type L2_reg,
+							precision_type grad_scale) {
+		cerr<<"write not implemented "<<endl;
+		exit(1);
+	}							
 	virtual void resetGradient() = 0;	
 	virtual void write(std::ofstream &file) {
 		cerr<<"write not implemented "<<endl;
+		exit(1);
 	};			
 	virtual void read(const string &filename) {
 		cerr<<"Read not implemented "<<endl;
+		exit(1);
 	}
 	virtual void readConfig(ifstream config_file) {
 		cerr<<"Write config not implemented"<<endl;
+		exit(1);
 	}
-
+	virtual precision_type getGradSqdNorm() {
+		return(0);
+	}
 };
 
 
@@ -69,15 +82,7 @@ public:
     Activation_function second_hidden_activation;
     Output_word_embeddings output_layer;
 	//output_model *output;	
-	/*
-    Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor> output_embedding_matrix,
-      input_embedding_matrix,
-      input_and_output_embedding_matrix,
-	  W_x_to_i_embedding_matrix, 
-	  W_x_to_f_embedding_matrix, 
-	  W_x_to_c_embedding_matrix, 
-	  W_x_to_o_embedding_matrix; 
-	*/
+
     //Linear_layer W_x_to_i, W_x_to_f, W_x_to_c, W_x_to_o;
   	Linear_layer W_h_to_i, W_h_to_f, W_h_to_c, W_h_to_o;
   	Linear_diagonal_layer W_c_to_i, W_c_to_f, W_c_to_o;
@@ -114,24 +119,12 @@ public:
 			ngram_size(1), 
             premultiplied(false),
             activation_function(Rectifier)//,
-            //output_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
-            //input_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_i_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_f_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_o_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>()),
-			//W_x_to_c_embedding_matrix(Matrix<precision_type,Dynamic,Dynamic,Eigen::RowMajor>())
-			//input_model(NULL)
+
         {
-			/*
-          output_layer.set_W(&output_embedding_matrix);
-          input_layer.set_W(&input_embedding_matrix);
-		  W_x_to_i.set_W(&W_x_to_i_embedding_matrix);
-		  W_x_to_f.set_W(&W_x_to_f_embedding_matrix);
-		  W_x_to_c.set_W(&W_x_to_c_embedding_matrix);
-		  W_x_to_o.set_W(&W_x_to_o_embedding_matrix);		
-			*/  
+
         }
 		
+	precision_type getGradSqdNorm();
 
     void resize(int ngram_size,
         int input_vocab_size,
@@ -188,6 +181,11 @@ public:
 						precision_type L2_reg,
 						bool norm_clipping,
 						precision_type norm_threshold);
+	void updateParams(precision_type learning_rate,
+	 					int current_minibatch_size,
+				  		precision_type momentum,
+						precision_type L2_reg,
+						precision_type grad_scale);						
 	void resetGradient();			
 	void scale(precision_type scaling_constant);
  private:
@@ -239,11 +237,17 @@ public:
 							precision_type L2_reg,
 							bool norm_clipping,
 							precision_type norm_threshold);
+	void updateParams(precision_type learning_rate,
+		 					int current_minibatch_size,
+					  		precision_type momentum,
+							precision_type L2_reg,
+							precision_type grad_scale);									
 	void resetGradient();
 	void scale(const precision_type scaling_constant);
 	void write(ofstream &file);
 	void read(const string &filename);
 	void readConfig(ifstream &config_file);
+	precision_type getGradSqdNorm();
 };
 
 class hidden_to_hidden_input_model : public input_model {
@@ -283,6 +287,7 @@ public:
 							precision_type L2_reg,
 							bool norm_clipping,
 							precision_type norm_threshold);
+					
 	void resetGradient();
 };
 

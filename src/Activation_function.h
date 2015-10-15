@@ -117,8 +117,8 @@ class Activation_function
 
         template <typename DerivedGOut, typename DerivedGIn, typename DerivedIn, typename DerivedOut>
 	void bProp(const MatrixBase<DerivedGOut> &input, 
-      MatrixBase<DerivedGIn> &output,
-		   const MatrixBase<DerivedIn> &finput,
+      	const MatrixBase<DerivedGIn> &output,
+		const MatrixBase<DerivedIn> &finput,
        const MatrixBase<DerivedOut> &foutput) const
         {
 	    UNCONST(DerivedGIn, output, my_output);
