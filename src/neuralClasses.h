@@ -621,7 +621,11 @@ class Output_word_embeddings
 
         initMatrix(engine, W, init_normal, init_range);
 		//std::cerr<<*W<<std::endl;e
-        b.fill(init_bias);
+		if (init_bias ==0 ){ 
+			initBias(engine, b, init_normal, init_range);
+		} else {
+        	b.fill(init_bias);
+		}
 		//shared_noise_embeddings.setZero()
     }
 	

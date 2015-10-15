@@ -594,7 +594,8 @@ int main(int argc, char** argv)
     nn.initialize(rng,
         myParam.init_normal,
         myParam.init_range,
-		-log(myParam.output_vocab_size),
+		//-log(myParam.output_vocab_size),
+		0,
         myParam.init_forget,
         myParam.parameter_update,
         myParam.adagrad_epsilon);	
