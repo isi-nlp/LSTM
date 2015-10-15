@@ -292,7 +292,7 @@ class Linear_layer
       //int size = b.size();
       // This used to be multithreaded, but there was no measureable difference
 
-			 U += (learning_rate * U_gradient/grad_scale);
+			 U += (learning_rate * U_gradient*grad_scale);
   }
  
   void updateParams(precision_type learning_rate,
@@ -544,7 +544,7 @@ class Linear_diagonal_layer
     //int size = b.size();
     // This used to be multithreaded, but there was no measureable difference
 
-		 U += (learning_rate * U_gradient/grad_scale);
+		 U += (learning_rate * U_gradient*grad_scale);
   }
     
   void resetGradient(){
@@ -851,8 +851,8 @@ template <typename DerivedIn, typename DerivedGOut>
 		precision_type L2_reg,
 		precision_type grad_scale){
 
-	 	  W += learning_rate*W_gradient/grad_scale;
-	 	  b += learning_rate*b_gradient/grad_scale;						   
+	 	  W += learning_rate*W_gradient*grad_scale;
+	 	  b += learning_rate*b_gradient*grad_scale;						   
 			   
    }
   
@@ -1001,8 +1001,8 @@ template <typename DerivedIn, typename DerivedGOut>
 	          int update_item = update_items[item_id];
 
 	          W.row(update_item) += learning_rate*
-	              W_gradient.row(update_item)/grad_scale;
-			  b(update_item) += learning_rate*b_gradient(update_item)/grad_scale;
+	              W_gradient.row(update_item)*grad_scale;
+			  b(update_item) += learning_rate*b_gradient(update_item)*grad_scale;
 
 
 	          W_gradient.row(update_item).setZero();
@@ -1328,7 +1328,7 @@ class Input_word_embeddings
 
 			  //Divide the gradient by the grad scale	
 	          W.row(update_item) += learning_rate*
-	              W_gradient.row(update_item)/grad_scale; 
+	              W_gradient.row(update_item)*grad_scale; 
 
             W_gradient.row(update_item).setZero();
         }
@@ -1546,7 +1546,7 @@ class Hidden_layer
 						precision_type grad_scale){
 		//as of now, only SGD
 
-		b += learning_rate*b_gradient/grad_scale;
+		b += learning_rate*b_gradient*grad_scale;
 		//cerr<<"b is "<<b<<endl;				
 	}	
 	void resetGradient(){
