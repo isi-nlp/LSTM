@@ -14,9 +14,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/algorithm/string/join.hpp>
-# include <boost/interprocess/managed_shared_memory.hpp>
-# include <boost/interprocess/allocators/allocator.hpp>
-# include <boost/interprocess/managed_mapped_file.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/allocators/allocator.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
 #include <Eigen/Dense>
@@ -26,6 +26,7 @@
 
 //#include "fastonebigheader.h"
 #include "define.h"
+//#include "constants.h"
 #include "model.h"
 #include "propagator.h"
 #include "param.h"
@@ -71,7 +72,7 @@ int main(int argc, char** argv)
 	srand (time(NULL));
 	setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize=0, arg_run_lm=0, arg_carry_states=0;
+    bool use_mmap_file, randomize=0, arg_run_lm=0, arg_carry_states=0, arg_run_tagger=0;
     param myParam;
 	int arg_seed;
     try {
@@ -160,6 +161,8 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  //ValueArg<bool> run_tagger("", "run_tagger", "Run as a tagger, \n \
+	  //	  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
 	  ValueArg<bool> carry_states("", "carry_states", "Carry the hidden states from one minibatch to another. This option is for \n \
 		  			language models only. Carrying hidden states over can improve perplexity. \n \
 						1 = yes. Default: 0 (Do not carry hidden states).", false, 0, "bool", cmd);		  
@@ -248,6 +251,7 @@ int main(int argc, char** argv)
 	  myParam.dropout_probability = dropout_probability.getValue();
 	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
+	  //arg_run_tagger = run_tagger.getValue();
 	  arg_seed = seed.getValue();
 	  arg_carry_states = carry_states.getValue();
 	  if (arg_run_lm == 0 && arg_carry_states == 1){
@@ -1016,6 +1020,24 @@ int main(int argc, char** argv)
 				}
 				//getchar();											 
 				//Updating the gradients
+				//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+				precision_type minibatch_scale = current_minibatch_size;
+				precision_type grad_squared_norm = 0.;
+				prop.getGradSqdNorm(grad_squared_norm,loss_function, arg_run_lm);
+				precision_type grad_scale = 1.;
+				precision_type grad_norm = sqrt(grad_squared_norm)/minibatch_scale;
+				cerr<<"grad norm is "<<grad_norm<<endl;
+				if (grad_norm  > myParam.norm_threshold) {
+					//Then you have to scale
+					grad_scale = myParam.norm_threshold/grad_norm * minibatch_scale;
+				} else {
+					grad_scale = 1./minibatch_scale;
+				}
+				cerr<<"grad scale is "<<grad_scale<<endl;
+				//cerr<<"max_input_sent_len + max_output_sent_len "<<max_input_sent_len + max_output_sent_len<<endl;
+				//getchar();
+				/*
+				//Updaging using local grad norms
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
 							max_input_sent_len + max_output_sent_len,
@@ -1024,8 +1046,17 @@ int main(int argc, char** argv)
 							myParam.norm_clipping,
 							myParam.norm_threshold,
 							loss_function,
-							arg_run_lm);														
-	
+							arg_run_lm);	
+				//Updating using global grad norms	
+				*/												
+				prop.updateParams(adjusted_learning_rate,
+							//max_sent_len,
+							max_input_sent_len + max_output_sent_len,
+					  		current_momentum,
+							myParam.L2_reg,
+							grad_scale,
+							loss_function,
+							arg_run_lm);				
 				//Resetting the gradients
 
 				prop.resetGradient();
