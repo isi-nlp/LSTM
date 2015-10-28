@@ -506,22 +506,28 @@ public:
 		W_h_to_o_node.param->fProp(h_t_minus_one,W_h_to_o_node.fProp_matrix);
 		W_h_to_f_node.param->fProp(h_t_minus_one,W_h_to_f_node.fProp_matrix);
 			
-
+		/*
+		cerr<<"W_h_to_i_node.fPropMatrix "<<endl<<W_h_to_i_node.fProp_matrix<<endl;
+		cerr<<"W_h_to_c_node.fPropMatrix "<<endl<<W_h_to_c_node.fProp_matrix<<endl;
+		cerr<<"W_h_to_o_node.fPropMatrix "<<endl<<W_h_to_o_node.fProp_matrix<<endl;
+		cerr<<"W_h_to_f_node.fPropMatrix "<<endl<<W_h_to_f_node.fProp_matrix<<endl;
+		*/
+		
 		//std::cerr<<"W_c_to_f_node fprop is "<<W_c_to_f_node.fProp_matrix<<std::endl;
 		//std::cerr<<"c to i fprop"<<W_c_to_i_node.fProp_matrix<<std::endl;
 		//i_t_input_matrix.noalias() = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
 		i_t_input_matrix.noalias() = input_node->W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix;
 		f_t_input_matrix.noalias() = input_node->W_x_to_f_node.fProp_matrix + W_h_to_f_node.fProp_matrix;
-
-
 	
 		//Computing input and forget gates
 		//cerr<<"i t input matrix"<<i_t_input_matrix<<endl;
 		i_t_node.param->fProp(i_t_input_matrix,
 							i_t_node.fProp_matrix);
+		//cerr<<"i_t_node.fProp_matrix "<<endl<<i_t_node.fProp_matrix<<endl;
 		//How much to forget					
 		f_t_node.param->fProp(f_t_input_matrix,
-							f_t_node.fProp_matrix);							
+							f_t_node.fProp_matrix);		
+		//cerr<<"f_t_node.fProp_matrix "<<endl<<f_t_node.fProp_matrix<<endl;										
 		//std::cerr<<"i_t node fProp value is "<<i_t_node.fProp_matrix<<std::endl;
 	
 	
@@ -534,14 +540,14 @@ public:
 		tanh_c_prime_t_node.param->fProp(tanh_c_prime_t_input_matrix,
 										tanh_c_prime_t_node.fProp_matrix);
 	
-		//std::cerr<<"tanh_c_prime_t_node "<<tanh_c_prime_t_node.fProp_matrix<<std::endl;
+		//std::cerr<<"tanh_c_prime_t_node.fProp_matrix"<<endl<<tanh_c_prime_t_node.fProp_matrix<<std::endl;
 	
 		//Computing the current cell value
 		//cerr<<"c_t_minus_one"<<c_t_minus_one<<endl;
 		//cerr<<c_t_minus_one.rows()<<" "<<c_t_minus_one.cols()<<endl;
 		c_t.array() = f_t_node.fProp_matrix.array()*c_t_minus_one.array() + 
 				i_t_node.fProp_matrix.array()*tanh_c_prime_t_node.fProp_matrix.array();
-		//cerr<<"c_t "<<c_t<<endl;
+		//cerr<<"c_t "<<endl<<c_t<<endl;
 		//How much to scale the output
 		//W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix, W_x_to_o_node.fProp_matrix);
 
@@ -555,12 +561,12 @@ public:
 		o_t_node.param->fProp(o_t_input_matrix,
 							o_t_node.fProp_matrix);	
 
-		//std::cerr<<"o_t "<<o_t_node.fProp_matrix<<std::endl;
+		//std::cerr<<"o_t "<<endl<<o_t_node.fProp_matrix<<std::endl;
 		//computing the hidden layer
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
-		//std::cerr<<"h_t "<<h_t<<endl;
+		//std::cerr<<"h_t "<<endl<<h_t<<endl;
 		//getchar();		
 	}
 
@@ -1003,14 +1009,19 @@ public:
 	template <typename Derived>
 	void fPropInput(const MatrixBase<Derived> &data){
 		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		//cerr<<"input_layer_node.fProp_matrix"<<endl<<input_layer_node.fProp_matrix<<endl;
 	}
 	
 	
 	void fPropProjections(){
 		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
+		//cerr<<"W_x_to_c_node.fProp_matrix "<<endl<<W_x_to_c_node.fProp_matrix<<endl;
 		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
+		//cerr<<"W_x_to_f_node.fProp_matrix "<<endl<<W_x_to_f_node.fProp_matrix<<endl;
 		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
+		//cerr<<"W_x_to_o_node.fProp_matrix "<<endl<<W_x_to_o_node.fProp_matrix<<endl;
 		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);	
+		//cerr<<"W_x_to_i_node.fProp_matrix "<<endl<<W_x_to_i_node.fProp_matrix<<endl;
 	}
 	
 

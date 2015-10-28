@@ -98,6 +98,7 @@ int main(int argc, char** argv)
 	bool arg_stochastic;
 	bool arg_score;
 	bool arg_run_lm;
+	bool arg_carry_states;
 	bool generate_hidden_states = 0;
 	bool do_beam_search;
 	int arg_beam_size = 0;
@@ -136,6 +137,9 @@ int main(int argc, char** argv)
 		  or probability of sentence if run as a language model. Default: 0 = no. \n", false, 0, "bool", cmd);	  	  	  
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
+	  ValueArg<bool> carry_states("", "carry_states", "Carry the hidden states from one minibatch to another. This option is for \n \
+		  			language models only. Carrying hidden states over can improve perplexity. If it was used during training, then it MUST \n \
+					be used at testing. 1 = yes. Default: 0 (Do not carry hidden states).", false, 0, "bool", cmd);		  	  
 	  ValueArg<bool> reverse_input("", "reverse", "Reverse the input sentence before decoding. \n \
 		  			It should be set to the same value as used during training. \n \
 		  			1 = yes. Default: 0 (No reversing).", false, 0, "bool", cmd);  
@@ -160,12 +164,16 @@ int main(int argc, char** argv)
 	  arg_stochastic = stochastic.getValue();
 	  arg_score = score.getValue();
 	  arg_run_lm = run_lm.getValue();
+	  arg_carry_states = carry_states.getValue();
 	  arg_hidden_states_file = hidden_states_file.getValue();
 	  arg_beam_size = beam_size.getValue();
 	  do_beam_search = (arg_beam_size > 0);
 	  arg_reverse_input = reverse_input.getValue();
 
-	  
+	  if (arg_run_lm == 0 && arg_carry_states == 1){
+		  cerr<<"--carry_states 1 can only be used with --run_lm 1"<<endl;
+		  exit(1);
+	  }	  
 	  if (arg_hidden_states_file != "")
 		  generate_hidden_states = 1;
 	  if (arg_greedy + arg_stochastic + arg_score + generate_hidden_states + do_beam_search == 0 || arg_greedy + arg_stochastic + arg_score + do_beam_search >= 2 ) {
@@ -208,9 +216,9 @@ int main(int argc, char** argv)
       //cerr << num_hidden.getDescription() << sep << num_hidden.getValue() << endl;
 	  //cerr<<input_sent_file.getDescription() << sep << input_sent_file.getValue() << endl;
 	  //cerr<<output_sent_file.getDescription() << sep << output_sent_file.getDescription() <<endl;
-	  cerr<<testing_sent_file.getDescription() << sep << testing_sent_file.getValue() <<endl;
-	  cerr<<encoder_model_file.getDescription() << sep << encoder_model_file.getValue() <<endl;
-	  cerr<<decoder_model_file.getDescription() << sep << decoder_model_file.getValue() <<endl;
+	  cerr << testing_sent_file.getDescription() << sep << testing_sent_file.getValue() <<endl;
+	  cerr << encoder_model_file.getDescription() << sep << encoder_model_file.getValue() <<endl;
+	  cerr << decoder_model_file.getDescription() << sep << decoder_model_file.getValue() <<endl;
 	  cerr << predicted_sequence_file.getDescription()<< sep << predicted_sequence_file.getValue() << endl;
 	  
       cerr << minibatch_size.getDescription() << sep << minibatch_size.getValue() << endl;
@@ -515,9 +523,10 @@ int main(int argc, char** argv)
 	
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
-		
-			current_c.setZero(myParam.num_hidden, minibatch_size);
-			current_h.setZero(myParam.num_hidden, minibatch_size);		
+			if (arg_carry_states == 0) {
+				current_c.setZero(myParam.num_hidden, minibatch_size);
+				current_h.setZero(myParam.num_hidden, minibatch_size);		
+			}
 			precision_type minibatch_log_likelihood = 0.;
             if (batch > 0 && batch % 100 == 0)
             {

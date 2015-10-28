@@ -976,10 +976,10 @@ namespace nplm
 	 			//same dimension in and LSTM. this might not be a good idea
 	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-				
+				//cerr<<"output is "<<output<<endl;
 	 			int sent_len = output.rows(); 
 	 			//precision_type log_likelihood = 0.;
-			
+				//cerr<<"Sent len is "<<sent_len<<endl;
 	 			for (int i=sent_len-1; i>=0; i--) {
 	 				//cerr<<"i is "<<i<<endl;
 					precision_type minibatch_log_likelihood;
@@ -1060,6 +1060,18 @@ namespace nplm
 								minibatch_samples_no_negative(0,col) = 0;
 							}
 						}
+						/*
+						int num_noise_samples = minibatch_samples.rows()-1;
+						//std::cerr<<"num noise samples are "<<num_noise_samples<<std::endl;
+						precision_type log_num_noise_samples = std::log(num_noise_samples);	
+						for (int row=0; row<minibatch_samples_no_negative.rows(); row++) {
+							for (int col =0; col<minibatch_samples_no_negative.row(row).cols(); col++){
+								int sample = minibatch_samples_no_negative(row,col);
+								cerr<<" minibatch sample "<<sample<<" \nand prob is "<<
+									log_num_noise_samples + unigram->logprob(sample)<<endl;
+							}
+						}
+						*/
 						//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
 						//getchar();
 						//cerr<<"Score is "<<scores<<endl;
@@ -1068,6 +1080,8 @@ namespace nplm
 														minibatch_samples_no_negative.leftCols(current_minibatch_size),
 														scores);
 						//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
+						//cerr<<"minibatch samples "<<minibatch_samples<<endl;
+						//getchar();
 						nce_loss.fProp(scores, 
 	       			 				  minibatch_samples,
 	       						   	  probs, 
@@ -1082,7 +1096,8 @@ namespace nplm
 			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
 			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
 													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<
+						//		d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
 						//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
 						//getchar();
 			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
@@ -1108,6 +1123,8 @@ namespace nplm
 					int sample = unigram.sample(eng);
 					my_minibatch.row(row).fill(sample);
 				}	
+				//cerr<<"my_minibatch samples"<<my_minibatch<<endl;
+				//getchar();
 			#else 		
 				for (int row=0; row<my_minibatch.rows(); row++){
 					for (int col=0; col<my_minibatch.cols(); col++){
@@ -1929,7 +1946,7 @@ namespace nplm
 		//cerr<<"init c is "<<init_c<<endl;
 		//cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
-		//cerr<<"In gradient check"<<endl;
+		cerr<<"In gradient check"<<endl;
 
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
@@ -1946,7 +1963,8 @@ namespace nplm
 				   			 loss_function,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);	
+							 dropout_probability,
+							 arg_run_lm);	
  		//init_rng = rng;					 
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -1962,7 +1980,8 @@ namespace nplm
  				   			 loss_function,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;					 
  		init_c = const_init_c;
  		init_h = const_init_h;		
@@ -1978,7 +1997,8 @@ namespace nplm
  				   			 loss_function,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;	
  		init_c = const_init_c;
  		init_h = const_init_h;										
@@ -1995,7 +2015,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2013,7 +2034,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 	#ifdef PEEP						 
  		//init_rng = rng;
  		init_c = const_init_c;
@@ -2032,7 +2054,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2050,7 +2073,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//nit_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2067,7 +2091,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 	#endif
  		//init_rng = rng;
  		init_c = const_init_c;
@@ -2086,7 +2111,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2104,7 +2130,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2122,7 +2149,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
  		//init_rng = rng;
  		init_c = const_init_c;
  		init_h = const_init_h;
@@ -2140,7 +2168,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);		
+							 dropout_probability,
+							 arg_run_lm);		
  		//Doing gradient check for the input nodes
   		//init_rng = rng;
   		init_c = const_init_c;
@@ -2158,7 +2187,8 @@ namespace nplm
  							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);		
+							 dropout_probability,
+							 arg_run_lm);		
    		init_c = const_init_c;
    		init_h = const_init_h;
    		paramGradientCheck(input,decoder_input, 
@@ -2174,7 +2204,8 @@ namespace nplm
   							 //softmax_nce_loss,
  							 input_sequence_cont_indices,
  							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		 		
    		init_c = const_init_c;
    		init_h = const_init_h;
@@ -2192,7 +2223,8 @@ namespace nplm
 						 //softmax_nce_loss,
 						 input_sequence_cont_indices,
 						 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		init_c = const_init_c;
 		init_h = const_init_h;		 
  		paramGradientCheck(input,decoder_input, 
@@ -2208,10 +2240,28 @@ namespace nplm
  						 //softmax_nce_loss,
  						 input_sequence_cont_indices,
  						 output_sequence_cont_indices,
-							 dropout_probability);;	
+							 dropout_probability,
+							 arg_run_lm);
+ 		init_c = const_init_c;
+ 		init_h = const_init_h;		 
+  		paramGradientCheck(input,decoder_input, 
+ 						 decoder_output,
+ 						 (dynamic_cast<input_model_type*>(decoder_plstm->input))->input_layer,
+ 						 "Decoder: input_layer", 
+  						 init_c,
+  						 init_h,
+  						 unigram,
+  						 num_noise_samples,
+  			   			 rng,
+  			   			 loss_function,
+  						 //softmax_nce_loss,
+  						 input_sequence_cont_indices,
+  						 output_sequence_cont_indices,
+ 							 dropout_probability,
+							 arg_run_lm);							 
 		
-		
-		//Encoder params				
+							
+		if (arg_run_lm == 0) {	
 							 					 							 
 		//init_rng = rng;					 
 		init_c = const_init_c;
@@ -2229,7 +2279,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;		
@@ -2247,7 +2298,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;	
 		init_c = const_init_c;
 		init_h = const_init_h;										
@@ -2265,7 +2317,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2283,7 +2336,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 	#ifdef PEEP
 		//init_rng = rng;
 		init_c = const_init_c;
@@ -2302,7 +2356,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2320,7 +2375,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//nit_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2337,7 +2393,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 	#endif
 		//init_rng = rng;
 		init_c = const_init_c;
@@ -2356,7 +2413,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2374,7 +2432,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2391,7 +2450,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 		//init_rng = rng;
 		init_c = const_init_c;
 		init_h = const_init_h;
@@ -2408,7 +2468,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);		
+							 dropout_probability,
+							 arg_run_lm);		
 		//Doing gradient check for the input nodes
  		//init_rng = rng;
  		init_c = const_init_c;
@@ -2425,7 +2486,8 @@ namespace nplm
 							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);		
+							 dropout_probability,
+							 arg_run_lm);		
   		init_c = const_init_c;
   		init_h = const_init_h;
   		paramGradientCheck(input,decoder_input, 
@@ -2441,7 +2503,8 @@ namespace nplm
  							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
 							 		
    		init_c = const_init_c;
    		init_h = const_init_h;
@@ -2458,7 +2521,8 @@ namespace nplm
   							 //softmax_nce_loss,
 							 input_sequence_cont_indices,
 							 output_sequence_cont_indices,
-							 dropout_probability);
+							 dropout_probability,
+							 arg_run_lm);
   		init_c = const_init_c;
   		init_h = const_init_h;					 
 		paramGradientCheck(input,decoder_input, 
@@ -2474,8 +2538,9 @@ namespace nplm
 						 //softmax_nce_loss,
 						 input_sequence_cont_indices,
 						 output_sequence_cont_indices,
-						 dropout_probability);								 									 							 	
-
+						 dropout_probability,
+						 arg_run_lm);								 									 							 	
+		}		
 		//paramGradientCheck(input,output,encoder_plstm->input_layer,"input_layer");
 		
 						 
@@ -2495,8 +2560,12 @@ namespace nplm
 			 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &input_sequence_cont_indices,
 			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices,
-			 precision_type dropout_probability){
+			 precision_type dropout_probability,
+			 bool arg_run_lm) {
+		//cerr<<"going over all dimensions"<<endl;
 		//Going over all dimensions of the parameter
+		//cerr<<"param.rows()"<<param.rows()<<endl;
+		//cerr<<"param.cols()"<<param.cols()<<endl;
 		for(int row=0; row<param.rows(); row++){
 			for (int col=0; col<param.cols(); col++){		
 				getFiniteDiff(input,
@@ -2515,7 +2584,8 @@ namespace nplm
 							//softmax_nce_loss,
 							input_sequence_cont_indices,
 							output_sequence_cont_indices,
-							dropout_probability);
+							dropout_probability,
+							arg_run_lm);
 			}
 		}
 	}
@@ -2537,7 +2607,9 @@ namespace nplm
 			 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss,
 			 const Eigen::ArrayBase<DerivedS> &input_sequence_cont_indices,
 			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices,
-			 precision_type dropout_probability) {
+			 precision_type dropout_probability,
+			 bool arg_run_lm) {
+				//cerr<<"inside finite diff"<<endl;
 				Matrix<precision_type,Dynamic,Dynamic> init_c; 
 				Matrix<precision_type,Dynamic,Dynamic> init_h;
 				boost::random::mt19937 init_rng = rng;
@@ -2550,7 +2622,11 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-				precision_type perturbation = 1e-3;
+				precision_type perturbation = 6*1e-3;
+				//cerr<<"param name "<<param_name<<endl;
+				//cerr<<"rand row "<<rand_row<<endl;
+				//cerr<<"rand col "<<rand_col<<endl;
+				//getchar();
 		 	    param.changeRandomParam(perturbation, 
 		 								rand_row,
 		 								rand_col);
@@ -2562,11 +2638,13 @@ namespace nplm
 				//cerr<<"const init h is "<<const_init_h<<endl;
 				//cerr<<"first perturbing"<<endl;
 				if (dropout_probability > 0) {
+					if (arg_run_lm == 0 ) {
 					fPropEncoderDropout(input,
 								init_c,
 								init_h,
 								input_sequence_cont_indices,
 								init_rng);	
+					}
 					//cerr<<"init_c"<<init_c<<endl;
 					//cerr<<"init_h"<<init_h<<endl;
 				    fPropDecoderDropout(decoder_input,
@@ -2581,11 +2659,13 @@ namespace nplm
 					   			 loss_function,	
 								 //softmax_nce_loss,
 			 			  		 before_log_likelihood);																					
-				} else {					
+				} else {	
+					if (arg_run_lm == 0) {			
 					fPropEncoder(input,
 								init_c,
 								init_h,
 								input_sequence_cont_indices);
+					}
 				    fPropDecoder(decoder_input,
 							init_c,
 							init_h,
@@ -2612,11 +2692,13 @@ namespace nplm
 				//cerr<<"second perturbing"<<endl;					
 		 		//fProp(input,output, 0, input.rows()-1, init_c, init_h, input_sequence_cont_indices);	
 				if (dropout_probability > 0) {
+					if (arg_run_lm == 0){
 					fPropEncoderDropout(input,
 								init_c,
 								init_h,
 								input_sequence_cont_indices,
 								init_rng);	
+					}
 				    fPropDecoderDropout(decoder_input,
 							init_c,
 							init_h,
@@ -2630,11 +2712,13 @@ namespace nplm
 								 //softmax_nce_loss,
 			 			  		 after_log_likelihood);	
 					 												
-				} else {					
+				} else {		
+					if (arg_run_lm == 0){
 					fPropEncoder(input,
 								init_c,
 								init_h,
 								input_sequence_cont_indices);	
+					}
 				    fPropDecoder(decoder_input,
 							init_c,
 							init_h,
@@ -2664,6 +2748,10 @@ namespace nplm
 				precision_type relative_error = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad)/
 					(fabs(param.getGradient(rand_row,rand_col)) + fabs(symmetric_finite_diff_grad));
 				cerr<<std::setprecision(15);
+				precision_type abs_diff = fabs(param.getGradient(rand_row,rand_col)-symmetric_finite_diff_grad);
+				precision_type abs_max = max(fabs(param.getGradient(rand_row,rand_col)),fabs(symmetric_finite_diff_grad));
+				//if (abs_diff > 
+				//	perturbation + perturbation*abs_max) {
 				if (gradient_diff > threshold || relative_error > threshold) {
 					cerr<<"!!!GRADIENT CHECKING FAILED!!!"<<endl;
 			 		cerr<<"Symmetric finite differences gradient is "<<	symmetric_finite_diff_grad<<endl;

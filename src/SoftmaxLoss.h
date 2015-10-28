@@ -168,10 +168,17 @@ public:
 		precision_type log_num_noise_samples = std::log(num_noise_samples);
 		//std::cerr<<"minibatch samples are "<<minibatch_samples<<std::endl;
 		//getchar();
-        #pragma omp parallel for reduction(+:log_likelihood) schedule(static)
+        //#pragma omp parallel for reduction(+:log_likelihood) schedule(static)
 		for (int train_id = 0; train_id < scores.cols(); train_id++)
 		{
+			for (int sample_id = 0;sample_id < minibatch_samples.rows(); sample_id++) {
+				int sample = minibatch_samples(sample_id, train_id);
+				//std::cerr<<"sample id "<<sample_id<<", train_id "<<train_id<<std::endl;
+				//std::cerr<<" minibatch sample "<<sample<<" \nand prob is "<<
+				//	log_num_noise_samples + unigram->logprob(sample)<<std::endl;	
+			}		
 			precision_type local_log_likelihood = 0;
+
 			//If the output word is -1, continue
 			if (minibatch_samples(0, train_id) == -1) {
 				output.col(train_id).setZero();
@@ -181,6 +188,8 @@ public:
 			} else {
 			    for (int sample_id = 0;sample_id < minibatch_samples.rows(); sample_id++)
 			    {
+					//cerr<<" for sample "<<sample<<" log_num_noise_samples + unigram->logprob(sample) "<<
+					//	sample<<log_num_noise_samples + unigram->logprob(sample)<<endl;
 			        int sample = minibatch_samples(sample_id, train_id);
 					// To avoid zero or infinite probabilities,
 					// never take exp of score without normalizing first,
@@ -197,6 +206,14 @@ public:
 			log_likelihood += local_log_likelihood;
 		}
 		loss = log_likelihood;
+		/*
+		Matrix<precision_type,Dynamic,Dynamic> only_p_trues = output;
+		only_p_trues.bottomRows(num_noise_samples)  = Matrix<precision_type,Dynamic,Dynamic>::Ones(num_noise_samples,only_p_trues.cols())
+						-only_p_trues.bottomRows(num_noise_samples);
+		std::cerr<<"Ptrues for everything are "<<only_p_trues<<std::endl;
+		getchar();
+		*/
+		
 	 }
 
     template <typename DerivedO, typename DerivedI>

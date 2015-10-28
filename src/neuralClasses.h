@@ -173,6 +173,7 @@ class Linear_layer
 
 	    initMatrix(engine, U, init_normal, init_range);
 		//std::cerr<<U<<std::endl;
+		//cerr<<" U "<<endl<<U<<endl;
       initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -186,9 +187,13 @@ class Linear_layer
 	void fProp(const MatrixBase<DerivedIn> &input,
       const MatrixBase<DerivedOut> &output) const
   {
-
+	  //cerr<<"input is "<<input<<endl;
       UNCONST(DerivedOut, output, my_output);
+	  //cerr<<"in fprop"<<endl;
+	  //cerr<<"U is "<<U<<endl;
       my_output.leftCols(input.cols()).noalias() = U*input;
+	  //cerr<<"My output is "<<my_output<<endl;
+	  //getchar();
 
   }
 
@@ -417,6 +422,7 @@ class Linear_diagonal_layer
 
 	    initMatrix(engine, U, init_normal, init_range);
 		//std::cerr<<U<<std::endl;
+		//cerr<<"Linear diagonal "<<endl<<U<<endl;
       //initBias(engine, b, init_normal, init_range);
 	}	  
 
@@ -620,12 +626,13 @@ class Output_word_embeddings
         }
 
         initMatrix(engine, W, init_normal, init_range);
-		//std::cerr<<*W<<std::endl;e
+		//cerr<<"Output W "<<endl<<W<<endl;
 		if (init_bias ==0 ){ 
 			initBias(engine, b, init_normal, init_range);
 		} else {
         	b.fill(init_bias);
 		}
+		//cerr<<"Output b "<<endl<<b<<endl;
 		//shared_noise_embeddings.setZero()
     }
 	
@@ -637,7 +644,7 @@ class Output_word_embeddings
     int n_outputs () const { return W.rows(); }
 
 	int rows() const {return W.rows(); }
-	int cols() const {return W.cols(); }
+	int cols() const {return W.cols() + 1; }
 	
     template <typename DerivedIn, typename DerivedOut>
     void fProp(const MatrixBase<DerivedIn> &input,
@@ -772,8 +779,15 @@ class Output_word_embeddings
 	  
 	  precision_type getGradient(int row,
 	  			 int col) {
+		 if (col == W.cols()) {
+		 	return b_gradient(row,0);
+		}
+		 else{
+			 return W_gradient(row,col);
+		 }
 					 //cerr<<"W_gradient"<<endl;
-					 return W_gradient(row,col);
+					 //return W_gradient(row,col);
+					 
 	 }
 				 
 template <typename DerivedIn, typename DerivedGOut>
@@ -811,6 +825,7 @@ template <typename DerivedIn, typename DerivedGOut>
 	          int update_item = update_items[item_id];
 	  		//W_gradient.row(update_item) /= current_minibatch_size;
 	  		squared_param_norm += W_gradient.row(update_item).squaredNorm()+b_gradient(update_item)*b_gradient(update_item);
+			
 	  	 }
 		 return(squared_param_norm);		  
 	  }
@@ -868,7 +883,17 @@ template <typename DerivedIn, typename DerivedGOut>
   void changeRandomParam(precision_type offset, 
 						int &rand_row,
 						int &rand_col){
-  	changeRandomParamInMatrix(W, offset, rand_row, rand_col);
+  	//changeRandomParamInMatrix(W, offset, rand_row, rand_col);
+	
+	 if (rand_col == W.cols()) {
+	 	//return b_gradient(row,0);
+		 int temp_col = 0;
+		changeRandomParamInMatrix(b,offset, rand_row, temp_col);
+	}
+	 else{
+		 changeRandomParamInMatrix(W,offset, rand_row, rand_col);
+		 //return W_gradient(row,col);
+	 }
   } 
   
 
@@ -896,17 +921,30 @@ template <typename DerivedIn, typename DerivedGOut>
 		//ACCUMULATING gradient
 		//cerr<<"W gradient is "<<W_gradient<<endl;
 		//getchar();
+		//Matrix<precision_type,Dynamic,1> temp_b_gradient;
+		//temp_b_gradient.setZero(b.rows(),b.cols());
+		//cerr<<"samples are "<<samples<<endl;
 	    USCMatrix<precision_type> gradient_output(W.rows(), samples, weights);
 	    uscgemm(1.0,
 	      gradient_output,
 	      predicted_embeddings.leftCols(samples.cols()).transpose(),
 	      W_gradient);
-		  
+		  //cerr<<"Weights are "<<weights<<endl;
+		 //cerr<<"b gradient before "<<b_gradient<<endl; 
 	    uscgemv(1.0, 
 	      gradient_output,
 		      Matrix<precision_type,Dynamic,1>::Ones(weights.cols()),
 	      b_gradient);
-		  
+		  /*
+  	    uscgemv(1.0, 
+  	      gradient_output,
+  		      Matrix<precision_type,Dynamic,1>::Ones(weights.cols()),
+  	      temp_b_gradient);		  
+		  cerr<<"b gradient is "<<b_gradient<<endl;
+		  getchar();
+		  cerr<<"temp b gradient is "<<temp_b_gradient<<endl;
+		  getchar();
+		  */
 	  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	  //getchar();
 	  //int_map update_map; //stores all the parameters that have been updated
@@ -927,7 +965,10 @@ template <typename DerivedIn, typename DerivedGOut>
 					
 	    // Convert to std::vector for parallelization
 		  //cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
-		  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;					
+		  //cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;	
+		  //cerr<<"W gradient is "<<W_gradient<<endl;
+		  //cerr<<"b gradient is "<<b_gradient<<endl;
+		  //getchar();
 	      std::vector<int> update_items;
 	      for (int_map::iterator it = this->update_map.begin(); it != this->update_map.end(); ++it)
 	      {
@@ -1144,6 +1185,7 @@ class Input_word_embeddings
             init_normal,
             init_range);
 		//std::cerr<<*W<<std::endl;
+		//cerr<<"Input W "<<endl<<W<<endl;
       }
 
 	int n_inputs() const { return -1; }
@@ -1485,6 +1527,7 @@ class Hidden_layer
 			b.fill(init_bias);
 		}
 		//<<b<<std::endl;
+		//cerr<<"hidden bias "<<endl<<b<<endl;
 	}	  
 
    void read_biases(std::ifstream &b_file) { readMatrix(b_file, b); }

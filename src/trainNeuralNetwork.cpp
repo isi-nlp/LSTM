@@ -70,9 +70,9 @@ int main(int argc, char** argv)
 	*/
 	cerr<<"precision type is "<<sizeof(precision_type)<<endl;
 	srand (time(NULL));
-	setprecision(16);
+	cerr<<setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize=0, arg_run_lm=0, arg_carry_states=0, arg_run_tagger=0;
+    bool use_mmap_file, randomize=0, arg_run_lm = 0, arg_carry_states=0, arg_run_tagger=0;
     param myParam;
 	int arg_seed;
     try {
@@ -161,8 +161,8 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
-	  //ValueArg<bool> run_tagger("", "run_tagger", "Run as a tagger, \n \
-	  //	  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
+	  ValueArg<bool> run_tagger("", "run_tagger", "Run as a tagger, \n \
+	  	  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
 	  ValueArg<bool> carry_states("", "carry_states", "Carry the hidden states from one minibatch to another. This option is for \n \
 		  			language models only. Carrying hidden states over can improve perplexity. \n \
 						1 = yes. Default: 0 (Do not carry hidden states).", false, 0, "bool", cmd);		  
@@ -251,7 +251,7 @@ int main(int argc, char** argv)
 	  myParam.dropout_probability = dropout_probability.getValue();
 	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
-	  //arg_run_tagger = run_tagger.getValue();
+	  arg_run_tagger = run_tagger.getValue();
 	  arg_seed = seed.getValue();
 	  arg_carry_states = carry_states.getValue();
 	  if (arg_run_lm == 0 && arg_carry_states == 1){
@@ -594,8 +594,8 @@ int main(int argc, char** argv)
     nn.initialize(rng,
         myParam.init_normal,
         myParam.init_range,
-		//-log(myParam.output_vocab_size),
-		0,
+		-log(myParam.output_vocab_size),
+		//0,
         myParam.init_forget,
         myParam.parameter_update,
         myParam.adagrad_epsilon);	
@@ -615,6 +615,8 @@ int main(int argc, char** argv)
 	
 	nn.set_input(input);
 				
+	//getchar();
+	//cerr<<"printing decoder stuff"<<endl;
 	model nn_decoder;
 	    nn_decoder.resize(myParam.ngram_size,
 	        decoder_input_vocab_size,
@@ -626,8 +628,8 @@ int main(int argc, char** argv)
 	    nn_decoder.initialize(rng,
 	        myParam.init_normal,
 	        myParam.init_range,
-			//-log(myParam.output_vocab_size),
-			0,
+			-log(myParam.output_vocab_size),
+			//0,
 	        myParam.init_forget,
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);		
@@ -645,7 +647,8 @@ int main(int argc, char** argv)
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);
 
-		nn_decoder.set_input(decoder_input);	
+		nn_decoder.set_input(decoder_input);
+	//getchar();	
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
     // LOAD THE NEURAL NETWORK MODEL
 
@@ -686,7 +689,10 @@ int main(int argc, char** argv)
 		unigram = multinomial<data_size_t> (unigram_counts);
 	}
 
-	
+	//cerr<<"decoder input vocab is "<<endl;
+	//decoder_input_vocab.print_vocabulary();
+	//cerr<<"decoder output vocab is "<<endl;
+	//decoder_output_vocab.print_vocabulary();
 	//IF we're using NCE, then the minibatches have different sizes
 	if (loss_function == NCELoss)
 		prop.resizeNCE(myParam.num_noise_samples, myParam.fixed_partition_function, unigram);
@@ -930,6 +936,8 @@ int main(int argc, char** argv)
 						training_output_sequence_cont_sent_data,
 						rng);				
 			} else {
+				//cerr<<" decoder_training_input_sent_data "<<decoder_training_input_sent_data<<endl;
+				//getchar();
 			    prop.fPropDecoder(decoder_training_input_sent_data,
 						current_c,
 						current_h,
@@ -964,6 +972,8 @@ int main(int argc, char** argv)
 	 						 myParam.gradient_check,
 	 						 myParam.norm_clipping); //,						 		
 				} else {
+					//cerr<<" decoder_training_output_sent_data "<<decoder_training_output_sent_data<<endl;
+					//getchar();
 				    prop.computeLosses(decoder_training_output_sent_data,
 						 data_log_likelihood,
 						 myParam.gradient_check,
@@ -1002,7 +1012,7 @@ int main(int argc, char** argv)
 	 			//					data_log_likelihood);	
 				//cerr<<"training_input_sent_data len"		
 				if (myParam.gradient_check) {		
-					cerr<<"Checking gradient"<<endl;
+					//cerr<<"Checking gradient"<<endl;
 						 
 					prop.gradientCheck(training_input_sent_data,
 						 		 decoder_training_input_sent_data,
@@ -1023,6 +1033,7 @@ int main(int argc, char** argv)
 				//getchar();											 
 				//Updating the gradients
 				//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+				/*
 				precision_type minibatch_scale = current_minibatch_size;
 				precision_type grad_squared_norm = 0.;
 				prop.getGradSqdNorm(grad_squared_norm,loss_function, arg_run_lm);
@@ -1035,10 +1046,11 @@ int main(int argc, char** argv)
 				} else {
 					grad_scale = 1./minibatch_scale;
 				}
-				cerr<<"grad scale is "<<grad_scale<<endl;
+				*/
+				//cerr<<"grad scale is "<<grad_scale<<endl;
 				//cerr<<"max_input_sent_len + max_output_sent_len "<<max_input_sent_len + max_output_sent_len<<endl;
 				//getchar();
-				/*
+				
 				//Updaging using local grad norms
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
@@ -1050,7 +1062,7 @@ int main(int argc, char** argv)
 							loss_function,
 							arg_run_lm);	
 				//Updating using global grad norms	
-				*/												
+					/*												
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
 							max_input_sent_len + max_output_sent_len,
@@ -1060,7 +1072,7 @@ int main(int argc, char** argv)
 							loss_function,
 							arg_run_lm);				
 				//Resetting the gradients
-
+					*/
 				prop.resetGradient();
 	      //}
 		  
