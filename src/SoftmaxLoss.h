@@ -199,7 +199,7 @@ public:
 					precision_type z = logadd(double(score), double(score_noise));
 					precision_type logprob = score - z;
 					precision_type logprob_noise = score_noise - z;
-					output(sample_id, train_id) = std::exp(logprob);
+					output(sample_id, train_id) = std::exp(double(logprob));
 					local_log_likelihood += sample_id == 0 ? logprob : logprob_noise;
 			    }
 			}

@@ -81,23 +81,27 @@ void model::initialize(mt19937 &init_engine,
         adagrad_epsilon);
 	//cerr<<"output word embeddings init"<<endl;
 	*/
+	//cerr<<"init output layer "<<endl;
     output_layer.initialize(init_engine,
         init_normal,
         init_range,
         init_output_bias,
         parameter_update,
         adagrad_epsilon);
+		/*
+	//cerr<"init output layer "<<endl;
     first_hidden_linear.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
+	
     second_hidden_linear.initialize(init_engine,
         init_normal,
         init_range,
         parameter_update,
         adagrad_epsilon);
-	
+	*/
 	//cerr<<"W_h_to_c init"<<endl;
 	W_h_to_c.initialize(init_engine,
         init_normal,
@@ -795,6 +799,7 @@ void google_input_model::initialize(mt19937 &init_engine,
         parameter_update,
         adagrad_epsilon);
 		
+		//cerr<<"W_x_to_c init"<<endl;
 		W_x_to_c.initialize(init_engine,
 	        init_normal,
 	        init_range,
