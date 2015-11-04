@@ -19,21 +19,21 @@ class vocabulary {
     std::vector<std::string> m_words;
     boost::unordered_map<std::string, int> m_index;
     int unk;
-	//bool unk_defined;
+	bool unk_defined;
 
 public:
     vocabulary() 
     { 
         unk = insert_word("<unk>");
-		unk = m_index["<unk>"]
-		//unk_defined = 0;
+		unk = m_index["<unk>"];
+		unk_defined = 1;
     }
 
     vocabulary(const std::vector<std::string> &words)
       :
       m_words(words)
     {
-		bool unk_defined = 0;
+		//bool unk_defined = 0;
         for (int i=0; i<words.size(); i++) {
             m_index[words[i]] = i;
 			if (words[i] == "<unk>"){
@@ -52,7 +52,7 @@ public:
     }
 	void build_vocab(const std::vector<std::string> &words) {
 		//std::cerr<<"The vocab size is "<<words.size()<<std::endl;
-		bool unk_defined = 0;
+		//bool unk_defined = 0;
 		m_words = words;
         for (int i=0; i<words.size(); i++) {
             m_index[words[i]] = i;
