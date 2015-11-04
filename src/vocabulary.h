@@ -41,9 +41,12 @@ public:
 		}
 		if (unk_defined == 0){
 			std::cerr<<"Warning:: The vocabulary does not have unk! \n\
-				Program will fail if the development set or test set have unknown words"<<std::endl;
+				Adding unk"<<std::endl;
+			m_words.push_back("<unk>");
+			m_index["<unk>"] = m_words.size()-1;
+			unk = m_index["<unk>"];
 		}
-		//unk = m_index["<unk>"];
+
     }
 	void build_vocab(const std::vector<std::string> &words) {
 		//std::cerr<<"The vocab size is "<<words.size()<<std::endl;
@@ -57,7 +60,10 @@ public:
 		}
 		if (unk_defined == 0){
 			std::cerr<<"Warning:: The vocabulary does not have unk! \n\
-				Program will fail if the development set or test set have unknown words"<<std::endl;
+				Adding unk"<<std::endl;
+			m_words.push_back("<unk>");
+			m_index["<unk>"] = m_words.size()-1;
+			unk = m_index["<unk>"];			
 		}		
 		//unk = m_index["<unk>"];		
 	}

@@ -39,13 +39,13 @@ namespace nplm
 	    propagator() : minibatch_size(0), 
 					encoder_plstm(0), 
 					decoder_plstm(0),
-					encoder_lstm_nodes(105,LSTM_node<input_node_type>()),
-					decoder_lstm_nodes(105,LSTM_node<input_node_type>()),
-					encoder_input_nodes(105,input_node_type()),
-					decoder_input_nodes(105,input_node_type()),
+					encoder_lstm_nodes(251,LSTM_node<input_node_type>()),
+					decoder_lstm_nodes(251,LSTM_node<input_node_type>()),
+					encoder_input_nodes(251,input_node_type()),
+					decoder_input_nodes(251,input_node_type()),
 					num_hidden(0), 
 					fixed_partition_function(0), 
-					losses(vector<Output_loss_node>(105,Output_loss_node())),
+					losses(vector<Output_loss_node>(251,Output_loss_node())),
 					unif_real(0.0,1.0),
 					output_dropout_layers(vector<Dropout_layer>()),
 					nce_loss(){ }
@@ -57,12 +57,12 @@ namespace nplm
 			decoder_plstm(&decoder_lstm),
 		 	minibatch_size(minibatch_size),
 			output_layer_node(&decoder_lstm.output_layer,minibatch_size),
-			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(105,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
-			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(105,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
-			encoder_input_nodes(vector<input_node_type >(105,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
-			decoder_input_nodes(vector<input_node_type >(105,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
+			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(251,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
+			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(251,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
+			encoder_input_nodes(vector<input_node_type >(251,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
+			decoder_input_nodes(vector<input_node_type >(251,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
 			//losses(vector<Matrix<precision_type,Dynamic,Dynamic> >(100,Matrix<precision_type,Dynamic,Dynamic>()))
-			losses(vector<Output_loss_node>(105,Output_loss_node())),
+			losses(vector<Output_loss_node>(251,Output_loss_node())),
 			unif_real(0.0,1.0),
 			output_dropout_layers(vector<Dropout_layer>()),
 			nce_loss()
@@ -243,11 +243,13 @@ namespace nplm
 										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
 										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
 				}
+				/*
 				//encoder_lstm_nodes.fProp();
-				//cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
+				cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+				cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
+				cerr<<"decoder_lstm_nodes["<<i<<"].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
+				cerr<<"decoder_lstm_nodes["<<i<<"].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
+				*/
 			}			
 
 	    }

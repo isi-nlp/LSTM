@@ -272,7 +272,7 @@ void readSentFile(const std::string &file,
 	    splitBySpace(line, words);
 		if (words.size() > 100){
 			std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
-			exit(1);
+			//exit(1);
 		}
 		if (add_start_stop) {
 			words.insert(words.begin(),"<s>");
@@ -316,11 +316,12 @@ void readOddSentFile(const std::string &file,
 		    splitBySpace(line, words);
 			if (words.size() > 100){
 				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
-				exit(1);
+				//exit(1);
 			}
 			if (reverse) { //If the user wants to reverse
 				std::reverse(words.begin(),words.end());
 			}
+			tokens += words.size();
 			//for (int i=0;i<words.size(); i++){
 			//	std::cerr<<" words "<<i<<" "<<words.at(i);
 			//}
@@ -330,11 +331,12 @@ void readOddSentFile(const std::string &file,
 				words.insert(words.begin(),"<s>");
 				if (is_output){
 					words.push_back("</s>");
+					tokens += 1;
 				}
 			}
 
 		    sentences.push_back(words);
-			tokens += words.size()-1;
+			
 		}
 		counter++;
 	  }
@@ -371,11 +373,12 @@ void readEvenSentFile(const std::string &file,
 		    splitBySpace(line, words);
 			if (words.size() > 100){
 				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
-				exit(1);
+				//exit(1);
 			}
 			if (reverse) {//If the user wants to reverse
 				std::reverse(words.begin(),words.end());	
 			}
+			tokens += words.size();
 			//for (int i=0;i<words.size(); i++){
 			//	std::cerr<<" words "<<i<<" "<<words.at(i);
 			//}					
@@ -385,10 +388,11 @@ void readEvenSentFile(const std::string &file,
 				words.insert(words.begin(),"<s>");
 				if (is_output){
 					words.push_back("</s>");
+					tokens += 1;
 				}
 			}
 		    sentences.push_back(words);
-			tokens += words.size();
+			//tokens += words.size();
 		}
 		counter++;
 	  }

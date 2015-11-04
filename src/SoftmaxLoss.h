@@ -51,6 +51,7 @@ struct SoftmaxLogLoss
     {
 		//std::cerr<<"output words are "<<output_words<<std::endl;
 		//std::cerr<<"output const is "<<output_const<<std::endl;
+		//std::cerr<<"input is "<<input<<std::endl;
 	    UNCONST(DerivedO, output_const, output);
 		//std::cerr<<"input is "<<input<<std::endl;
 
