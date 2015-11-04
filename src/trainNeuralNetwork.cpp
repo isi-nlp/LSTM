@@ -387,7 +387,7 @@ int main(int argc, char** argv)
     //data_size_t training_data_size = num_tokens / myParam.ngram_size;
 	
     cerr << "Number of training instances "<< decoder_training_output_sent.size() << endl;
-    cerr << "Number of validation instances "<< decoder_validation_output_sent.size() << endl;
+    cerr << "	 "<< decoder_validation_output_sent.size() << endl;
 	
     Matrix<int,Dynamic,Dynamic> training_data;
 	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
@@ -922,7 +922,7 @@ int main(int argc, char** argv)
 	#endif
 	
 		//scale the model before writing it
-		input.scale(1.-myParam.dropout_probability);
+		//input.scale(1.-myParam.dropout_probability);
 		decoder_input.scale(1.-myParam.dropout_probability);
 		nn_decoder.scale(1.-myParam.dropout_probability);
 		
