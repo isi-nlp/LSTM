@@ -443,7 +443,7 @@ int main(int argc, char** argv)
 	}
 	
 
-	validation_data_size = validation_output_sent.size();
+	validation_data_size = word_validation_output_sent.size();
 	//data_size_t num_validation_batches = (validation_data_size-1)/myParam.validation_minibatch_size + 1;
     //Map< Matrix<int,Dynamic,Dynamic> > validation_data(validation_data_flat.data(), myParam.ngram_size, validation_data_size);
 
