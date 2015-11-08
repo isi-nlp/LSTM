@@ -1832,7 +1832,8 @@ namespace nplm
 	  
 	  template <typename DerivedOut>
 	  void computeProbsLog(const MatrixBase<DerivedOut> &output,
-	  					precision_type &log_likelihood) 
+	  					precision_type &log_likelihood,
+						precision_type validation_correct_labels) 
 	  {	
 		  	//cerr<<"output is "<<output<<endl;
 			//cerr<<"In computeProbs..."<<endl;
@@ -1864,6 +1865,16 @@ namespace nplm
 				//cerr<<"probs is "<<probs<<endl;
 		        stop_timer(5);
 		        log_likelihood += minibatch_log_likelihood;		
+	            for (int minibatch_instance=0; minibatch_instance < current_minibatch_size; minibatch_instance++){
+	                Matrix<double,1,Dynamic>::Index max_index;
+	                probs.col(minibatch_instance).maxCoeff(&max_index);
+	                //validation_argmaxes.push_back(max_index);
+	                if (max_index ==
+	                    output(i,minibatch_instance) && 
+							output(i,minibatch_instance) != -1){
+	                        validation_correct_labels += 1.;
+	                    }
+	            }				
 			}
 
 	  }	  

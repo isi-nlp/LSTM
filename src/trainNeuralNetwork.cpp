@@ -934,7 +934,7 @@ int main(int argc, char** argv)
             ////////////////////////////////////////////////////////////////
 
             precision_type log_likelihood = 0.0;
-			
+			precision_type correct_validation_labels = 0.;
 		    //Matrix<precision_type,Dynamic,Dynamic> scores(output_vocab_size, validation_minibatch_size);
 		    //Matrix<precision_type,Dynamic,Dynamic> output_probs(output_vocab_size, validation_minibatch_size);
 		    //Matrix<int,Dynamic,Dynamic> minibatch(ngram_size, validation_minibatch_size);
@@ -1048,7 +1048,8 @@ int main(int argc, char** argv)
 						validation_output_sequence_cont_sent_data);	
 											 
 		 		prop_validation.computeProbsLog(decoder_validation_output_sent_data,
-		 		 			  	minibatch_log_likelihood);
+		 		 			  	minibatch_log_likelihood,
+								correct_validation_labels);
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;
 			}
@@ -1060,7 +1061,7 @@ int main(int argc, char** argv)
 			cerr << "		Validation log-likelihood base 2 in epoch   "<<epoch<<":      " << log_likelihood/log(2.) << endl;
 			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":      "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
 			cerr << "         		perplexity in epoch                 "<<epoch<<":      "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
-			
+			cerr << "		Validation accuracy in epoch                "<<epoch<<":      "<< correct_validation_labels/total_validation_output_tokens << endl;
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
 			if (exp(-log_likelihood/total_validation_output_tokens) < best_perplexity){
