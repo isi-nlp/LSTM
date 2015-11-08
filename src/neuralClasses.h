@@ -66,6 +66,8 @@ class Dropout_layer
 	}
 	template<typename Engine> 
 	void createMask(Engine &eng){
+        //cerr<<"The size of dropout mask is "<<dropout_mask.rows()
+        //#        <<"cols "<<dropout_mask.cols()<<endl;		
 		//Setting up the dropout sampler
 		boost::random::uniform_real_distribution<> real_01(0, 1);
 		for (int i=0; i<dropout_mask.rows(); i++){
@@ -74,6 +76,8 @@ class Dropout_layer
 					( real_01(eng) <1.0 - keep_probability ) ? 0: 1;
 			}
 		}
+		//cerr<<"dropout mask is "<<endl<<dropout_mask<<endl;
+		//getchar();
 	}
 	template<typename Derived, typename Engine>
 	void fProp(const MatrixBase<Derived> &input,
@@ -107,8 +111,8 @@ class Dropout_layer
 		//cerr<<"Before dropout the bProp input is "<<input<<endl;		
 		dropout(input,
 				this->dropout_mask);
+		//cerr<<"dropout mask is "<<this->dropout_mask<<endl;
 		//cerr<<"After dropout the bProp input is "<<input<<endl;				
-				
 		//UNCONST(DerivedGOut, input, my_input);
 		//my_input.noalias().array() *= dropout_mask.array();
 	}
@@ -687,44 +691,7 @@ class Output_word_embeddings
 	}
 	
 	
-	/*
-	//The NCE fprop version if we are sharing noise samples across the minibatch.
-	//If the noise samples are shared, we can densify the gradient computation, at least
-	//for the noise sample
-    template <typename DerivedIn, typename DerivedOutI, typename DerivedOutV>
-    void fPropShared(const MatrixBase<DerivedIn> &input,
-    const MatrixBase<DerivedOutI> &samples,
-    const MatrixBase<DerivedOutV> &output) const
-	{
-		//First LOAD in the embeddings into the matrix that is going to store them. 
-		//the first set are	
-        uscgemm(1.0,
-	        W.transpose(), 
-	        USCMatrix<precision_type>(W.rows(),samples,Matrix<precision_type,1,Dynamic>::Ones(samples.cols())),
-	        my_output.block(ngram*embedding_dimension, 0, embedding_dimension, input.cols()));
-		
-		
-		
-        UNCONST(DerivedOutV, output, my_output);
-		//cerr<<"my_output rows and cols"<<my_output.rows()<<" "<<my_output.cols()<<endl;
-		//cerr<<"input rows and cols"<<input.rows()<<input.cols()<<endl;
-        #pragma omp parallel for
-        for (int instance_id = 0; instance_id < samples.cols(); instance_id++)
-        {
-		  if (samples(0, instance_id) == -1) 
-			  continue;
-          for (int sample_id = 0; sample_id < samples.rows(); sample_id++)
-          {
-			//cerr<<"sample is "<<samples(sample_id, instance_id)<<endl;
-            my_output(sample_id, instance_id) = b(samples(sample_id, instance_id));
-          }
-        }
-		
-        USCMatrix<precision_type> sparse_output(W.rows(), samples, my_output);
-        uscgemm_masked(1.0, W, input, sparse_output);
-        my_output = sparse_output.values; // too bad, so much copying
-	}
-	*/
+
 	
     // Return single element of output matrix
     template <typename DerivedIn>
@@ -779,14 +746,16 @@ class Output_word_embeddings
 	  
 	  precision_type getGradient(int row,
 	  			 int col) {
+		 //cerr<<"W_gradient"<<W_gradient<<endl;
+		 //cerr<<"b_gradient"<<b_gradient<<endl;					 
 		 if (col == W.cols()) {
 		 	return b_gradient(row,0);
 		}
 		 else{
 			 return W_gradient(row,col);
 		 }
-					 //cerr<<"W_gradient"<<endl;
-					 //return W_gradient(row,col);
+
+		//return W_gradient(row,col);
 					 
 	 }
 				 
@@ -799,8 +768,8 @@ template <typename DerivedIn, typename DerivedGOut>
     // predicted_embeddings is output_embedding_dimension x minibatch_size
     // bProp_input is vocab_size x minibatch_size
 	
-    W_gradient += bProp_input * predicted_embeddings.transpose();
-    b_gradient += bProp_input.rowwise().sum();
+    W_gradient.noalias() += bProp_input * predicted_embeddings.transpose();
+    b_gradient.noalias() += bProp_input.rowwise().sum();
 	//cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	//getchar();
 	//cerr<<"W_gradient in output layer is "<<W_gradient<<endl

@@ -1053,7 +1053,12 @@ public:
 				f_t_node_bProp_matrix,
 				tanh_c_prime_t_node_bProp_matrix,
 				current_minibatch_size);
+		//cerr<<"before backpropping the dropout layer, the derivative wrt x_t is "<<endl		
+		//	<<d_Err_t_to_n_d_x_t<<endl;
 		x_t_dropout_layer.bProp(d_Err_t_to_n_d_x_t);
+		//cerr<<"after backpropping the dropout layer, the derivative wrt x_t is "<<endl
+		//	<<d_Err_t_to_n_d_x_t<<endl;
+		//getchar();
 		bPropInput(data);				
 	}
 					

@@ -354,18 +354,20 @@ int main(int argc, char** argv)
 	decoder_output_vocab_size = decoder_output_vocab.size();
 	myParam.output_vocab_size = decoder_output_vocab.size();
 	myParam.input_vocab_size = decoder_input_vocab.size();
-
+	/*
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
 	cerr<<"Decoder input vocab size is "<<decoder_input_vocab_size<<endl;
 	cerr<<"Decoder output vocab size is "<<decoder_output_vocab_size<<endl;
 	cerr<<"myParam.output_vocab_size "<<myParam.output_vocab_size<<endl;
 	cerr<<"myParam.input_vocab_size "<<myParam.input_vocab_size<<endl;
-	/*
+	
 	cerr<<"Decoder input vocab is "<<endl;
 	decoder_input_vocab.print_vocabulary();
 	cerr<<"Decoder output vocab is "<<endl;
 	decoder_output_vocab.print_vocabulary();
+	getchar();
 	*/
+	
 	//Creating separate decoder input vocab and decoder output vocab
 	
    	integerize(word_training_output_sent, 
@@ -464,8 +466,8 @@ int main(int argc, char** argv)
 	if (myParam.output_vocab_size == 0)
 	    myParam.output_vocab_size = output_words.size();
     }
-	//cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
-	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
+	cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
+	cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
 	
 
 
@@ -525,6 +527,7 @@ int main(int argc, char** argv)
 		google_input_model decoder_input(myParam.num_hidden, 
 							decoder_input_vocab_size,
 							myParam.input_embedding_dimension);
+		cerr<<"decoder_input_vocab_size "<<decoder_input_vocab_size<<endl;
 		decoder_input.resize(decoder_input_vocab_size,
 		    myParam.input_embedding_dimension,
 		    myParam.num_hidden);
@@ -562,7 +565,7 @@ int main(int argc, char** argv)
     propagator<Google_input_node, google_input_model> prop_validation(nn, 
 															nn_decoder, 
 															myParam.validation_minibatch_size);
-														    vector<data_size_t> unigram_counts;
+	vector<data_size_t> unigram_counts;
 	multinomial<data_size_t> unigram;																
 	if (loss_function == NCELoss){
 	    vector<data_size_t> unigram_counts = vector<data_size_t>(decoder_output_vocab_size,0);
@@ -754,6 +757,8 @@ int main(int argc, char** argv)
 			init_h = current_h; 	
 
 			if (arg_run_lm == 0) {
+				cerr<<"arg run lm is 0"<<endl;
+				getchar();
 				if (myParam.dropout_probability > 0.) {
 					prop.fPropEncoderDropout(training_input_sent_data,
 								current_c,
@@ -836,14 +841,7 @@ int main(int argc, char** argv)
 							 training_input_sequence_cont_sent_data); 						
 					}				 
 				 }
-					 //init_c,
-					 //init_h,
-					 //training_sequence_cont_sent_data); 	
-
-	 			//Checking the compute probs function
-	 			//prop.computeProbs(training_output_sent_data,
-	 			//					data_log_likelihood);	
-				//cerr<<"training_input_sent_data len"		
+	
 				if (myParam.gradient_check) {		
 					//cerr<<"Checking gradient"<<endl;
 						 
@@ -875,18 +873,7 @@ int main(int argc, char** argv)
 							myParam.norm_threshold,
 							loss_function,
 							arg_run_lm);	
-				//Updating using global grad norms	
-					/*												
-				prop.updateParams(adjusted_learning_rate,
-							//max_sent_len,
-							max_input_sent_len + max_output_sent_len,
-					  		current_momentum,
-							myParam.L2_reg,
-							grad_scale,
-							loss_function,
-							arg_run_lm);				
-				//Resetting the gradients
-					*/
+
 				prop.resetGradient();
 	      //}
 		  
@@ -1082,7 +1069,7 @@ int main(int argc, char** argv)
 			}
 			//scale the model back for training
 			//scale the model before writing it
-			input.scale(1./(1.-myParam.dropout_probability));
+			//input.scale(1./(1.-myParam.dropout_probability));
 			decoder_input.scale(1./(1-myParam.dropout_probability));
 			nn_decoder.scale(1./(1-myParam.dropout_probability));
 			if (myParam.max_epoch > -1 && epoch+1 >= myParam.max_epoch) {

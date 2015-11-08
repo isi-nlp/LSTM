@@ -271,7 +271,8 @@ void readSentFile(const std::string &file,
 	    std::vector<T> words;
 	    splitBySpace(line, words);
 		if (words.size() > 100){
-			std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+			std::cerr<<"Error! The training sentence length was "<<words.size()<<".  \
+				Maximum allowed sentence length is 100"<<std::endl;
 			//exit(1);
 		}
 		if (add_start_stop) {
@@ -315,7 +316,8 @@ void readOddSentFile(const std::string &file,
 		    std::vector<T> words;
 		    splitBySpace(line, words);
 			if (words.size() > 100){
-				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+				std::cerr<<"Error! The training sentence length was "<<words.size()<<".  \
+					Maximum allowed sentence length is 100"<<std::endl;
 				//exit(1);
 			}
 			if (reverse) { //If the user wants to reverse
@@ -372,7 +374,8 @@ void readEvenSentFile(const std::string &file,
 		    std::vector<T> words;
 		    splitBySpace(line, words);
 			if (words.size() > 100){
-				std::cerr<<"Error! The training sentence length was greater than 100. Maximum allowed sentence length is 100"<<std::endl;
+				std::cerr<<"Error! The training sentence length was "<<words.size()<<".  \
+					Maximum allowed sentence length is 100"<<std::endl;
 				//exit(1);
 			}
 			if (reverse) {//If the user wants to reverse

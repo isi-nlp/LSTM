@@ -145,7 +145,7 @@ namespace nplm
 		}
 		
 		void resizeOutputDropoutLayers(int minibatch_size, precision_type dropout_probability) {
-			this->output_dropout_layers = vector<Dropout_layer>(105,Dropout_layer(output_layer_node.param->n_inputs(),
+			this->output_dropout_layers = vector<Dropout_layer>(251,Dropout_layer(output_layer_node.param->n_inputs(),
 																		minibatch_size,
 																		1-dropout_probability));
 			/*
@@ -981,7 +981,7 @@ namespace nplm
 				//cerr<<"output is "<<output<<endl;
 	 			int sent_len = output.rows(); 
 	 			//precision_type log_likelihood = 0.;
-				//cerr<<"Sent len is "<<sent_len<<endl;
+				cerr<<"Sent len is "<<sent_len<<endl;
 	 			for (int i=sent_len-1; i>=0; i--) {
 	 				//cerr<<"i is "<<i<<endl;
 					precision_type minibatch_log_likelihood;
@@ -1002,13 +1002,13 @@ namespace nplm
 	 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 	 					//cerr<<"Score is"<<endl;
 	 					//cerr<<scores<<endl;
-				
+						cerr<<"output.row(i) "<<output.row(i)<<endl;
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
 	 			                   output.row(i), 
 	 			                   probs, 
 	 			                   minibatch_log_likelihood);
-	 					//cerr<<"probs is "<<probs<<endl;
+						cerr<<"probs is "<<probs<<endl;
 						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
 	 			        stop_timer(5);
 	 			        log_likelihood += minibatch_log_likelihood;
@@ -1161,7 +1161,7 @@ namespace nplm
 	 			//precision_type log_likelihood = 0.;
 			
 	 			for (int i=sent_len-1; i>=0; i--) {
-	 				//cerr<<"i is "<<i<<endl;
+	 				//cerr<<"i in losses is "<<i<<endl;
 					precision_type minibatch_log_likelihood;
 	 				if (loss_function == LogLoss) {
 						//Applying dropout to the output layer
@@ -1365,7 +1365,7 @@ namespace nplm
 			
 			//first getting decoder loss
 			for (int i=output_sent_len-1; i>=0; i--) {
-
+				//cerr<<"i in backprop decoder dropout is "<<i<<endl;
 				if (i==0 && output_sent_len-1 > 0) {
 					
 				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
@@ -1390,7 +1390,7 @@ namespace nplm
 		
 				} else if (i > 0) {
 					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
 
 							   losses[i].d_Err_t_d_h_t,
 							   //output_layer_node.bProp_matrix,
@@ -1776,7 +1776,7 @@ namespace nplm
 			//precision_type log_likelihood = 0.;
 
 			for (int i=sent_len-1; i>=0; i--) {
-				//cerr<<"i in gradient check is "<<i<<endl;
+				//cerr<<"i in compute probs dropout is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
 					output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);					
@@ -1952,7 +1952,7 @@ namespace nplm
 
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
-
+		//cerr<<"Arg run lm is "<<arg_run_lm<<endl;
 		paramGradientCheck(input,decoder_input, 
 							 decoder_output,
 							 decoder_plstm->output_layer,
@@ -2245,8 +2245,12 @@ namespace nplm
 							 dropout_probability,
 							 arg_run_lm);
  		init_c = const_init_c;
- 		init_h = const_init_h;		 
-  		paramGradientCheck(input,decoder_input, 
+ 		init_h = const_init_h;		
+		//cerr<<"decoder_input "<<decoder_input<<endl;
+		//cerr<<"decoder output "<<decoder_output<<endl;
+		//getchar();
+  		paramGradientCheck(input,
+						 decoder_input, 
  						 decoder_output,
  						 (dynamic_cast<input_model_type*>(decoder_plstm->input))->input_layer,
  						 "Decoder: input_layer", 
@@ -2611,6 +2615,7 @@ namespace nplm
 			 const Eigen::ArrayBase<DerivedS> &output_sequence_cont_indices,
 			 precision_type dropout_probability,
 			 bool arg_run_lm) {
+				//cerr<<"Arg run lm is "<<arg_run_lm<<endl;
 				//cerr<<"inside finite diff"<<endl;
 				Matrix<precision_type,Dynamic,Dynamic> init_c; 
 				Matrix<precision_type,Dynamic,Dynamic> init_h;
@@ -2641,11 +2646,11 @@ namespace nplm
 				//cerr<<"first perturbing"<<endl;
 				if (dropout_probability > 0) {
 					if (arg_run_lm == 0 ) {
-					fPropEncoderDropout(input,
-								init_c,
-								init_h,
-								input_sequence_cont_indices,
-								init_rng);	
+						fPropEncoderDropout(input,
+									init_c,
+									init_h,
+									input_sequence_cont_indices,
+									init_rng);	
 					}
 					//cerr<<"init_c"<<init_c<<endl;
 					//cerr<<"init_h"<<init_h<<endl;
@@ -2765,6 +2770,7 @@ namespace nplm
 									after_log_likelihood<<endl;
 					cerr<<"Graves threshold is "<<graves_threshold<<endl;
 					cerr<<"Relative error is "<<relative_error<<endl;
+					assert(!(gradient_diff > threshold || relative_error > threshold));
 					exit(1);
 				} else {
 		 	    	cerr<<"The difference between computed gradient and symbolic gradient for "<<param_name<<" at row: "<<rand_row
