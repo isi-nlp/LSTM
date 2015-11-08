@@ -151,6 +151,8 @@ void readEmbeddingsFromFile(const std::string &file,
   	  {
   	    std::cerr << "Error: can't read from file " << file<< std::endl;
   	    exit(-1);
+  	  } else {
+		  std::cerr << "Reading embeddings from file "<< file<< std::endl;
   	  }
 
   	  std::string line;
