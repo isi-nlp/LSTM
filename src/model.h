@@ -248,6 +248,9 @@ public:
 	void read(const string &filename);
 	void readConfig(ifstream &config_file);
 	precision_type getGradSqdNorm();
+    void readEmbeddingsFromFile(const std::string &file, vocabulary &vocab){
+    	input_layer.readEmbeddingsFromFile(file, vocab);
+    }
 };
 
 class hidden_to_hidden_input_model : public input_model {

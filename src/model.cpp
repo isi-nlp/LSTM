@@ -761,17 +761,18 @@ void google_input_model::resize(int input_vocab_size,
     int input_embedding_dimension,
     int num_hidden)
 {
-    input_layer.resize(input_vocab_size, input_embedding_dimension, 1); // the input is always dimension 1 now.
+	// the context size is set by default to 1. This can change
+    input_layer.resize(input_vocab_size, input_embedding_dimension, 1); 
 
     this->input_vocab_size = input_vocab_size;
     this->input_embedding_dimension = input_embedding_dimension;
     this->num_hidden = num_hidden;
 	
 
-	W_x_to_c.resize(num_hidden,num_hidden);
-	W_x_to_o.resize(num_hidden,num_hidden);
-	W_x_to_f.resize(num_hidden,num_hidden);
-	W_x_to_i.resize(num_hidden,num_hidden);
+	W_x_to_c.resize(num_hidden,input_embedding_dimension);
+	W_x_to_o.resize(num_hidden,input_embedding_dimension);
+	W_x_to_f.resize(num_hidden,input_embedding_dimension);
+	W_x_to_i.resize(num_hidden,input_embedding_dimension);
 	
 
 }

@@ -655,7 +655,7 @@ class Output_word_embeddings
     const MatrixBase<DerivedOut> &output) const
 	  {
         UNCONST(DerivedOut, output, my_output);
-        my_output = (W * input).colwise() + b; //No bias for output words
+        my_output = (W * input).colwise() + b; 
 		//my_output = (*W) * input ; //No bias for output words
 
 	  }
@@ -746,9 +746,10 @@ class Output_word_embeddings
 	  
 	  precision_type getGradient(int row,
 	  			 int col) {
-		 //cerr<<"W_gradient"<<W_gradient<<endl;
-		 //cerr<<"b_gradient"<<b_gradient<<endl;					 
+		 //cerr<<"W_gradient"<<endl<<W_gradient<<endl;
+		 //cerr<<"b_gradient"<<endl<<b_gradient<<endl;					 
 		 if (col == W.cols()) {
+			//cerr<<"Getting b gradient"<<endl;
 		 	return b_gradient(row,0);
 		}
 		 else{
@@ -772,8 +773,12 @@ template <typename DerivedIn, typename DerivedGOut>
     b_gradient.noalias() += bProp_input.rowwise().sum();
 	//cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	//getchar();
-	//cerr<<"W_gradient in output layer is "<<W_gradient<<endl
-	
+	/*
+	cerr<<"bProp_input "<<bProp_input<<endl;
+	cerr<<"W_gradient in output layer is "<<endl<<W_gradient<<endl;
+	cerr<<"b_gradient in output layer is "<<endl<<b_gradient<<endl;
+	getchar();
+	*/
   }
   
   precision_type getGradSqdNorm(){
@@ -1276,6 +1281,9 @@ class Input_word_embeddings
 		
   }
 
+  void readEmbeddingsFromFile(std::string file, vocabulary &vocab){
+  	::nplm::readEmbeddingsFromFile(file, vocab, W);
+  }
   template <typename DerivedGOut, typename DerivedIn>
   void updateGradient(const MatrixBase<DerivedGOut> &bProp_input,
      const MatrixBase<DerivedIn> &input_words)
@@ -1291,16 +1299,7 @@ class Input_word_embeddings
 	    for (int ngram=0; ngram<context_size; ngram++)
 	        W += learning_rate * input_words.middleRows(ngram*vocab_size, vocab_size) * bProp_input.middleRows(ngram*embedding_dimension, embedding_dimension).transpose()
 	    */
-	  /*
-	    for (int ngram=0; ngram<context_size; ngram++)
-	    {
-	        uscgemm(learning_rate, 
-			USCMatrix<precision_type>(W.rows(), input_words.middleRows(ngram, 1), Matrix<precision_type,1,Dynamic>::Ones(input_words.cols())),
-			bProp_input.block(ngram*embedding_dimension,0,embedding_dimension,input_words.cols()).transpose(),
-      	  	*W);
-	    }
-	  */
-      
+
       //IF WE WANT TO DO GRADIENT CLIPPING, THEN WE FIRST COMPUTE THE GRADIENT AND THEN
       //PERFORM CLIPPING WHILE UPDATING
 

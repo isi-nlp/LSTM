@@ -104,7 +104,8 @@ int main(int argc, char** argv)
       ValueArg<int> seed("", "seed", "The seed for the random number generator (used for initializing the model parameters). \
 		   Default: 1234.", false, 1234, "int", cmd);
 
-
+	  ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. \
+		  Default: Same as num_hidden.", false, 0, "int", cmd);
       ValueArg<string> loss_function("", "loss_function", "Loss function (log, nce). Default: log.", false, "log", "string", cmd);
       //ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 64. All gates, cells, hidden layers, \n \
@@ -141,7 +142,9 @@ int main(int argc, char** argv)
 	  ValueArg<precision_type> dropout_probability("", "dropout_probability", "Dropout probability. Default 0: No dropout", false,0., "precision_type", cmd);
 	  
       ValueArg<int> max_epoch("", "max_epoch", "After max_epoch, the learning rate is halved for every subsequent epoch. \n \
-		  If not supplied, then the learning rate is modified based on the valdation set. Default: -1", false, -1, "int", cmd);	  
+		  If not supplied, then the learning rate is modified based on the valdation set. Default: -1", false, -1, "int", cmd);	
+	  ValueArg<string> input_embeddings_file("","input_embeddings_file", "Read the input embeddings from the specified file. \n \
+		  Default: none", false,"","string",cmd);  
       cmd.parse(argc, argv);
 
 
@@ -190,6 +193,8 @@ int main(int argc, char** argv)
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
 	  myParam.dropout_probability = dropout_probability.getValue();
+	  myParam.input_embedding_dimension = input_embedding_dimension.getValue();
+	  myParam.input_embeddings_file = input_embeddings_file.getValue();
 	  //myParam.restart_states = norm_threshold.getValue();
 	  
 	  //arg_run_lm = run_lm.getValue();
@@ -227,6 +232,8 @@ int main(int argc, char** argv)
 	  cerr << loss_function.getDescription() << sep << loss_function.getValue() << endl;
 	  cerr << num_noise_samples.getDescription() << sep << num_noise_samples.getValue() << endl;
 	  cerr << fixed_partition_function.getDescription() << sep << fixed_partition_function.getValue() << endl;
+	  cerr << input_embedding_dimension.getDescription() << sep << input_embedding_dimension.getValue() << endl;
+	  cerr << input_embeddings_file.getDescription() << sep << input_embeddings_file.getValue() << endl;
 	  //cerr << load_encoder_file.getDescription() <<sep <<load_encoder_file.getValue() <<endl;
 	  //cerr << load_decoder_file.getDescription() <<sep <<load_decoder_file.getValue() <<endl;
 	  if (arg_run_lm == 1) {
@@ -354,7 +361,7 @@ int main(int argc, char** argv)
 	decoder_output_vocab_size = decoder_output_vocab.size();
 	myParam.output_vocab_size = decoder_output_vocab.size();
 	myParam.input_vocab_size = decoder_input_vocab.size();
-	/*
+	
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
 	cerr<<"Decoder input vocab size is "<<decoder_input_vocab_size<<endl;
 	cerr<<"Decoder output vocab size is "<<decoder_output_vocab_size<<endl;
@@ -366,7 +373,7 @@ int main(int argc, char** argv)
 	cerr<<"Decoder output vocab is "<<endl;
 	decoder_output_vocab.print_vocabulary();
 	getchar();
-	*/
+	
 	
 	//Creating separate decoder input vocab and decoder output vocab
 	
@@ -472,7 +479,10 @@ int main(int argc, char** argv)
 
 
     ///// Create and initialize the neural network and associated propagators.
-	myParam.input_embedding_dimension = myParam.num_hidden;
+	if (myParam.input_embedding_dimension == 0) {
+		cerr<<"Setting input embedding dimension to num_hidden"<<endl;
+		myParam.input_embedding_dimension = myParam.num_hidden;
+	} 
 	myParam.output_embedding_dimension = myParam.num_hidden;
 	
     model nn;
@@ -531,7 +541,10 @@ int main(int argc, char** argv)
 		decoder_input.resize(decoder_input_vocab_size,
 		    myParam.input_embedding_dimension,
 		    myParam.num_hidden);
-
+		if (myParam.input_embeddings_file != ""){
+			decoder_input.readEmbeddingsFromFile(myParam.input_embeddings_file,
+				decoder_input_vocab);
+		}
 		decoder_input.initialize(rng,
 	        myParam.init_normal,
 	        myParam.init_range,

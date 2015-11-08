@@ -54,7 +54,7 @@ struct param
 	bool norm_clipping;
 	bool gradient_check;
 	bool restart_states;
-	
+	std::string input_embeddings_file;
     int num_noise_samples;
 
     bool use_momentum;

@@ -1002,13 +1002,13 @@ namespace nplm
 	 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 	 					//cerr<<"Score is"<<endl;
 	 					//cerr<<scores<<endl;
-						cerr<<"output.row(i) "<<output.row(i)<<endl;
+						//cerr<<"output.row(i) "<<output.row(i)<<endl;
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
 	 			                   output.row(i), 
 	 			                   probs, 
 	 			                   minibatch_log_likelihood);
-						cerr<<"probs is "<<probs<<endl;
+						//cerr<<"probs is "<<probs<<endl;
 						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
 	 			        stop_timer(5);
 	 			        log_likelihood += minibatch_log_likelihood;
@@ -1770,7 +1770,7 @@ namespace nplm
 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 			//same dimension in and LSTM. this might not be a good idea
-			dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
+			//dummy_zero.setZero(output_layer_node.param->n_inputs(),current_minibatch_size);
 
 			int sent_len = output.rows(); 
 			//precision_type log_likelihood = 0.;
@@ -1949,7 +1949,8 @@ namespace nplm
 		//cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
 		cerr<<"In gradient check"<<endl;
-
+		cerr<<"Decoder input is "<<decoder_input<<endl;
+		cerr<<"Decoder output is "<<decoder_output<<endl;
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
 		//cerr<<"Arg run lm is "<<arg_run_lm<<endl;

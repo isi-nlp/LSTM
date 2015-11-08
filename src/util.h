@@ -138,6 +138,39 @@ void clipParamMatrix (const Eigen::MatrixBase<Derived> &const_param_matrix){
 	
 }
 
+//Read embeddings from a file. Assumes that the first item is the word
+//and the rest are the embeddings
+template<typename Derived>
+void readEmbeddingsFromFile(const std::string &file, 
+	vocabulary &vocab,
+	const Eigen::MatrixBase<Derived> &const_embedding_matrix) {
+	  UNCONST(Derived,const_embedding_matrix, embedding_matrix);
+  	  std::ifstream FILEIN;
+  	  FILEIN.open(file.c_str());
+  	  if (! FILEIN)
+  	  {
+  	    std::cerr << "Error: can't read from file " << file<< std::endl;
+  	    exit(-1);
+  	  }
+
+  	  std::string line;
+  	  while (getline(FILEIN, line))
+  	  {
+  	    std::vector<std::string> words;
+  	    splitBySpace(line, words);
+		if (words.size()-1 != embedding_matrix.cols()) {
+			std::cerr<<"Wrong number of fields in the embeddings file"<<std::endl;
+			exit(1);
+		}
+		int word_id = vocab.lookup_word(words[0]);
+		for (int i=1; i<words.size(); i++){
+			embedding_matrix(word_id,i-1) = 
+				boost::lexical_cast<precision_type>(words[i]);
+		}
+  	  }
+	  
+  	  FILEIN.close();
+}
 //Aug-27-2015
 //Structure for saving decoder trace. The current decoder trace assumes so much about the LSTM model. 
 //The decoder trace should contain a generic dump that that can be printed out. For that, a simple structure
