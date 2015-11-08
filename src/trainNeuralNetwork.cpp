@@ -362,6 +362,7 @@ int main(int argc, char** argv)
 	myParam.output_vocab_size = decoder_output_vocab.size();
 	myParam.input_vocab_size = decoder_input_vocab.size();
 	
+	/*
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;	
 	cerr<<"Decoder input vocab size is "<<decoder_input_vocab_size<<endl;
 	cerr<<"Decoder output vocab size is "<<decoder_output_vocab_size<<endl;
@@ -373,7 +374,7 @@ int main(int argc, char** argv)
 	cerr<<"Decoder output vocab is "<<endl;
 	decoder_output_vocab.print_vocabulary();
 	getchar();
-	
+	*/
 	
 	//Creating separate decoder input vocab and decoder output vocab
 	
