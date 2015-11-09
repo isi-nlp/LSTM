@@ -542,16 +542,16 @@ int main(int argc, char** argv)
 		decoder_input.resize(decoder_input_vocab_size,
 		    myParam.input_embedding_dimension,
 		    myParam.num_hidden);
-		if (myParam.input_embeddings_file != ""){
-			decoder_input.readEmbeddingsFromFile(myParam.input_embeddings_file,
-				decoder_input_vocab);
-		}
+
 		decoder_input.initialize(rng,
 	        myParam.init_normal,
 	        myParam.init_range,
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);
-
+		if (myParam.input_embeddings_file != ""){
+			decoder_input.readEmbeddingsFromFile(myParam.input_embeddings_file,
+				decoder_input_vocab);
+		}
 		nn_decoder.set_input(decoder_input);
 	//getchar();	
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
