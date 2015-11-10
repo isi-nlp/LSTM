@@ -770,7 +770,9 @@ template <typename DerivedIn, typename DerivedGOut>
     // bProp_input is vocab_size x minibatch_size
 	
     W_gradient.noalias() += bProp_input * predicted_embeddings.transpose();
+	cerr<<"b gradient before is "<<b_gradient<<endl;
     b_gradient.noalias() += bProp_input.rowwise().sum();
+	cerr<<"b gradient after is "<<b_gradient<<endl;
 	//cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	//getchar();
 	/*
@@ -858,11 +860,18 @@ template <typename DerivedIn, typename DerivedGOut>
 						int &rand_row,
 						int &rand_col){
   	//changeRandomParamInMatrix(W, offset, rand_row, rand_col);
-	
+	 //cerr<<"In changeRandomParam for W "<<endl;
+	 //cerr<<"rand_row = "<<rand_row<<endl;
+	 //cerr<<"rand_col = "<<rand_col<<endl;
 	 if (rand_col == W.cols()) {
 	 	//return b_gradient(row,0);
 		 int temp_col = 0;
+		 //cerr<<"perturbation is offset"<<offset<<endl;
+		 //cerr<<"previous bias is "<<endl<<b<<endl;
+		 //cerr<<"rand row "<<rand_row<<" temp col "<<temp_col<<endl;
+		 //cerr<<"Changing bias"<<endl;
 		changeRandomParamInMatrix(b,offset, rand_row, temp_col);
+		//cerr<<"new bias is "<<endl<<b<<endl;
 	}
 	 else{
 		 changeRandomParamInMatrix(W,offset, rand_row, rand_col);

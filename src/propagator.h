@@ -1706,6 +1706,7 @@ namespace nplm
 	
 			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
+					//cerr<<"Scores is "<<scores.leftCols(current_minibatch_size)<<endl;
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
 			                   output.row(i), 
 			                   probs, 
@@ -2643,7 +2644,7 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-				precision_type perturbation = 6*1e-3;
+				precision_type perturbation = 1e-3;
 				//cerr<<"param name "<<param_name<<endl;
 				//cerr<<"rand row "<<rand_row<<endl;
 				//cerr<<"rand col "<<rand_col<<endl;
