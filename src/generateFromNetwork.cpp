@@ -2,7 +2,7 @@
 //1. beam search should allow minibatches. It should be possible
 //2. Generate hiddens states is very ugly right now. It assumes so much about the architecture.
 // It should accept a struct back and then print the struct
-
+//#define EIGEN_RUNTIME_NO_MALLOC
 #include <ctime>
 #include <cmath>
 
@@ -18,9 +18,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/algorithm/string/join.hpp>
-# include <boost/interprocess/managed_shared_memory.hpp>
-# include <boost/interprocess/allocators/allocator.hpp>
-# include <boost/interprocess/managed_mapped_file.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/allocators/allocator.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #include <boost/interprocess/containers/vector.hpp>
 
 #include <Eigen/Dense>
