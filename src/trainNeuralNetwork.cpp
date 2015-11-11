@@ -1,4 +1,5 @@
 //#define EIGEN_NO_MALLOC
+//#define EIGEN_NO_AUTOMATIC_RESIZING
 #include <ctime>
 #include <cmath>
 
@@ -55,7 +56,7 @@ typedef unordered_map<Matrix<int,Dynamic,1>, precision_type> vector_map;
 typedef ip::allocator<int, ip::managed_mapped_file::segment_manager> intAllocator;
 typedef ip::vector<int, intAllocator> vec;
 typedef ip::allocator<vec, ip::managed_mapped_file::segment_manager> vecAllocator;
-
+//#define EIGEN_NO_AUTOMATIC_RESIZING
 
 //typedef long long int data_size_t; // training data can easily exceed 2G instances
 
@@ -81,20 +82,8 @@ int main(int argc, char** argv)
 
       // The options are printed in reverse order
 
-      //ValueArg<string> unigram_probs_file("", "unigram_probs_file", "Unigram model (deprecated and ignored)." , false, "", "string", cmd);
-
       ValueArg<int> num_threads("", "num_threads", "Number of threads. Default: maximum.", false, 0, "int", cmd);
 
-      //ValueArg<precision_type> final_momentum("", "final_momentum", "Final value of momentum. Default: 0.9.", false, 0.9, "precision_type", cmd);
-      //ValueArg<precision_type> initial_momentum("", "initial_momentum", "Initial value of momentum. Default: 0.9.", false, 0.9, "precision_type", cmd);
-      //ValueArg<bool> use_momentum("", "use_momentum", "Use momentum (hidden layer weights only). 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
-
-      //ValueArg<precision_type> normalization_init("", "normalization_init", "Initial normalization parameter. Default: 0.", false, 0.0, "precision_type", cmd);
-      //ValueArg<bool> normalization("", "normalization", "Learn individual normalization factors during training. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
-
-      //ValueArg<bool> mmap_file("", "mmap_file", "Use memory mapped files. This is useful if the entire data cannot fit in memory. prepareNeuralLM can generate memory mapped files", false, 0, "bool", cmd);
-
-      //ValueArg<bool> arg_randomize("", "randomize", "Randomize training instances for better training. 1 = yes, 0 = no. Default: 1.", false, true, "bool", cmd);
 
       ValueArg<int> num_noise_samples("", "num_noise_samples", "Number of noise samples for noise-contrastive estimation. Default: 100.", false, 100, "int", cmd);
 
@@ -103,11 +92,7 @@ int main(int argc, char** argv)
       ValueArg<precision_type> learning_rate("", "learning_rate", "Learning rate for stochastic gradient ascent. Default: 1.", false, 1., "precision_type", cmd);
 	  ValueArg<precision_type> fixed_partition_function("", "fixed_partition_function", "Fixed log normalization constant value. Default: 0.", false, 0., "precision_type", cmd);
 
-      //ValueArg<precision_type> conditioning_constant("", "conditioning_constant", "Constant to condition the RMS of the expected square of the gradient in ADADELTA. Default: 10E-3.", false, 10E-3, "precision_type", cmd);
 
-      //ValueArg<precision_type> decay("", "decay", "Decay for ADADELTA. Default: 0.95", false, 0.95, "precision_type", cmd);
-      //ValueArg<precision_type> adagrad_epsilon("", "adagrad_epsilon", "Constant to initialize the L2 squared norm of the gradients with.\
-      //    Default: 10E-3", false, 10E-3, "precision_type", cmd);
       ValueArg<int> validation_minibatch_size("", "validation_minibatch_size", "Minibatch size for validation. Default: 128.", false, 128, "int", cmd);
       ValueArg<int> minibatch_size("", "minibatch_size", "Minibatch size (for training). Default: 128.", false, 128, "int", cmd);
 
@@ -125,10 +110,6 @@ int main(int argc, char** argv)
       //ValueArg<string> activation_function("", "activation_function", "Activation function (identity, rectifier, tanh, hardtanh). Default: rectifier.", false, "rectifier", "string", cmd);
       ValueArg<int> num_hidden("", "num_hidden", "Number of hidden nodes. Default: 64. All gates, cells, hidden layers, \n \
 		  							input and output embedding dimension are set to this value", false, 64, "int", cmd);
-      //ValueArg<bool> share_embeddings("", "share_embeddings", "Share input and output embeddings. 1 = yes, 0 = no. Default: 0.", false, 0, "bool", cmd);
-      //ValueArg<int> output_embedding_dimension("", "output_embedding_dimension", "Number of output embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      //ValueArg<int> input_embedding_dimension("", "input_embedding_dimension", "Number of input embedding dimensions. Default: 50.", false, 50, "int", cmd);
-      //ValueArg<int> embedding_dimension("", "embedding_dimension", "Number of input and output embedding dimensions. Default: none.", false, -1, "int", cmd);
 
       //ValueArg<int> vocab_size("", "vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
       ValueArg<int> input_vocab_size("", "input_vocab_size", "Vocabulary size. Default: auto.", false, 0, "int", cmd);
@@ -138,10 +119,7 @@ int main(int argc, char** argv)
       ValueArg<string> model_prefix("", "model_prefix", "Prefix for output model files." , true, "", "string", cmd);
 	  //ValueArg<string> load_encoder_file("", "init_encoder_file", "Loading a pre-trained encoder" , false, "", "string", cmd);
 	  //ValueArg<string> load_decoder_file("", "init_decoder_file", "Loading a pre-trained decoder" , false, "", "string", cmd);
-      //ValueArg<string> words_file("", "words_file", "Vocabulary." , false, "", "string", cmd);
-      //ValueArg<string> parameter_update("", "parameter_update", "parameter update type.\n Stochastic Gradient Descent(SGD)\n \
-       //   ADAGRAD(ADA)\n \
-       //   ADADELTA(ADAD)" , false, "SGD", "string", cmd);
+
       ValueArg<string> input_words_file("", "input_words_file", "Vocabulary." , false, "", "string", cmd);
       ValueArg<string> output_words_file("", "output_words_file", "Vocabulary." , false, "", "string", cmd);
 	  //ValueArg<string> input_sent_file("", "input_sent_file", "Input sentences file." , true, "", "string", cmd);
@@ -149,11 +127,7 @@ int main(int argc, char** argv)
 	  ValueArg<string> training_sent_file("", "training_sent_file", "Training sentences file" , true, "", "string", cmd);
 	  ValueArg<string> validation_sent_file("", "validation_sent_file", "Validation sentences file" , true, "", "string", cmd);
 	  
-	  //ValueArg<string> training_sequence_cont_file("", "training_sequence_cont_file", "Training sequence continuation file" , false, "", "string", cmd);
-	  //ValueArg<string> validation_sequence_cont_file("", "validation_sequence_cont_file", "Validation sequence continuation file" , false, "", "string", cmd);
-	  //ValueArg<string> input_validation_sent_file("", "input_validation_sent_file", "Input sentences file." , true, "", "string", cmd);
-	  //ValueArg<string> output_validation_sent_file("", "output_validation_sent_file", "Input sentences file." , true, "", "string", cmd);	  
-      //ValueArg<string> validation_file("", "validation_file", "Validation data (one numberized example per line)." , false, "", "string", cmd);
+
 	  ValueArg<bool> gradient_check("", "gradient_check", "Do you want to do a gradient check or not. 1 = Yes, 0 = No. Default: 0.", false, 0, "bool", cmd);
 	  
       //ValueArg<string> train_file("", "train_file", "Training data (one numberized example per line)." , true, "", "string", cmd);
@@ -180,11 +154,7 @@ int main(int argc, char** argv)
       cmd.parse(argc, argv);
 
       // define program parameters //
-     // use_mmap_file = mmap_file.getValue();
-      //randomize = arg_randomize.getValue();
-      //myParam.model_file = model_file.getValue();
-      //myParam.train_file = train_file.getValue();
-      //myParam.validation_file = validation_file.getValue();
+
       myParam.input_words_file = input_words_file.getValue();
       myParam.output_words_file = output_words_file.getValue();
 	  //myParam.input_sent_file = input_sent_file.getValue();
@@ -192,14 +162,7 @@ int main(int argc, char** argv)
 	  myParam.training_sent_file = training_sent_file.getValue();
 	  myParam.validation_sent_file = validation_sent_file.getValue();
 	  myParam.reverse_input = reverse_input.getValue();
-	  //myParam.input_validation_sent_file = input_validation_sent_file.getValue();
-	  //myParam.output_validation_sent_file = output_validation_sent_file.getValue();	  
-	  //myParam.training_sequence_cont_file = training_sequence_cont_file.getValue();
-	  //myParam.validation_sequence_cont_file = validation_sequence_cont_file.getValue();
-	 /* 
-      if (words_file.getValue() != "")
-	      myParam.input_words_file = myParam.output_words_file = words_file.getValue();
-	  */
+
       myParam.model_prefix = model_prefix.getValue();
 
       //myParam.ngram_size = ngram_size.getValue();
@@ -432,13 +395,7 @@ int main(int argc, char** argv)
 	cerr<<"Decoder input vocab size is "<<decoder_input_vocab_size<<endl;
 	cerr<<"Decoder output vocab size is "<<decoder_output_vocab_size<<endl;
 	
-
-    //vector<data_size_t> unigram_counts(myParam.output_vocab_size);
-	/*
-	integerize(word_training_output_sent, 
-					training_output_sent, 
-					output_vocab);
-	*/						
+				
 	//Creating separate decoder input vocab and decoder output vocab
 
 	integerize(word_training_output_sent, 
@@ -467,12 +424,12 @@ int main(int argc, char** argv)
     cerr << "Number of validation instances "<< decoder_validation_output_sent.size() << endl;
 	
     Matrix<int,Dynamic,Dynamic> training_data;
-	Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
-	Matrix<int,Dynamic,Dynamic> decoder_training_input_sent_data, decoder_training_output_sent_data;
-	Matrix<int,Dynamic,Dynamic> decoder_validation_input_sent_data, decoder_validation_output_sent_data;
-	Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
-	Array<int,Dynamic,Dynamic> validation_input_sequence_cont_sent_data, training_input_sequence_cont_sent_data;
-	Array<int,Dynamic,Dynamic> validation_output_sequence_cont_sent_data, training_output_sequence_cont_sent_data;
+	//Matrix<int,Dynamic,Dynamic> training_input_sent_data, training_output_sent_data;
+	//Matrix<int,Dynamic,Dynamic> decoder_training_input_sent_data, decoder_training_output_sent_data;
+	//Matrix<int,Dynamic,Dynamic> decoder_validation_input_sent_data, decoder_validation_output_sent_data;
+	//Matrix<int,Dynamic,Dynamic> validation_input_sent_data, validation_output_sent_data;
+	//Array<int,Dynamic,Dynamic> validation_input_sequence_cont_sent_data, training_input_sequence_cont_sent_data;
+	//Array<int,Dynamic,Dynamic> validation_output_sequence_cont_sent_data, training_output_sequence_cont_sent_data;
     //(training_data_flat.data(), myParam.ngram_size, training_data_size);
     
 	
@@ -554,31 +511,7 @@ int main(int argc, char** argv)
     }
 	//cerr<<"Input vocab size is "<<myParam.input_vocab_size<<endl;
 	//cerr<<"Output vocab size is "<<myParam.output_vocab_size<<endl;
-	
-    ///// Construct unigram model and sampler that will be used for NCE
-	
 
-	/*
-    for (data_size_t train_id=0; train_id < training_output_sent.size(); train_id++)
-    {
-		for (int j=0; j<training_output_sent[train_id].size(); j++) {
-			int output_word = training_output_sent[train_id][j];
-			unigram_counts[output_word] += 1;
-		}
-    }
-	*/
-	//vector<data_size_t> unigram_counts(myParam.output_words.size())
-	/*
-	for (int i=0; i<unigram_counts.size(); i++)
-		cerr<<"The count of word "<<i<<" is "<<unigram_counts[i]<<endl;
-	*/
-    
-	/*
-	//generating 10 noise samples for testing
-	for (int i=0; i<20; i++){
-		cerr<<"A sample is "<<unigram.sample(rng)<<endl;
-	}
-	*/
     ///// Create and initialize the neural network and associated propagators.
 	myParam.input_embedding_dimension = myParam.num_hidden;
 	myParam.output_embedding_dimension = myParam.num_hidden;
@@ -781,7 +714,7 @@ int main(int argc, char** argv)
 		current_h.setZero(myParam.num_hidden, minibatch_size);			
 		//c_last.setZero(numParam.num_hidden, minibatch_size);
 		//h_last.setZero(numParam.num_hidden, minibatch_size);
-	
+
 		//cerr<<"About to start training "<<endl;
     for(data_size_t batch=0;batch<num_batches;batch++)
     {
@@ -823,7 +756,18 @@ int main(int argc, char** argv)
 			unsigned int minibatch_output_tokens,minibatch_input_tokens, minibatch_sequence_cont_tokens;
 			minibatch_output_tokens = minibatch_input_tokens = minibatch_sequence_cont_tokens = 0;
 			max_input_sent_len = max_output_sent_len = 0;
+			
 			//cerr<<"reading data"<<endl;
+			//Calling fProp. Note that it should not matter for fProp if we're doing log 
+			//or NCE loss													
+			if (myParam.gradient_check) {
+				current_c_for_gradCheck = current_c;
+				current_h_for_gradCheck = current_h;
+				cerr<<"current_c_for_gradCheck "<<current_c_for_gradCheck<<endl;
+				cerr<<"current_h_for_gradCheck "<<current_h_for_gradCheck<<endl;
+			}													
+			init_c = current_c;
+			init_h = current_h; 	
 
 			if (arg_run_lm == 0) {
 				miniBatchifyEncoder(training_input_sent, 
@@ -841,12 +785,24 @@ int main(int argc, char** argv)
 								max_input_sent_len,
 								minibatch_input_tokens,
 								0);			
-				training_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+				Map< Matrix<int,Dynamic,Dynamic> > training_input_sent_data (minibatch_input_sentences.data(), 
 												max_input_sent_len,
 												current_minibatch_size);
-				training_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+				Map< Array<int,Dynamic,Dynamic> > training_input_sequence_cont_sent_data (minibatch_input_sequence_cont_sentences.data(),
 																				max_input_sent_len,
-																				current_minibatch_size);																
+																				current_minibatch_size);	
+				if (myParam.dropout_probability > 0.) {
+					prop.fPropEncoderDropout(training_input_sent_data,
+								current_c,
+								current_h,
+								training_input_sequence_cont_sent_data,
+								rng);					
+				} else {
+					prop.fPropEncoder(training_input_sent_data,
+								current_c,
+								current_h,
+								training_input_sequence_cont_sent_data);
+				}																																									
 			}
 
 			miniBatchifyDecoder(decoder_training_output_sent, 
@@ -866,10 +822,10 @@ int main(int argc, char** argv)
 							minibatch_output_tokens,
 							1,
 							0);									
-			decoder_training_output_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_output_sentences.data(),
+			Map< Matrix<int, Dynamic, Dynamic> >  decoder_training_output_sent_data (minibatch_decoder_output_sentences.data(),
 																						max_output_sent_len,
 																						current_minibatch_size);
-			decoder_training_input_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_input_sentences.data(),
+			Map< Matrix<int, Dynamic, Dynamic> >  decoder_training_input_sent_data (minibatch_decoder_input_sentences.data(),
 																						max_output_sent_len,
 																						current_minibatch_size);	
 			/*																			
@@ -890,45 +846,15 @@ int main(int argc, char** argv)
 							0,
 							0);	
 
-			training_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
+			Map< Array<int,Dynamic,Dynamic> > training_output_sequence_cont_sent_data(minibatch_output_sequence_cont_sentences.data(),
 																		max_output_sent_len,
 																		current_minibatch_size);
 			//cerr<<"training_output_sequence_cont_sent_data "<<training_output_sequence_cont_sent_data<<endl;		
 																																
 
-			//Calling fProp. Note that it should not matter for fProp if we're doing log 
-			//or NCE loss													
-			if (myParam.gradient_check) {
-				current_c_for_gradCheck = current_c;
-				current_h_for_gradCheck = current_h;
-				cerr<<"current_c_for_gradCheck "<<current_c_for_gradCheck<<endl;
-				cerr<<"current_h_for_gradCheck "<<current_h_for_gradCheck<<endl;
-			}													
-			init_c = current_c;
-			init_h = current_h; 	
-			/*
-			prop.fProp(training_input_sent_data,
-					training_output_sent_data,
-						0,
-						max_input_sent_len-1,
-						current_c,
-						current_h,	
-						training_sequence_cont_sent_data);	
-			*/
-			if (arg_run_lm == 0) {
-				if (myParam.dropout_probability > 0.) {
-					prop.fPropEncoderDropout(training_input_sent_data,
-								current_c,
-								current_h,
-								training_input_sequence_cont_sent_data,
-								rng);					
-				} else {
-					prop.fPropEncoder(training_input_sent_data,
-								current_c,
-								current_h,
-								training_input_sequence_cont_sent_data);
-				}						
-			}
+
+			
+
 			if (myParam.dropout_probability > 0.) {
 			    prop.fPropDecoderDropout(decoder_training_input_sent_data,
 						current_c,
@@ -943,18 +869,12 @@ int main(int argc, char** argv)
 						current_h,
 						training_output_sequence_cont_sent_data);
 			}
-					
+				
 		  	precision_type adjusted_learning_rate = current_learning_rate;
 			if (!myParam.norm_clipping){
 				adjusted_learning_rate /= current_minibatch_size;			
 			}
-		    //if (loss_function == NCELoss)
-		    //{
 
-
-		    //}
-		    //else if (loss_function == LogLoss)
-		    //{
 				
 				//computing losses
 				if (myParam.dropout_probability > 0) {
@@ -967,8 +887,7 @@ int main(int argc, char** argv)
 						 num_noise_samples,
 						 rng);
 						 //softmax_nce_loss); //, 			
-	 				    prop.bPropDecoderDropout(training_input_sent_data,
-	 						decoder_training_input_sent_data,
+	 				    prop.bPropDecoderDropout(decoder_training_input_sent_data,
 	 						 myParam.gradient_check,
 	 						 myParam.norm_clipping); //,						 		
 				} else {
@@ -983,14 +902,19 @@ int main(int argc, char** argv)
 						 num_noise_samples,
 						 rng);
 						 //softmax_nce_loss); //,
-	 				    prop.bPropDecoder(training_input_sent_data,
-	 						decoder_training_input_sent_data,
+	 				    prop.bPropDecoder(decoder_training_input_sent_data,
 	 						 myParam.gradient_check,						  
 							 myParam.norm_clipping);
 				 }	
 
 					 
 				if (arg_run_lm == 0) { 
+					Map< Matrix<int,Dynamic,Dynamic> > training_input_sent_data (minibatch_input_sentences.data(), 
+													max_input_sent_len,
+													current_minibatch_size);
+					Map< Array<int,Dynamic,Dynamic> > training_input_sequence_cont_sent_data (minibatch_input_sequence_cont_sentences.data(),
+																					max_input_sent_len,
+																					current_minibatch_size);						
 					if (myParam.dropout_probability > 0.){ 
 		 			    prop.bPropEncoderDropout(training_input_sent_data,
 		 					 myParam.gradient_check,
@@ -1003,9 +927,6 @@ int main(int argc, char** argv)
 							 training_input_sequence_cont_sent_data); 						
 					}				 
 				 }
-					 //init_c,
-					 //init_h,
-					 //training_sequence_cont_sent_data); 	
 
 	 			//Checking the compute probs function
 	 			//prop.computeProbs(training_output_sent_data,
@@ -1013,7 +934,12 @@ int main(int argc, char** argv)
 				//cerr<<"training_input_sent_data len"		
 				if (myParam.gradient_check) {		
 					//cerr<<"Checking gradient"<<endl;
-						 
+					Map< Matrix<int,Dynamic,Dynamic> > training_input_sent_data (minibatch_input_sentences.data(), 
+													max_input_sent_len,
+													current_minibatch_size);		
+					Map< Array<int,Dynamic,Dynamic> > training_input_sequence_cont_sent_data (minibatch_input_sequence_cont_sentences.data(),
+																					max_input_sent_len,
+																					current_minibatch_size);																		 
 					prop.gradientCheck(training_input_sent_data,
 						 		 decoder_training_input_sent_data,
 								 decoder_training_output_sent_data,
@@ -1174,12 +1100,16 @@ int main(int argc, char** argv)
 									max_input_sent_len,
 									minibatch_input_tokens,
 									0);		
-					validation_input_sent_data = Map< Matrix<int,Dynamic,Dynamic> >(minibatch_input_sentences.data(), 
+					Map< Matrix<int,Dynamic,Dynamic> > validation_input_sent_data (minibatch_input_sentences.data(), 
 													max_input_sent_len,
 													current_minibatch_size);
-					validation_input_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_input_sequence_cont_sentences.data(),
+					Map< Array<int,Dynamic,Dynamic> > validation_input_sequence_cont_sent_data (minibatch_input_sequence_cont_sentences.data(),
 																					max_input_sent_len,
-																					current_minibatch_size);										
+																					current_minibatch_size);	
+					prop_validation.fPropEncoder(validation_input_sent_data,
+								current_validation_c,
+								current_validation_h,
+								validation_input_sequence_cont_sent_data);																															
 				}				
 
 
@@ -1200,10 +1130,10 @@ int main(int argc, char** argv)
 								minibatch_output_tokens,
 								1,
 								0);			
-				decoder_validation_output_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_output_sentences.data(),
+				Map< Matrix<int, Dynamic, Dynamic> >  decoder_validation_output_sent_data (minibatch_decoder_output_sentences.data(),
 																							max_output_sent_len,
 																							current_minibatch_size);
-				decoder_validation_input_sent_data = Map< Matrix<int, Dynamic, Dynamic> > (minibatch_decoder_input_sentences.data(),
+				Map< Matrix<int, Dynamic, Dynamic> > decoder_validation_input_sent_data (minibatch_decoder_input_sentences.data(),
 																							max_output_sent_len,
 																							current_minibatch_size);		
 				//cerr<<"decoder_validation_output_sent_data "<<decoder_validation_output_sent_data<<endl;
@@ -1217,16 +1147,11 @@ int main(int argc, char** argv)
 								0);		
 		
 
-				validation_output_sequence_cont_sent_data = Map< Array<int,Dynamic,Dynamic> >(minibatch_output_sequence_cont_sentences.data(),
+				Map< Array<int,Dynamic,Dynamic> > validation_output_sequence_cont_sent_data (minibatch_output_sequence_cont_sentences.data(),
 																			max_output_sent_len,
 																			current_minibatch_size);																																																																													
-
-				if (arg_run_lm == 0) {																
-					prop_validation.fPropEncoder(validation_input_sent_data,
-								current_validation_c,
-								current_validation_h,
-								validation_input_sequence_cont_sent_data);	
-				}								
+																			
+								
 			    prop_validation.fPropDecoder(decoder_validation_input_sent_data,
 						current_validation_c,
 						current_validation_h,
@@ -1257,8 +1182,7 @@ int main(int argc, char** argv)
 				if (myParam.model_prefix != "")
 				{
 				    cerr << "Overwriting the previous best model from epoch " << best_model<< endl;
-			        //nn.write(myParam.model_prefix + ".encoder." + lexical_cast<string>(epoch+1), input_vocab.words(), output_vocab.words());
-					//n_decoder.write(myParam.model_prefix + ".decoder." + lexical_cast<string>(epoch+1), output_vocab.words(), output_vocab.words());
+
 					nn_decoder.write(myParam.model_prefix + ".decoder.best", decoder_input_vocab.words(), decoder_output_vocab.words());
 					if (arg_run_lm == 0) 
 						nn.write(myParam.model_prefix + ".encoder.best" , input_vocab.words(), output_vocab.words());					
