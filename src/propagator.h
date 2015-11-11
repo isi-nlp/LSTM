@@ -1266,18 +1266,14 @@ namespace nplm
 		}
 		
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
-	    void bPropDecoder(const MatrixBase<DerivedIn> &input_data,
-				const MatrixBase<DerivedOut> &output_data,
+	    template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    void bPropDecoder(const MatrixBase<DerivedOut> &output_data,
 			 bool gradient_check,
-			 bool norm_clipping)//,
-			 //const MatrixBase<DerivedC> &init_c,
-			 //const MatrixBase<DerivedH> &init_h,
-			 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
+			 bool norm_clipping)
 	    {	
 		
 			//cerr<<"In backprop..."<<endl;
-			int current_minibatch_size = input_data.cols();
+			int current_minibatch_size = output_data.cols();
 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
@@ -1285,7 +1281,6 @@ namespace nplm
 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
-			int input_sent_len = input_data.rows();
 			int output_sent_len = output_data.rows(); 
 			//precision_type log_likelihood = 0.;
 			
@@ -1342,14 +1337,13 @@ namespace nplm
 	  }
 	  		
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
-	    void bPropDecoderDropout(const MatrixBase<DerivedIn> &input_data,
-				const MatrixBase<DerivedOut> &output_data,
+	    template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    void bPropDecoderDropout(const MatrixBase<DerivedOut> &output_data,
 			 bool gradient_check,
 			 bool norm_clipping)
 	    {			
 			//cerr<<"In backprop..."<<endl;
-			int current_minibatch_size = input_data.cols();
+			int current_minibatch_size = output_data.cols();
 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
@@ -1357,7 +1351,6 @@ namespace nplm
 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
-			int input_sent_len = input_data.rows();
 			int output_sent_len = output_data.rows(); 
 			//precision_type log_likelihood = 0.;
 			
@@ -1367,8 +1360,6 @@ namespace nplm
 				if (i==0 && output_sent_len-1 > 0) {
 					
 				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
-							   //init_h,
-				   			   //init_c,
 								losses[i].d_Err_t_d_h_t,
 							   //output_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
@@ -1388,7 +1379,7 @@ namespace nplm
 		
 				} else if (i > 0) {
 					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
 
 							   losses[i].d_Err_t_d_h_t,
 							   //output_layer_node.bProp_matrix,
@@ -2622,7 +2613,7 @@ namespace nplm
 		 		//cerr<<"Checking the gradient of "<<param_name<<endl;
 		 		//rand_row = 0;
 				//rand_col= 0;
-				precision_type perturbation = 6*1e-3;
+				precision_type perturbation = 1e-3;
 				//cerr<<"param name "<<param_name<<endl;
 				//cerr<<"rand row "<<rand_row<<endl;
 				//cerr<<"rand col "<<rand_col<<endl;
