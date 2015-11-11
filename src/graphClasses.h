@@ -5,10 +5,16 @@
 #include "neuralClasses.h"
 #include <Eigen/Dense>
 #include <Eigen/Core>
+#include <Eigen/Eigen>
 
+
+using namespace Eigen;
 namespace nplm
 {
 
+
+using namespace Eigen;
+	
 	struct stateClipper{
 	  precision_type operator() (precision_type x) const { 
 	    return (precision_type) std::min(25., std::max(double(x),-25.));
@@ -295,7 +301,7 @@ public:
 	
 	#ifdef PEEP
 
-	void fPropLSTMBlock() {
+	void fPropLSTMBlock() {	
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
@@ -365,6 +371,7 @@ public:
 			   bool gradient_check,
 			   bool norm_clipping,
 			   int current_minibatch_size) {
+		//Eigen::internal::set_is_malloc_allowed(false);			   
    		Matrix<precision_type,Dynamic,Dynamic> dummy_matrix;
 
    		//NOTE: d_Err_t_to_n_d_h_t is read as derivative of Error function from time t to n wrt h_t. 
@@ -491,7 +498,8 @@ public:
    		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
    		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
    		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
-   		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));			   	
+   		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));	
+		//Eigen::internal::set_is_malloc_allowed(false);			   	
 	}
 	
 	#else
@@ -512,7 +520,7 @@ public:
 		cerr<<"W_h_to_o_node.fPropMatrix "<<endl<<W_h_to_o_node.fProp_matrix<<endl;
 		cerr<<"W_h_to_f_node.fPropMatrix "<<endl<<W_h_to_f_node.fProp_matrix<<endl;
 		*/
-		
+			
 		//std::cerr<<"W_c_to_f_node fprop is "<<W_c_to_f_node.fProp_matrix<<std::endl;
 		//std::cerr<<"c to i fprop"<<W_c_to_i_node.fProp_matrix<<std::endl;
 		//i_t_input_matrix.noalias() = W_x_to_i_node.fProp_matrix + W_h_to_i_node.fProp_matrix + W_c_to_i_node.fProp_matrix;
@@ -567,7 +575,7 @@ public:
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
 		//std::cerr<<"h_t "<<endl<<h_t<<endl;
-		//getchar();		
+		//getchar();	
 	}
 
 
@@ -578,7 +586,7 @@ public:
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
 			   bool gradient_check,
 			   bool norm_clipping,
-			   int current_minibatch_size) {
+			   int current_minibatch_size) {	   
 		Matrix<precision_type,Dynamic,Dynamic> dummy_matrix;
 
 		//NOTE: d_Err_t_to_n_d_h_t is read as derivative of Error function from time t to n wrt h_t. 
@@ -650,7 +658,7 @@ public:
 		//cerr<<"tanh_c_prime_t_node.bProp_matrix "<<tanh_c_prime_t_node.bProp_matrix<<endl;									
 
 		//Error derivatives for h_t_minus_one
-		W_h_to_o_node.param->bProp(o_t_node.bProp_matrix,
+			W_h_to_o_node.param->bProp(o_t_node.bProp_matrix,
 						 W_h_to_o_node.bProp_matrix);
 			W_h_to_f_node.param->bProp(f_t_node.bProp_matrix,
 							 W_h_to_f_node.bProp_matrix);
@@ -697,7 +705,7 @@ public:
 		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
-		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));			   	
+		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));		   	
 	}	
 	
 	#endif
@@ -1183,3 +1191,4 @@ public:
 };
 
 } // namespace nplm
+#undef EIGEN_NO_AUTOMATIC_RESIZING

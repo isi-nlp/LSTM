@@ -18,7 +18,7 @@
 // classes for various kinds of layers
 #include "SoftmaxLoss.h"
 #include "Activation_function.h"
-#define quote(x) #x
+//#define quote(x) #x
 //#include <stdlib.h> 
 
 //#define EIGEN_DONT_PARALLELIZE
@@ -185,15 +185,12 @@ class Linear_layer
 	
   template <typename DerivedIn, typename DerivedOut>
 	void fProp(const MatrixBase<DerivedIn> &input,
-      const MatrixBase<DerivedOut> &output) const
+     	MatrixBase<DerivedOut> const &output) const
   {
 	  //cerr<<"input is "<<input<<endl;
       UNCONST(DerivedOut, output, my_output);
-	  //cerr<<"in fprop"<<endl;
-	  //cerr<<"U is "<<U<<endl;
-      my_output.leftCols(input.cols()).noalias() = U*input;
-	  //cerr<<"My output is "<<my_output<<endl;
-	  //getchar();
+
+      my_output.noalias() = U*input;
 
   }
 
@@ -234,7 +231,7 @@ class Linear_layer
 				   
   template <typename DerivedGOut, typename DerivedGIn>
 	void bProp(const MatrixBase<DerivedGOut> &input,
-      MatrixBase<DerivedGIn> &output) const
+      MatrixBase<DerivedGIn> const &output) const
   {
 	    UNCONST(DerivedGIn, output, my_output);
 	    my_output.noalias() = U.transpose()*input;
