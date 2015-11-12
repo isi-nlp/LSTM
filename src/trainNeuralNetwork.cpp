@@ -488,26 +488,26 @@ int main(int argc, char** argv)
 	
     model nn;
     nn.resize(myParam.ngram_size,
-        myParam.input_vocab_size,
-        myParam.input_vocab_size,
-        myParam.input_embedding_dimension,
-        myParam.num_hidden,
-        myParam.output_embedding_dimension);
+	        decoder_input_vocab_size,
+	        decoder_output_vocab_size,
+	        myParam.input_embedding_dimension,
+	        myParam.num_hidden,
+	        myParam.output_embedding_dimension);
 
     nn.initialize(rng,
-        myParam.init_normal,
-        myParam.init_range,
-		-log(myParam.output_vocab_size),
-        myParam.init_forget,
-        myParam.parameter_update,
-        myParam.adagrad_epsilon);	
+	        myParam.init_normal,
+	        myParam.init_range,
+			-log(myParam.output_vocab_size),
+	        myParam.init_forget,
+	        myParam.parameter_update,
+	        myParam.adagrad_epsilon);	
 	//Creating the input node
 	google_input_model input(myParam.num_hidden, 
 						myParam.input_vocab_size,
 						myParam.input_embedding_dimension);
-	input.resize(myParam.input_vocab_size,
-	    myParam.input_embedding_dimension,
-	    myParam.num_hidden);
+	input.resize(myParam.num_hidden, 
+				decoder_input_vocab_size,
+				myParam.input_embedding_dimension);
 
 	input.initialize(rng,
         myParam.init_normal,
@@ -536,8 +536,8 @@ int main(int argc, char** argv)
 	        myParam.adagrad_epsilon);		
 		//Creating the input node
 		google_input_model decoder_input(myParam.num_hidden, 
-							decoder_input_vocab_size,
-							myParam.input_embedding_dimension);
+					decoder_input_vocab_size,
+					myParam.input_embedding_dimension);
 		cerr<<"decoder_input_vocab_size "<<decoder_input_vocab_size<<endl;
 		decoder_input.resize(decoder_input_vocab_size,
 		    myParam.input_embedding_dimension,
@@ -548,9 +548,13 @@ int main(int argc, char** argv)
 	        myParam.init_range,
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);
+			
+		//Reading embeddings if they have been defined 
 		if (myParam.input_embeddings_file != ""){
 			decoder_input.readEmbeddingsFromFile(myParam.input_embeddings_file,
 				decoder_input_vocab);
+			input.readEmbeddingsFromFile(myParam.input_embeddings_file,
+				decoder_input_vocab);				
 		}
 		nn_decoder.set_input(decoder_input);
 	//getchar();	
@@ -774,18 +778,19 @@ int main(int argc, char** argv)
 				cerr<<"arg run lm is 0"<<endl;
 				getchar();
 				if (myParam.dropout_probability > 0.) {
-					prop.fPropEncoderDropout(training_input_sent_data,
-								current_c,
-								current_h,
-								training_input_sequence_cont_sent_data,
-								rng);					
+					prop.fPropEncoderDropout(decoder_training_input_sent_data,
+						current_c,
+						current_h,
+						training_output_sequence_cont_sent_data,
+						rng);					
 				} else {
-					prop.fPropEncoder(training_input_sent_data,
-								current_c,
-								current_h,
-								training_input_sequence_cont_sent_data);
+					prop.fPropEncoder(decoder_training_input_sent_data,
+						current_c,
+						current_h,
+						training_output_sequence_cont_sent_data);
 				}						
 			}
+			
 			if (myParam.dropout_probability > 0.) {
 			    prop.fPropDecoderDropout(decoder_training_input_sent_data,
 						current_c,
@@ -822,7 +827,13 @@ int main(int argc, char** argv)
 	 				    prop.bPropDecoderDropout(training_input_sent_data,
 	 						decoder_training_input_sent_data,
 	 						 myParam.gradient_check,
-	 						 myParam.norm_clipping); //,						 		
+	 						 myParam.norm_clipping); //,
+						if (arg_run_lm == 0){
+			 			    prop.bPropEncoderDropout(training_input_sent_data,
+			 					 myParam.gradient_check,
+			 					 myParam.norm_clipping,
+								 training_input_sequence_cont_sent_data); 							
+						}
 				} else {
 					//cerr<<" decoder_training_output_sent_data "<<decoder_training_output_sent_data<<endl;
 					//getchar();
@@ -839,22 +850,14 @@ int main(int argc, char** argv)
 	 						decoder_training_input_sent_data,
 	 						 myParam.gradient_check,						  
 							 myParam.norm_clipping);
+						if (arg_run_lm == 0){
+			 			    prop.bPropEncoder(training_input_sent_data,
+			 					 myParam.gradient_check,
+			 					 myParam.norm_clipping,
+								 training_input_sequence_cont_sent_data); 							
+						}
 				 }	
 
-					 
-				if (arg_run_lm == 0) { 
-					if (myParam.dropout_probability > 0.){ 
-		 			    prop.bPropEncoderDropout(training_input_sent_data,
-		 					 myParam.gradient_check,
-		 					 myParam.norm_clipping,
-							 training_input_sequence_cont_sent_data); 	
-					} else {
-		 			    prop.bPropEncoder(training_input_sent_data,
-		 					 myParam.gradient_check,
-		 					 myParam.norm_clipping,
-							 training_input_sequence_cont_sent_data); 						
-					}				 
-				 }
 	
 				if (myParam.gradient_check) {		
 					//cerr<<"Checking gradient"<<endl;
