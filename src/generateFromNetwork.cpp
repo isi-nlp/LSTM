@@ -914,17 +914,7 @@ int main(int argc, char** argv)
 					//cerr<<"current sentence length is "<<current_sentence_length<<endl;
 					current_sentence_length--; //this is because the last word in the output sentence is </s> 
 					//The first symbol will be '<s>
-					/*
-					hidden_states_file << "input_symbol: <s>" << endl;
-					writeStates(hidden_states_file,
-								decoder_h_t,
-								decoder_c_t,
-								decoder_f_t,
-								decoder_i_t,
-								decoder_o_t,
-								minibatch_index,
-								0);				
-					*/		
+	
 					for (int word_index=0; word_index<=current_sentence_length; word_index++){
 						//cerr<<"testing_output_sequence_cont_sent_data("<<word_index<<","<<minibatch_index<<") "
 						//		<<testing_output_sequence_cont_sent_data(word_index,minibatch_index)<<endl;
