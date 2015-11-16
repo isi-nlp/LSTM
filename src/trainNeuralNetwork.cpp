@@ -624,6 +624,7 @@ int main(int argc, char** argv)
     precision_type momentum_delta = (myParam.final_momentum - myParam.initial_momentum)/(myParam.num_epochs-1);
     precision_type current_learning_rate = myParam.learning_rate;
     precision_type current_validation_ll = 0.0;
+	precision_type current_accuracy = 0.;
 
     int ngram_size = myParam.ngram_size;
     int input_vocab_size = myParam.input_vocab_size;
@@ -634,6 +635,7 @@ int main(int argc, char** argv)
 
 	
 	precision_type best_perplexity = 999999999;
+	precision_type best_accuracy = 0.;
 	int best_model = 0;	
 	//Resetting the gradient in the beginning
 	prop.resetGradient();
@@ -1017,7 +1019,7 @@ int main(int argc, char** argv)
 				//cerr<<"Minibatch log likelihood is "<<minibatch_log_likelihood<<endl;
 				log_likelihood += minibatch_log_likelihood;
 			}
-				
+			precision_type accuracy  = correct_validation_labels/total_validation_output_tokens;
 	        //cerr << "Validation log-likelihood: "<< log_likelihood << endl;
 	        //cerr << "           perplexity:     "<< exp(-log_likelihood/validation_data_size) << endl;
 			cerr << "		Per symbol validation probability           "<<epoch<<":      " << exp(log_likelihood)/total_validation_output_tokens << endl;
@@ -1025,14 +1027,17 @@ int main(int argc, char** argv)
 			cerr << "		Validation log-likelihood base 2 in epoch   "<<epoch<<":      " << log_likelihood/log(2.) << endl;
 			cerr<<  "		Validation cross entropy in base 2 in epoch "<<epoch<<":      "<< log_likelihood/(log(2.)*total_validation_output_tokens)<< endl;
 			cerr << "         		perplexity in epoch                 "<<epoch<<":      "<< exp(-log_likelihood/total_validation_output_tokens) << endl;
-			cerr << "		Validation accuracy in epoch                "<<epoch<<":      "<< correct_validation_labels/total_validation_output_tokens << endl;
+			cerr << "		Validation accuracy in epoch                "<<epoch<<":      "<< accuracy << endl;
 		    // If the validation perplexity decreases, halve the learning rate.
 	        //if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
-			if (exp(-log_likelihood/total_validation_output_tokens) < best_perplexity){
+
+			//if (exp(-log_likelihood/total_validation_output_tokens) < best_perplexity){
+			if (accuracy < current_accuracy){	
 				
-				cerr<<"Perplexity on validation improved." <<endl;
-				cerr<<"Previous best perplexity from epoch "<<best_model<<" was "<<best_perplexity<<endl;
+				cerr<<"Accuracy on validation improved." <<endl;
+				//cerr<<"Previous best accuracy from epoch "<<best_model<<" was "<<<<endl;
 				best_perplexity = exp(-log_likelihood/total_validation_output_tokens);
+				best_accuracy = accuracy;
 				//only write the best model
 				if (myParam.model_prefix != "")
 				{
@@ -1053,11 +1058,14 @@ int main(int argc, char** argv)
 			nn_decoder.scale(1./(1-myParam.dropout_probability));
 			if (myParam.max_epoch > -1 && epoch+1 >= myParam.max_epoch) {
 				current_learning_rate /= 2;
-			} else  if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+			} else  
+			//if (epoch > 0 && log_likelihood < current_validation_ll && myParam.parameter_update != "ADA")
+			if (epoch > 0 && current_accuracy < accuracy && myParam.parameter_update != "ADA")	
 		        { 
 		            current_learning_rate /= 2;
 		        }
 	        current_validation_ll = log_likelihood;
+			current_accuracy = accuracy;
 	 
 		}
 	
