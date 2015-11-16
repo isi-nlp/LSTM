@@ -56,7 +56,7 @@ namespace nplm
 	      : encoder_plstm(&encoder_lstm),
 			decoder_plstm(&decoder_lstm),
 		 	minibatch_size(minibatch_size),
-			output_layer_node(&decoder_lstm.output_layer,minibatch_size),
+			output_layer_node(&encoder_lstm.output_layer,minibatch_size),
 			encoder_lstm_nodes(vector<LSTM_node<input_node_type> >(251,LSTM_node<input_node_type>(encoder_lstm,minibatch_size))),
 			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(251,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
 			encoder_input_nodes(vector<input_node_type >(251,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
@@ -420,7 +420,10 @@ namespace nplm
 	 					//First doing fProp for the output layer
 	 					//The number of columns in scores will be the current minibatch size
 						//cerr<<"ht going into loss"<<decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size)<<endl;
-	 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+						
+	 					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+						//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+						output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
@@ -451,8 +454,10 @@ namespace nplm
 	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
 										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
 
-	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
+	 	   		        						//output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	 	   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));		
+   	 	   		        output_layer_node.param->updateGradient(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));												   							   	 		   
 	 					//cerr<<" i is "<<i<<endl;
 	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
 	 				} else if (loss_function == NCELoss){
@@ -560,13 +565,13 @@ namespace nplm
 					precision_type minibatch_log_likelihood;
 	 				if (loss_function == LogLoss) {
 						//Applying dropout to the output layer
-						output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+						output_dropout_layers[i].fProp(encoder_lstm_nodes[i].h_t,rng);
 	 					//First doing fProp for the output layer
 	 					//The number of columns in scores will be the current minibatch size
 						
-	 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+	 					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 
-				
+	 					output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);				
 	 			        
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
@@ -596,8 +601,12 @@ namespace nplm
 										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
 									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
 
-	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));	
+	 	   		        						//output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+	 	   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));	
+   	 	   		        						//output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   	 	   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));		
+  	 	   		        output_layer_node.param->updateGradient(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+  	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));											   								   
 														   	 		   
 						//Applying dropout to the backpropagated loss
 						//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);
@@ -653,9 +662,8 @@ namespace nplm
 		}
 		
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    template <typename DerivedIn> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bPropDecoder(const MatrixBase<DerivedIn> &input_data,
-				const MatrixBase<DerivedOut> &output_data,
 			 bool gradient_check,
 			 bool norm_clipping)
 	    {	
@@ -670,32 +678,31 @@ namespace nplm
 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
 			int input_sent_len = input_data.rows();
-			int output_sent_len = output_data.rows(); 
 			//precision_type log_likelihood = 0.;
 			
 			//first getting decoder loss
-			for (int i=output_sent_len-1; i>=0; i--) {
+			for (int i=input_sent_len-1; i>=0; i--) {
 
-				if (i==0 && output_sent_len-1 > 0) {
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+				if (i==0 && input_sent_len-1 > 0) {
+				    decoder_lstm_nodes[i].bProp(input_data.row(i),
 							   //init_h,
 				   			   //init_c,
 								losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
 							   norm_clipping);	
-				} else if (i == output_sent_len-1) {	
+				} else if (i == input_sent_len-1) {	
 
 					//cerr<<"previous ht is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
 					//cerr<<"previous ct is "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
 					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+				    decoder_lstm_nodes[i].bProp(input_data.row(i),
 							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero,
 							   gradient_check,
@@ -703,11 +710,11 @@ namespace nplm
 		
 				} else if (i > 0) {
 					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+				    decoder_lstm_nodes[i].bProp(input_data.row(i),
 							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
 							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
@@ -720,9 +727,8 @@ namespace nplm
 	  }
 	  		
 	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedIn, typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    template <typename DerivedIn> //, typename DerivedC, typename DerivedH, typename DerivedS>
 	    void bPropDecoderDropout(const MatrixBase<DerivedIn> &input_data,
-				const MatrixBase<DerivedOut> &output_data,
 			 bool gradient_check,
 			 bool norm_clipping)
 	    {			
@@ -736,29 +742,29 @@ namespace nplm
 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			
 			int input_sent_len = input_data.rows();
-			int output_sent_len = output_data.rows(); 
+			//int output_sent_len = output_data.rows(); 
 			//precision_type log_likelihood = 0.;
 			
 			//first getting decoder loss
-			for (int i=output_sent_len-1; i>=0; i--) {
+			for (int i=input_sent_len-1; i>=0; i--) {
 				//cerr<<"i in backprop decoder dropout is "<<i<<endl;
-				if (i==0 && output_sent_len-1 > 0) {
+				if (i==0 && input_sent_len-1 > 0) {
 					
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+				    decoder_lstm_nodes[i].bPropDropout(input_data.row(i),
 							   //init_h,
 				   			   //init_c,
 								losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
 							   norm_clipping);	
-				} else if (i == output_sent_len-1) {	
+				} else if (i == input_sent_len-1) {	
 
 
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+				    decoder_lstm_nodes[i].bPropDropout(input_data.row(i),
 							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 				   			   dummy_zero,
 							   gradient_check,
@@ -766,99 +772,28 @@ namespace nplm
 		
 				} else if (i > 0) {
 					
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+				    decoder_lstm_nodes[i].bPropDropout(input_data.row(i),
 
 							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
+							   //input_layer_node.bProp_matrix,
 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
 							   gradient_check,
-							   norm_clipping);		
-					   						
+							   norm_clipping);						   						
 				} 		   
 
 			}
-
 	  }
 
 
 	  
-  // Dense version (for standard log-likelihood)
-  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
-  void bPropEncoder(const MatrixBase<DerivedIn> &input_data,
-	 bool gradient_check,
-	 bool norm_clipping,
-	 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
-	 //const MatrixBase<DerivedC> &init_c,
-	 //const MatrixBase<DerivedH> &init_h,
-	 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
-  {	
-
-	//cerr<<"In backprop..."<<endl;
-	int current_minibatch_size = input_data.cols();
-	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-	//same dimension in and LSTM. this might not be a good idea
-	dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-	//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-	
-	int input_sent_len = input_data.rows();
-
-
-	for (int i=input_sent_len-1; i>=0; i--) {
-		//getchar();
-		// Now calling backprop for the LSTM nodes
-		if (i == input_sent_len-1) {	
-			
-			//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
-			encoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));			
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne<<endl;
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne<<endl;												
-		    encoder_lstm_nodes[i].bProp(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);
-
-		} else{
-			encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));		
-																	
-		    encoder_lstm_nodes[i].bProp(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);								   
-			   						
-		} 		   
-   
-	}
-} 	  
-
-	  // Dense version (for standard log-likelihood)
-	  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
-	  void bPropEncoderDropout(const MatrixBase<DerivedIn> &input_data,
+    // Dense version (for standard log-likelihood)
+    template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+    void bPropEncoder(const MatrixBase<DerivedOut> &input_data,
 		 bool gradient_check,
-		 bool norm_clipping,
-		 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
-	  {	
-
+		 bool norm_clipping)
+    {	
+	
 		//cerr<<"In backprop..."<<endl;
 		int current_minibatch_size = input_data.cols();
 		//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
@@ -866,57 +801,99 @@ namespace nplm
 		//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
 		//same dimension in and LSTM. this might not be a good idea
 		dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-		//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+		dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+		
+
+		int input_sent_len = input_data.rows(); 
+		//precision_type log_likelihood = 0.;
+		
+		//first getting encoder loss
+		for (int i=0; i<input_sent_len; i++) {
+			//cerr<<"input_data.row(i) "<<input_data.row(i)<<endl;
+			if (i==input_sent_len-1 && input_sent_len-1 > 0) {
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+							losses[i].d_Err_t_d_h_t,
+			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);	
+			} else if (i == 0) {				
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+						   losses[i].d_Err_t_d_h_t,
+			   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+			   			   dummy_zero,
+						   gradient_check,
+						   norm_clipping);
 	
-		int input_sent_len = input_data.rows();
+			} else if (i > 0) {				
+			    encoder_lstm_nodes[i].bProp(input_data.row(i),
+						   losses[i].d_Err_t_d_h_t,
+			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);		
+				   						
+			} 		   
 
-		//Now backpropping through the encoder
+		}
 
+  }
 
-		for (int i=input_sent_len-1; i>=0; i--) {
-			//getchar();
-			// Now calling backprop for the LSTM nodes
-			if (i == input_sent_len-1) {	
+  // Dense version (for standard log-likelihood)
+  template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
+  void bPropEncoderDropout(const MatrixBase<DerivedOut> &input_data,
+	 bool gradient_check,
+	 bool norm_clipping)
+	  {			
+		//cerr<<"In backprop..."<<endl;
+		int current_minibatch_size = input_data.cols();
+		//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+		Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+		//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+		//same dimension in and LSTM. this might not be a good idea
+		dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+		dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+	
+		int input_sent_len = input_data.rows(); 
+		//precision_type log_likelihood = 0.;
+	
+		//first getting decoder loss
+		for (int i=0; i<input_sent_len; i++) {
+			//cerr<<"i in backprop encoder dropout is "<<i<<endl;
+			if (i==input_sent_len-1 && input_sent_len-1 > 0) {
 			
-				//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
-				encoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-															decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-															decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-															decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-															sequence_cont_indices.row(i));			
-				//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne<<endl;
-				//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne<<endl;												
 			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-						   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-			   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-						   dummy_zero,
+						losses[i].d_Err_t_d_h_t,
+			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
+						   gradient_check,
+						   norm_clipping);	
+			} else if (i == 0) {	
+			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
+						   losses[i].d_Err_t_d_h_t,
 						   //output_layer_node.bProp_matrix,
-			   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-			   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
+			   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+			   			   dummy_zero,
 						   gradient_check,
 						   norm_clipping);
 
-			} else{
-				encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-															encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-															encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-															encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-															sequence_cont_indices.row(i));		
-																	
+			} else if (i > 0) {
+			
 			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-						   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-			   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-						   dummy_zero,
+
+						   losses[i].d_Err_t_d_h_t,
 						   //output_layer_node.bProp_matrix,
-			   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-						   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
+						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
 						   gradient_check,
-						   norm_clipping);								   
+						   norm_clipping);		
 			   						
 			} 		   
-   
+
 		}
-	} 				
+
+	}
+
 		template <typename DerivedH> 
 		void getHiddenStates(const MatrixBase<DerivedH> &const_hidden_states,
 							const int max_sent_len,
@@ -1474,13 +1451,21 @@ namespace nplm
 		//cerr<<"updating params "<<endl;
 		//First compute the norm of the gradients for norm scaling
 		if (loss_function == LogLoss){
+			/*
 			//cerr<<"updating log output layer"<<endl;
 			decoder_plstm->output_layer.updateParams(learning_rate,
 							current_minibatch_size,
 		  					momentum,
 		  					L2_reg,
 							norm_clipping,
-							norm_threshold);			
+							norm_threshold);		
+			*/
+			encoder_plstm->output_layer.updateParams(learning_rate,
+							current_minibatch_size,
+		  					momentum,
+		  					L2_reg,
+							norm_clipping,
+							norm_threshold);										
 		} else if (loss_function == NCELoss){
 			//cerr<<"NOT IMPLEMENTED"<<endl;
 			//exit(1);
@@ -1498,23 +1483,24 @@ namespace nplm
 
 
 
-		if (arg_run_lm == 0) {
-			//cerr<<"updating encoder params"<<endl;
-		    encoder_plstm->updateParams(learning_rate,
-												current_minibatch_size,
-												momentum,
-												L2_reg,
-												norm_clipping,
-												norm_threshold);
-		}
-		
+
+		//cerr<<"updating encoder params"<<endl;
+	    encoder_plstm->updateParams(learning_rate,
+											current_minibatch_size,
+											momentum,
+											L2_reg,
+											norm_clipping,
+											norm_threshold);
+
+											/*
 		//cerr<<"updating decoder params"<<endl;
 		decoder_plstm->updateParams(learning_rate,
 										current_minibatch_size,
 										momentum,
 										L2_reg,
 										norm_clipping,
-										norm_threshold);												
+										norm_threshold);	
+											*/											
 	  }
 
  	 void updateParams(precision_type learning_rate,
@@ -1593,8 +1579,10 @@ namespace nplm
 				//cerr<<"i in gradient check is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-										scores.leftCols(current_minibatch_size));
+					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+					//					scores.leftCols(current_minibatch_size));
+					output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));										
 					//then compute the log loss of the objective
 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 					//cerr<<"Score is"<<endl;
@@ -1676,11 +1664,14 @@ namespace nplm
 				//cerr<<"i in compute probs dropout is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
-					output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);					
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-										scores.leftCols(current_minibatch_size));
+					//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);	
+					output_dropout_layers[i].fProp(encoder_lstm_nodes[i].h_t,rng);		
+								
+					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+					//					scores.leftCols(current_minibatch_size));
 
-	
+					output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+										scores.leftCols(current_minibatch_size));
 			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
@@ -1747,7 +1738,8 @@ namespace nplm
 			for (int i=sent_len-1; i>=0; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
-				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
@@ -1799,7 +1791,8 @@ namespace nplm
 			for (int i=sent_len-1; i>=0; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
-				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
 				//cerr<<"Score is"<<endl;
@@ -1859,11 +1852,12 @@ namespace nplm
 		//cerr<<"init h is "<<init_h<<endl;
 		//cerr<<"in gradient check. The size of input is "<<input.rows()<<endl;
 		cerr<<"In gradient check"<<endl;
-		cerr<<"Decoder input is "<<decoder_input<<endl;
-		cerr<<"Decoder output is "<<decoder_output<<endl;
+		//cerr<<"Decoder input is "<<decoder_input<<endl;
+		//cerr<<"Decoder output is "<<decoder_output<<endl;
 		//Check every dimension of all the parameters to make sure the gradient is fine
 		
 		//cerr<<"Arg run lm is "<<arg_run_lm<<endl;
+		/*
 		paramGradientCheck(input,decoder_input, 
 							 decoder_output,
 							 decoder_plstm->output_layer,
@@ -2177,13 +2171,28 @@ namespace nplm
  							 dropout_probability,
 							 arg_run_lm);							 
 		
-							
-		if (arg_run_lm == 0) {	
-							 					 							 
+		*/
+		//if (arg_run_lm == 0) {	
+		paramGradientCheck(input,
+							 decoder_input, 
+							 decoder_output,
+							 encoder_plstm->output_layer,
+							 "output_layer", 
+							 init_c,
+							 init_h,
+							 unigram,
+							 num_noise_samples,
+				   			 rng,
+				   			 loss_function,
+							 input_sequence_cont_indices,
+							 output_sequence_cont_indices,
+							 dropout_probability,
+							 arg_run_lm);								 					 							 
 		//init_rng = rng;					 
 		init_c = const_init_c;
 		init_h = const_init_h;
-		paramGradientCheck(input,decoder_input, 
+		paramGradientCheck(input,
+							 decoder_input, 
 							 decoder_output,
 							 encoder_plstm->W_h_to_c,
 							 "Encoder: W_h_to_c", 
@@ -2392,7 +2401,8 @@ namespace nplm
  		init_c = const_init_c;
  		init_h = const_init_h;
  		paramGradientCheck(input,decoder_input, 
-							 decoder_output,(dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_i,
+							 decoder_output,
+							 (dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_i,
 							 "Encoder: Standard_input_node: W_x_to_i", 
 							 init_c,
 							 init_h,
@@ -2442,7 +2452,8 @@ namespace nplm
 							 arg_run_lm);
   		init_c = const_init_c;
   		init_h = const_init_h;					 
-		paramGradientCheck(input,decoder_input, 
+		paramGradientCheck(input,
+						 decoder_input, 
 						 decoder_output,
 						 (dynamic_cast<input_model_type*>(encoder_plstm->input))->W_x_to_o,
 						 "Encoder: Standard_input_node: W_x_to_o", 
@@ -2457,7 +2468,7 @@ namespace nplm
 						 output_sequence_cont_indices,
 						 dropout_probability,
 						 arg_run_lm);								 									 							 	
-		}		
+		//}		
 		//paramGradientCheck(input,output,encoder_plstm->input_layer,"input_layer");
 		
 						 
@@ -2556,20 +2567,18 @@ namespace nplm
 				//cerr<<"const init h is "<<const_init_h<<endl;
 				//cerr<<"first perturbing"<<endl;
 				if (dropout_probability > 0) {
-					if (arg_run_lm == 0 ) {
-						fPropEncoderDropout(input,
+					fPropEncoderDropout(decoder_input,
 									init_c,
 									init_h,
-									input_sequence_cont_indices,
+									output_sequence_cont_indices,
 									init_rng);	
-					}
-					//cerr<<"init_c"<<init_c<<endl;
-					//cerr<<"init_h"<<init_h<<endl;
+					/*				
 				    fPropDecoderDropout(decoder_input,
 							init_c,
 							init_h,
 							output_sequence_cont_indices,
 							init_rng);		
+					*/
 			 		computeProbsDropout(decoder_output,
 								 unigram,
 					   			 num_noise_samples,
@@ -2578,16 +2587,17 @@ namespace nplm
 								 //softmax_nce_loss,
 			 			  		 before_log_likelihood);																					
 				} else {	
-					if (arg_run_lm == 0) {			
-					fPropEncoder(input,
+
+					fPropEncoder(decoder_input,
 								init_c,
 								init_h,
-								input_sequence_cont_indices);
-					}
+								output_sequence_cont_indices);
+								/*
 				    fPropDecoder(decoder_input,
 							init_c,
 							init_h,
 							output_sequence_cont_indices);	
+								*/
 			 		computeProbs(decoder_output,
 								 unigram,
 					   			 num_noise_samples,
@@ -2610,18 +2620,20 @@ namespace nplm
 				//cerr<<"second perturbing"<<endl;					
 		 		//fProp(input,output, 0, input.rows()-1, init_c, init_h, input_sequence_cont_indices);	
 				if (dropout_probability > 0) {
-					if (arg_run_lm == 0){
-					fPropEncoderDropout(input,
+					//if (arg_run_lm == 0){
+					fPropEncoderDropout(decoder_input,
 								init_c,
 								init_h,
-								input_sequence_cont_indices,
+								output_sequence_cont_indices,
 								init_rng);	
-					}
+					//}
+								/*
 				    fPropDecoderDropout(decoder_input,
 							init_c,
 							init_h,
 							output_sequence_cont_indices,
-							init_rng);				
+							init_rng);	
+								*/			
 			 		computeProbsDropout(decoder_output,
 								 unigram,
 					   			 num_noise_samples,
@@ -2631,16 +2643,18 @@ namespace nplm
 			 			  		 after_log_likelihood);	
 					 												
 				} else {		
-					if (arg_run_lm == 0){
-					fPropEncoder(input,
+					//if (arg_run_lm == 0){
+					fPropEncoder(decoder_input,
 								init_c,
 								init_h,
-								input_sequence_cont_indices);	
-					}
+								output_sequence_cont_indices);	
+					//}
+								/*
 				    fPropDecoder(decoder_input,
 							init_c,
 							init_h,
-							output_sequence_cont_indices);	
+							output_sequence_cont_indices);
+								*/	
  			 		computeProbs(decoder_output,
 								 unigram,
  					   			 num_noise_samples,

@@ -1079,7 +1079,7 @@ public:
 				W_x_to_i_node.param->bProp(i_t_node_bProp_matrix,
 										W_x_to_i_node.bProp_matrix);
 
-			
+				//cerr<<" W_x_to_i_node.bProp_matrix "<<endl<<W_x_to_i_node.bProp_matrix<<endl;
 				W_x_to_o_node.param->updateGradient(o_t_node_bProp_matrix.leftCols(current_minibatch_size),
 													input_layer_node.fProp_matrix.leftCols(current_minibatch_size));
 				//cerr<<"W_x_to_i_node"<<endl;									

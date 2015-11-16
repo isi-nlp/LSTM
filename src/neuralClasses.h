@@ -770,9 +770,9 @@ template <typename DerivedIn, typename DerivedGOut>
     // bProp_input is vocab_size x minibatch_size
 	
     W_gradient.noalias() += bProp_input * predicted_embeddings.transpose();
-	cerr<<"b gradient before is "<<b_gradient<<endl;
+	//cerr<<"b gradient before is "<<b_gradient<<endl;
     b_gradient.noalias() += bProp_input.rowwise().sum();
-	cerr<<"b gradient after is "<<b_gradient<<endl;
+	//cerr<<"b gradient after is "<<b_gradient<<endl;
 	//cerr<<"the W gradient norm is "<<W_gradient.norm()<<endl;
 	//getchar();
 	/*
