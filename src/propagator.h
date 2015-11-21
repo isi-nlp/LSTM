@@ -16,8 +16,11 @@ namespace nplm
 
 
 	    model *encoder_plstm, *decoder_plstm;
+		bidirectional_combiner *combiner;
+		//Node<bidirectional_combiner> combiner_node;
 		vector<LSTM_node<input_node_type> > encoder_lstm_nodes; //We will allow only 20 positions now. 
 		vector<LSTM_node<input_node_type> > decoder_lstm_nodes; //We will allow only 20 positions now.
+		vector<Bidirectional_combiner_node> bidirectional_combiner_nodes;
 		vector<input_node_type > encoder_input_nodes, decoder_input_nodes; 
 		Node<Output_word_embeddings> output_layer_node;
 		//Matrix<precision_type,Dynamic,Dynamic> d_Err_tPlusOne_to_n_d_c_t,d_Err_tPlusOne_to_n_d_h_t; //Derivatives wrt the future h_t and c_t
@@ -41,6 +44,7 @@ namespace nplm
 					decoder_plstm(0),
 					encoder_lstm_nodes(251,LSTM_node<input_node_type>()),
 					decoder_lstm_nodes(251,LSTM_node<input_node_type>()),
+					bidirectional_combiner_nodes(251,Bidirectional_combiner_node()),
 					encoder_input_nodes(251,input_node_type()),
 					decoder_input_nodes(251,input_node_type()),
 					num_hidden(0), 
@@ -52,6 +56,7 @@ namespace nplm
 
 	    propagator (model &encoder_lstm, 
 					model &decoder_lstm,
+					bidirectional_combiner &combiner,
 					int minibatch_size)
 	      : encoder_plstm(&encoder_lstm),
 			decoder_plstm(&decoder_lstm),
@@ -61,11 +66,13 @@ namespace nplm
 			decoder_lstm_nodes(vector<LSTM_node<input_node_type> >(251,LSTM_node<input_node_type>(decoder_lstm,minibatch_size))),
 			encoder_input_nodes(vector<input_node_type >(251,input_node_type (dynamic_cast<input_model_type&>(*(encoder_lstm.input)),minibatch_size))),
 			decoder_input_nodes(vector<input_node_type >(251,input_node_type (dynamic_cast<input_model_type&>(*(decoder_lstm.input)),minibatch_size))),
-			//losses(vector<Matrix<precision_type,Dynamic,Dynamic> >(100,Matrix<precision_type,Dynamic,Dynamic>()))
 			losses(vector<Output_loss_node>(251,Output_loss_node())),
+			bidirectional_combiner_nodes(vector<Bidirectional_combiner_node>(251,Bidirectional_combiner_node(combiner,minibatch_size))),
 			unif_real(0.0,1.0),
 			output_dropout_layers(vector<Dropout_layer>()),
-			nce_loss()
+			nce_loss(),
+			//combiner_node(&combiner, minibatch_size),
+			combiner(&combiner)
 			{
 				resize(minibatch_size);
 			}
@@ -73,6 +80,12 @@ namespace nplm
 		void resizeOutput(int minibatch_size){
 		  output_layer_node.resize(minibatch_size);			
 		}
+		void resizeBidirectionalCombinerNode(int minibatch_size){
+			cerr<<"Resizing bidirectional combiner nodes"<<endl;
+    		  for (int i=0; i<bidirectional_combiner_nodes.size(); i++){
+    			  bidirectional_combiner_nodes[i].resize(minibatch_size);
+    		  }		
+		 }		
 		void resizeRest(int minibatch_size) {
 	      //this->minibatch_size = minibatch_size;
 		  //CURRENTLY, THE RESIZING IS WRONG FOR SOME OF THE MINIBATCHES
@@ -135,6 +148,7 @@ namespace nplm
 				
 	    void resize(int minibatch_size) {
 			this->minibatch_size = minibatch_size;
+			resizeBidirectionalCombinerNode(minibatch_size);
 			resizeOutput(minibatch_size);
 			resizeEncoderNodes(minibatch_size);
 			resizeDecoderNodes(minibatch_size);
@@ -423,8 +437,15 @@ namespace nplm
 						
 	 					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 						//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
-						output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
-
+						bidirectional_combiner_nodes[i].fProp(
+							decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+							encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size));
+							
+						//output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+						//output_layer_node.param->fProp(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+						output_layer_node.param->fProp(
+							bidirectional_combiner_nodes[i].combination_layer_node.fProp_matrix,
+						 scores);	
 	 			        start_timer(5);
 	 			        SoftmaxLogLoss().fProp(scores, 
 	 			                   output.row(i), 
@@ -456,9 +477,12 @@ namespace nplm
 
 	 	   		        						//output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
 	 	   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));		
-   	 	   		        output_layer_node.param->updateGradient(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-   	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));												   							   	 		   
-	 					//cerr<<" i is "<<i<<endl;
+   	 	   		        						//output_layer_node.param->updateGradient(encoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   	 	   			 //	d_Err_t_d_output.leftCols(current_minibatch_size));												   							   	 		   
+ 	   		        output_layer_node.param->updateGradient(
+					  bidirectional_combiner_nodes[i].combination_layer_node.fProp_matrix.leftCols(current_minibatch_size),
+ 	   				  d_Err_t_d_output.leftCols(current_minibatch_size));			 	
+						//cerr<<" i is "<<i<<endl;
 	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
 	 				} else if (loss_function == NCELoss){
 						//cerr<<"NOT IMPLEMENTED"<<endl;
@@ -510,7 +534,8 @@ namespace nplm
 													     d_Err_t_d_output.leftCols(current_minibatch_size));
 	 				}
 					
-
+					//Computing the error derivative wrt the bidirectional combiner node
+					bidirectional_combiner_nodes[i].bProp(losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
 	 			}
 		 	
 		}
@@ -812,14 +837,16 @@ namespace nplm
 			//cerr<<"input_data.row(i) "<<input_data.row(i)<<endl;
 			if (i==input_sent_len-1 && input_sent_len-1 > 0) {
 			    encoder_lstm_nodes[i].bProp(input_data.row(i),
-							losses[i].d_Err_t_d_h_t,
+							//losses[i].d_Err_t_d_h_t,
+							bidirectional_combiner_nodes[i].backward_layer_transformation_node.bProp_matrix,
 			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
 						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
 						   gradient_check,
 						   norm_clipping);	
 			} else if (i == 0) {				
 			    encoder_lstm_nodes[i].bProp(input_data.row(i),
-						   losses[i].d_Err_t_d_h_t,
+						   //losses[i].d_Err_t_d_h_t,
+						   bidirectional_combiner_nodes[i].backward_layer_transformation_node.bProp_matrix,
 			   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 			   			   dummy_zero,
 						   gradient_check,
@@ -827,7 +854,8 @@ namespace nplm
 	
 			} else if (i > 0) {				
 			    encoder_lstm_nodes[i].bProp(input_data.row(i),
-						   losses[i].d_Err_t_d_h_t,
+						   //losses[i].d_Err_t_d_h_t,
+						   bidirectional_combiner_nodes[i].backward_layer_transformation_node.bProp_matrix,
 			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
 						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
 						   gradient_check,
@@ -863,14 +891,16 @@ namespace nplm
 			if (i==input_sent_len-1 && input_sent_len-1 > 0) {
 			
 			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-						losses[i].d_Err_t_d_h_t,
+						//losses[i].d_Err_t_d_h_t,
+						   bidirectional_combiner_nodes[i].forward_layer_transformation_node.bProp_matrix,
 			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
 						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,
 						   gradient_check,
 						   norm_clipping);	
 			} else if (i == 0) {	
 			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-						   losses[i].d_Err_t_d_h_t,
+						   //losses[i].d_Err_t_d_h_t,
+						   bidirectional_combiner_nodes[i].forward_layer_transformation_node.bProp_matrix,
 						   //output_layer_node.bProp_matrix,
 			   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
 			   			   dummy_zero,
@@ -880,8 +910,8 @@ namespace nplm
 			} else if (i > 0) {
 			
 			    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-
-						   losses[i].d_Err_t_d_h_t,
+						   //losses[i].d_Err_t_d_h_t,
+						   bidirectional_combiner_nodes[i].forward_layer_transformation_node.bProp_matrix,
 						   //output_layer_node.bProp_matrix,
 			   			   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_c_tMinusOne,
 						   encoder_lstm_nodes[i-1].d_Err_t_to_n_d_h_tMinusOne,

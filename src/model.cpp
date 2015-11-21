@@ -72,15 +72,7 @@ void model::initialize(mt19937 &init_engine,
     string &parameter_update,
     precision_type adagrad_epsilon)
 {
-	/*
-	//cerr<<"Input word embeddings init"<<endl;
-    input_layer.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-	//cerr<<"output word embeddings init"<<endl;
-	*/
+
 	//cerr<<"init output layer "<<endl;
     output_layer.initialize(init_engine,
         init_normal,
@@ -88,20 +80,7 @@ void model::initialize(mt19937 &init_engine,
         init_output_bias,
         parameter_update,
         adagrad_epsilon);
-		/*
-	//cerr<"init output layer "<<endl;
-    first_hidden_linear.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-	
-    second_hidden_linear.initialize(init_engine,
-        init_normal,
-        init_range,
-        parameter_update,
-        adagrad_epsilon);
-	*/
+
 	//cerr<<"W_h_to_c init"<<endl;
 	W_h_to_c.initialize(init_engine,
         init_normal,
@@ -192,8 +171,35 @@ void model::initialize(mt19937 &init_engine,
 	
 	tanh_c_t.set_activation_function(Tanh);
 	
-	
 }
+
+//Initializing the combination layer
+void bidirectional_combiner::resize( int output_embedding_dimension,
+			int num_hidden) {
+	forward_layer_transformation_layer.resize(output_embedding_dimension,
+										num_hidden);
+	backward_layer_transformation_layer.resize(output_embedding_dimension,
+										num_hidden);
+	combination_layer.resize(output_embedding_dimension);
+}
+
+void bidirectional_combiner::initialize(boost::random::mt19937 &init_engine,
+    bool init_normal,
+    precision_type init_range,
+    string &parameter_update,
+    precision_type adagrad_epsilon){
+		forward_layer_transformation_layer.initialize(init_engine,
+	        init_normal,
+	        init_range,
+	        parameter_update,
+	        adagrad_epsilon);
+		backward_layer_transformation_layer.initialize(init_engine,
+	        init_normal,
+	        init_range,
+	        parameter_update,
+	        adagrad_epsilon);		
+}
+
 /*
 void model::premultiply()
 {
@@ -209,6 +215,7 @@ void model::premultiply()
     premultiplied = true;
 }
 */
+
 void model::readConfig(ifstream &config_file)
 {
     string line;

@@ -141,12 +141,6 @@ public:
         string &parameter_udpate,
         precision_type adagrad_epsilon);
 
-    void set_activation_function(activation_function_type f)
-    {
-        activation_function = f;
-        first_hidden_activation.set_activation_function(f);
-        second_hidden_activation.set_activation_function(f);
-    }
 	
     void set_activation_functions()
     {
@@ -194,8 +188,39 @@ public:
     void write(const std::string &filename, const std::vector<std::string> *input_pwords, const std::vector<std::string> *output_pwords);
 };
 
+class bidirectional_combiner {
+	int output_embedding_dimension,num_hidden;
+public:	
+	Linear_layer forward_layer_transformation_layer, backward_layer_transformation_layer;
+	Activation_function combination_layer;
+	activation_function_type activation_function;
 
+	bidirectional_combiner(): output_embedding_dimension(0),
+								   num_hidden(0),
+								   activation_function(Rectifier){
+	
+	}
+	bidirectional_combiner( int output_embedding_dimension,
+								 int num_hidden) {
+		resize(output_embedding_dimension,num_hidden);
+	}
 
+    void set_activation_function()
+    {
+		combination_layer.set_activation_function(Rectifier);
+		//f_t.set_activation_function(Sigmoid);	
+		//i_t.set_activation_function(Sigmoid);		
+	}
+	
+    void resize(int output_embedding_dimension,
+    int num_hidden);
+
+    void initialize(boost::random::mt19937 &init_engine,
+        bool init_normal,
+        precision_type init_range,
+        string &parameter_udpate,
+        precision_type adagrad_epsilon);		
+};
 
 class google_input_model : public input_model {
 

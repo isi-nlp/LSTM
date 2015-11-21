@@ -33,11 +33,21 @@ class Node {
         X * param; //what parameter is this
         //vector <void *> children;
         //vector <void *> parents;
+		//typedef typename X::fProp_data fProp_data;
+		//typedef typename X::bProp_data bProp_data;
+		//fProp_data fProp_matrix;
+		//bProp_data bProp_maxtrix;
 	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> fProp_matrix;
 	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> bProp_matrix;
 	int minibatch_size;
 
     public:
+		/*
+		fprop(inmatrix)
+		{
+			param->fprop(inmatrix,fProp_data);
+		}
+		*/
         Node() : param(NULL), minibatch_size(0) { }
 
         Node(X *input_param, int minibatch_size)
@@ -755,7 +765,67 @@ public:
 	
 };
 
+//Node that takes takes in the two
+class Bidirectional_combiner_node{
+	int minibatch_size;
+public:
+	Node<Linear_layer> forward_layer_transformation_node, backward_layer_transformation_node;
+	Node<Activation_function> combination_layer_node;
+	Matrix<precision_type, Dynamic, Dynamic> combination_layer_input_matrix, dummy_matrix;
+	
+	Bidirectional_combiner_node():
+		minibatch_size(0),
+		forward_layer_transformation_node(),
+		backward_layer_transformation_node(),
+		combination_layer_node(),
+		combination_layer_input_matrix(Matrix<precision_type, Dynamic, Dynamic>()),
+		dummy_matrix(Matrix<precision_type, Dynamic, Dynamic>()) {}
+	Bidirectional_combiner_node(bidirectional_combiner &combiner,
+								int minibatch_size):
+		minibatch_size(minibatch_size),
+		forward_layer_transformation_node(&combiner.forward_layer_transformation_layer, minibatch_size),
+		backward_layer_transformation_node(&combiner.backward_layer_transformation_layer, minibatch_size),
+		combination_layer_node(&combiner.combination_layer, minibatch_size) { }
+		
+	void resize(int minibatch_size){
+		this->minibatch_size = minibatch_size;
+		forward_layer_transformation_node.resize(minibatch_size);
+		backward_layer_transformation_node.resize(minibatch_size);
+		combination_layer_node.resize(minibatch_size);
+		combination_layer_input_matrix.setZero(
+			combination_layer_node.param->n_inputs(),
+			forward_layer_transformation_node.param->n_outputs());
+	}
 
+	template <typename Derived>
+	void fProp(const MatrixBase<Derived> &forward_layer_fProp_matrix,
+				const MatrixBase<Derived> &backward_layer_fProp_matrix){
+		//cerr<<"Data is "<<data<<endl;
+		forward_layer_transformation_node.param->fProp(forward_layer_fProp_matrix,
+										forward_layer_transformation_node.fProp_matrix);
+		backward_layer_transformation_node.param->fProp(backward_layer_fProp_matrix,
+										backward_layer_transformation_node.fProp_matrix);
+		combination_layer_input_matrix.noalias() =
+			forward_layer_transformation_node.fProp_matrix+
+			backward_layer_transformation_node.fProp_matrix;
+		combination_layer_node.param->fProp(combination_layer_input_matrix,
+			combination_layer_node.fProp_matrix);
+	}		
+	
+	template <typename DerivedGIn>
+	void bProp(const MatrixBase<DerivedGIn> &bProp_matrix){
+		combination_layer_node.param->bProp(bProp_matrix,
+   						      combination_layer_node.bProp_matrix,
+   							  combination_layer_node.fProp_matrix,
+   							  dummy_matrix);
+		forward_layer_transformation_node.param->bProp(
+			combination_layer_node.bProp_matrix,
+			forward_layer_transformation_node.bProp_matrix);
+		backward_layer_transformation_node.param->bProp(
+			combination_layer_node.bProp_matrix,
+			backward_layer_transformation_node.bProp_matrix);	
+	}
+};
 
 class Standard_input_node{
 	int minibatch_size;
@@ -902,8 +972,15 @@ public:
 	
 	template <typename Derived>
 	void fProp(const MatrixBase<Derived> &data){
-		fPropInput(data);
-		fPropProjections();
+		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
+		//cerr<<"W_x_to_c_node.fProp_matrix "<<endl<<W_x_to_c_node.fProp_matrix<<endl;
+		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
+		//cerr<<"W_x_to_f_node.fProp_matrix "<<endl<<W_x_to_f_node.fProp_matrix<<endl;
+		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
+		//cerr<<"W_x_to_o_node.fProp_matrix "<<endl<<W_x_to_o_node.fProp_matrix<<endl;
+		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);	
+		//cerr<<"W_x_to_i_node.fProp_matrix "<<endl<<W_x_to_i_node.fProp_matrix<<endl;
 	}
 	
 	template <typename Derived, typename Engine>
@@ -918,20 +995,13 @@ public:
 	
 	template <typename Derived>
 	void fPropInput(const MatrixBase<Derived> &data){
-		input_layer_node.param->fProp(data, input_layer_node.fProp_matrix);
+		
 		//cerr<<"input_layer_node.fProp_matrix"<<endl<<input_layer_node.fProp_matrix<<endl;
 	}
 	
 	
 	void fPropProjections(){
-		W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
-		//cerr<<"W_x_to_c_node.fProp_matrix "<<endl<<W_x_to_c_node.fProp_matrix<<endl;
-		W_x_to_f_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_f_node.fProp_matrix);
-		//cerr<<"W_x_to_f_node.fProp_matrix "<<endl<<W_x_to_f_node.fProp_matrix<<endl;
-		W_x_to_o_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_o_node.fProp_matrix);
-		//cerr<<"W_x_to_o_node.fProp_matrix "<<endl<<W_x_to_o_node.fProp_matrix<<endl;
-		W_x_to_i_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_i_node.fProp_matrix);	
-		//cerr<<"W_x_to_i_node.fProp_matrix "<<endl<<W_x_to_i_node.fProp_matrix<<endl;
+		
 	}
 	
 

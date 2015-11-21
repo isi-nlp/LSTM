@@ -548,7 +548,8 @@ int main(int argc, char** argv)
 	        myParam.init_range,
 	        myParam.parameter_update,
 	        myParam.adagrad_epsilon);
-		nn_decoder.set_input(decoder_input);	
+		nn_decoder.set_input(decoder_input);
+			
 		//Reading embeddings if they have been defined 
 		if (myParam.input_embeddings_file != ""){
 			decoder_input.readEmbeddingsFromFile(myParam.input_embeddings_file,
@@ -557,6 +558,15 @@ int main(int argc, char** argv)
 				decoder_input_vocab);				
 		}
 		
+		//initializing the combiner
+		bidirectional_combiner combiner;
+		combiner.resize(myParam.output_embedding_dimension,
+						myParam.num_hidden);
+		combiner.initialize(rng,
+	        myParam.init_normal,
+	        myParam.init_range,
+	        myParam.parameter_update,
+	        myParam.adagrad_epsilon);	
 	//getchar();	
     // IF THE MODEL FILE HAS BEEN DEFINED, THEN 
     // LOAD THE NEURAL NETWORK MODEL
@@ -575,6 +585,7 @@ int main(int argc, char** argv)
 
     propagator<Google_input_node, google_input_model> prop(nn, 
 														nn_decoder, 
+														combiner,
 														myParam.minibatch_size);
 	if (myParam.dropout_probability > 0 ){
 		prop.resizeDropout(myParam.minibatch_size, myParam.dropout_probability);
@@ -582,6 +593,7 @@ int main(int argc, char** argv)
 
     propagator<Google_input_node, google_input_model> prop_validation(nn, 
 															nn_decoder, 
+															combiner,
 															myParam.validation_minibatch_size);
 	vector<data_size_t> unigram_counts;
 	multinomial<data_size_t> unigram;																
