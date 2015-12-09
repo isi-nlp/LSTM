@@ -1537,14 +1537,12 @@ namespace nplm
    
 	}
 } 
-	 precision_type getGradSqdNorm(precision_type &grad_norm,
-	 								loss_function_type loss_function,
-	 								bool arg_run_lm){
+	 precision_type getGradSqdNorm(bool arg_run_lm){
  		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
  		//cerr<<"updating params "<<endl;
  		//First compute the norm of the gradients for norm scaling
  		//precision_type grad_norm = 0;
-										
+		precision_type grad_norm = 0.;						
  		grad_norm += decoder_plstm->output_layer.getGradSqdNorm();
 		//cerr<<"Output grad squared norm is "<<grad_norm<<endl;
  		if (arg_run_lm == 0) {

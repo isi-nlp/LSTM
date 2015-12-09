@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 	srand (time(NULL));
 	cerr<<setprecision(16);
     ios::sync_with_stdio(false);
-    bool use_mmap_file, randomize=0, arg_run_lm = 0, arg_carry_states=0, arg_run_tagger=0;
+    bool use_mmap_file, randomize=0, arg_run_lm = 0, arg_carry_states=0, arg_run_tagger=0, arg_global_norm=0;
     param myParam;
 	int arg_seed;
     try {
@@ -135,8 +135,8 @@ int main(int argc, char** argv)
 		  			0 = gradient clipping. Default: 1.", false, 1, "bool", cmd);
 	  ValueArg<bool> run_lm("", "run_lm", "Run as a language model, \n \
 		  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);	
-	  ValueArg<bool> run_tagger("", "run_tagger", "Run as a tagger, \n \
-	  	  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
+	  //ValueArg<bool> run_tagger("", "run_tagger", "Run as a tagger, \n \
+	  //	  			1 = yes. Default: 0 (Run as a sequence to sequence model).", false, 0, "bool", cmd);		  
 	  ValueArg<bool> carry_states("", "carry_states", "Carry the hidden states from one minibatch to another. This option is for \n \
 		  			language models only. Carrying hidden states over can improve perplexity. \n \
 						1 = yes. Default: 0 (Do not carry hidden states).", false, 0, "bool", cmd);		  
@@ -150,7 +150,8 @@ int main(int argc, char** argv)
 	  ValueArg<precision_type> dropout_probability("", "dropout_probability", "Dropout probability. Default 0: No dropout", false,0., "precision_type", cmd);
 	  
       ValueArg<int> max_epoch("", "max_epoch", "After max_epoch, the learning rate is halved for every subsequent epoch. \n \
-		  If not supplied, then the learning rate is modified based on the valdation set. Default: -1", false, -1, "int", cmd);	  
+		  If not supplied, then the learning rate is modified based on the valdation set. Default: -1", false, -1, "int", cmd);	
+	  ValueArg<bool> global_norm("", "global_norm", "Using global regularization in training", false, 0, "bool", cmd);	    
       cmd.parse(argc, argv);
 
       // define program parameters //
@@ -212,9 +213,11 @@ int main(int argc, char** argv)
 	  myParam.norm_clipping = norm_clipping.getValue();
 	  myParam.norm_threshold = norm_threshold.getValue();
 	  myParam.dropout_probability = dropout_probability.getValue();
+	  
 	  //myParam.restart_states = norm_threshold.getValue();
 	  arg_run_lm = run_lm.getValue();
-	  arg_run_tagger = run_tagger.getValue();
+	  arg_global_norm = global_norm.getValue();
+	  //arg_run_tagger = run_tagger.getValue();
 	  arg_seed = seed.getValue();
 	  arg_carry_states = carry_states.getValue();
 	  if (arg_run_lm == 0 && arg_carry_states == 1){
@@ -955,28 +958,27 @@ int main(int argc, char** argv)
 								 myParam.dropout_probability);
 					//for the next minibatch, we want the range to be updated as well
 					rng_grad_check = rng;
-				}
-				//getchar();											 
-				//Updating the gradients
-				//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
-				/*
-				precision_type minibatch_scale = current_minibatch_size;
-				precision_type grad_squared_norm = 0.;
-				prop.getGradSqdNorm(grad_squared_norm,loss_function, arg_run_lm);
-				precision_type grad_scale = 1.;
-				precision_type grad_norm = sqrt(grad_squared_norm)/minibatch_scale;
-				cerr<<"grad norm is "<<grad_norm<<endl;
-				if (grad_norm  > myParam.norm_threshold) {
-					//Then you have to scale
-					grad_scale = myParam.norm_threshold/grad_norm;
+				}		
+				if (arg_global_norm == 1){
+					//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+					precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+					precision_type model_squared_norm = prop.getGradSqdNorm(arg_run_lm);
+					precision_type final_scale = 1.0f/minibatch_scale;
+					//cerr<<"model squared norm is "<<model_squared_norm<<endl;
+					if (sqrt(model_squared_norm)/minibatch_scale > myParam.norm_threshold){
+						final_scale = myParam.norm_threshold/sqrt(model_squared_norm);
+					}	
+					//cerr<<"final_scale "<<final_scale<<endl;
+					
+					prop.updateParams(current_learning_rate,
+								//max_sent_len,
+								current_minibatch_size,
+						  		current_momentum,
+								myParam.L2_reg,
+								final_scale,
+								loss_function,
+								arg_run_lm);		
 				} else {
-					grad_scale = 1./minibatch_scale;
-				}
-				*/
-				//cerr<<"grad scale is "<<grad_scale<<endl;
-				//cerr<<"max_input_sent_len + max_output_sent_len "<<max_input_sent_len + max_output_sent_len<<endl;
-				//getchar();
-				
 				//Updaging using local grad norms
 				prop.updateParams(adjusted_learning_rate,
 							//max_sent_len,
@@ -987,6 +989,7 @@ int main(int argc, char** argv)
 							myParam.norm_threshold,
 							loss_function,
 							arg_run_lm);	
+				}
 				//Updating using global grad norms	
 					/*												
 				prop.updateParams(adjusted_learning_rate,
