@@ -2528,7 +2528,25 @@ namespace nplm
 						 input_sequence_cont_indices,
 						 output_sequence_cont_indices,
 						 dropout_probability,
-						 arg_run_lm);								 									 							 	
+						 arg_run_lm);	
+						 			
+		init_c = const_init_c;
+		init_h = const_init_h;					 
+ 		paramGradientCheck(input,decoder_input, 
+ 						 decoder_output,
+ 						 (dynamic_cast<input_model_type*>(encoder_plstm->input))->input_layer,
+ 						 "Encoder: input_layer", 
+ 						 init_c,
+ 						 init_h,
+ 						 unigram,
+ 						 num_noise_samples,
+ 			   			 rng,
+ 			   			 loss_function,
+ 						 //softmax_nce_loss,
+ 						 input_sequence_cont_indices,
+ 						 output_sequence_cont_indices,
+ 						 dropout_probability,
+ 						 arg_run_lm);								 				 									 							 	
 		}		
 		//paramGradientCheck(input,output,encoder_plstm->input_layer,"input_layer");
 		
