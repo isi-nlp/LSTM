@@ -75,8 +75,9 @@ class Dropout_layer
 			}
 		}
 	}
-	template<typename Derived, typename Engine>
-	void fProp(const MatrixBase<Derived> &input,
+	template<typename DerivedIn, typename DerivedOut, typename Engine>
+	void fProp(const MatrixBase<DerivedIn> &input,
+			   const MatrixBase<DerivedOut> &output,
 				Engine &eng) {
 		createMask(eng);
 		//cerr<<"Created the dropout mask "<<endl;
@@ -84,28 +85,33 @@ class Dropout_layer
 		//getchar();
 		//cerr<<"Before dropout the fProp input is"<<input<<endl;
 		dropout(input,
+				output,
 				this->dropout_mask);		
 		//cerr<<"After dropout the fProp input is"<<input<<endl;
 		//UNCONST(Derived, input, my_input);
 		//my_input.array().noalias() *= dropout_mask.array();
 		
 	}
-	
+	int n_inputs(){ return dropout_mask.rows();}
+	int n_outputs() {return dropout_mask.cols();}
 	//Its possible that this might just want to be used a function by itself
-	template<typename Derived, typename DropMask>
-	static void dropout(const MatrixBase<Derived> &input,
-							const MatrixBase<DropMask> &dropout_mask){
+	template<typename DerivedIn, typename DerivedOut, typename DropMask>
+	static void dropout(const MatrixBase<DerivedIn> &input,
+						const MatrixBase<DerivedOut> &output,
+						const MatrixBase<DropMask> &dropout_mask){
 
-		UNCONST(Derived, input, my_input);
+		UNCONST(DerivedOut, output, my_output);
 		//cerr<<"Dropping out"<<endl;
 		//cerr<<"dropout_mask "<<dropout_mask<<endl;
-		my_input.array() *= dropout_mask.array();
+		my_output.array() = dropout_mask.array()*input.array();
 	}
 	
-	template<typename DerivedGOut>
-	void bProp(const MatrixBase<DerivedGOut> &input) {
+	template<typename DerivedGIn, typename DerivedGOut>
+	void bProp(const MatrixBase<DerivedGIn> &input,
+			   const MatrixBase<DerivedGOut> &output) {
 		//cerr<<"Before dropout the bProp input is "<<input<<endl;		
 		dropout(input,
+				output,
 				this->dropout_mask);
 		//cerr<<"After dropout the bProp input is "<<input<<endl;				
 				
@@ -113,6 +119,7 @@ class Dropout_layer
 		//my_input.noalias().array() *= dropout_mask.array();
 	}
 };
+
 class Linear_layer
 {
     private: 

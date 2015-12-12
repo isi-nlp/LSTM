@@ -853,10 +853,7 @@ int main(int argc, char** argv)
 																		max_output_sent_len,
 																		current_minibatch_size);
 			//cerr<<"training_output_sequence_cont_sent_data "<<training_output_sequence_cont_sent_data<<endl;		
-																																
-
-
-			
+																																		
 
 			if (myParam.dropout_probability > 0.) {
 			    prop.fPropDecoderDropout(decoder_training_input_sent_data,
@@ -892,7 +889,9 @@ int main(int argc, char** argv)
 						 //softmax_nce_loss); //, 			
 	 				    prop.bPropDecoderDropout(decoder_training_input_sent_data,
 	 						 myParam.gradient_check,
-	 						 myParam.norm_clipping); //,						 		
+	 						 myParam.norm_clipping,
+							 current_h,
+							 current_c);							 						 		
 				} else {
 					//cerr<<" decoder_training_output_sent_data "<<decoder_training_output_sent_data<<endl;
 					//getchar();
@@ -907,7 +906,9 @@ int main(int argc, char** argv)
 						 //softmax_nce_loss); //,
 	 				    prop.bPropDecoder(decoder_training_input_sent_data,
 	 						 myParam.gradient_check,						  
-							 myParam.norm_clipping);
+							 myParam.norm_clipping,
+							 current_h,
+							 current_c);
 				 }	
 
 					 

@@ -92,10 +92,10 @@ public:
 	Node<Linear_diagonal_layer> W_c_to_i_node, W_c_to_f_node, W_c_to_o_node;
     Node<Hidden_layer> i_t_node,f_t_node,o_t_node,tanh_c_prime_t_node;
 	Node<Activation_function> tanh_c_t_node;
-	Dropout_layer output_dropout_layer;
+	Dropout_layer h_t_dropout_layer;
 	
 
-	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,c_t_minus_one, h_t_minus_one;
+	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> h_t,c_t,m_t,c_t_minus_one, h_t_minus_one;
 	Eigen::Matrix<precision_type,Eigen::Dynamic,Eigen::Dynamic> d_Err_t_to_n_d_h_t,
 														d_Err_t_to_n_d_c_t,
 														d_Err_t_to_n_d_o_t,
@@ -130,6 +130,7 @@ public:
 		o_t_node(),
 		tanh_c_prime_t_node(),
 		tanh_c_t_node(),
+		h_t_dropout_layer(Dropout_layer()),
 		//input_layer_node(),
 		input_node(NULL) {}
 
@@ -170,8 +171,8 @@ public:
 		//Resizing all the local node matrices
 		h_t.setZero(W_h_to_i_node.param->n_inputs(),minibatch_size);
 		c_t.setZero(W_c_to_i_node.param->n_inputs(),minibatch_size);
-		h_t_minus_one.setZero(W_h_to_i_node.param->n_inputs(),minibatch_size);
-		c_t_minus_one.setZero(W_c_to_i_node.param->n_inputs(),minibatch_size);
+		//h_t_minus_one.setZero(W_h_to_i_node.param->n_inputs(),minibatch_size);
+		//c_t_minus_one.setZero(W_c_to_i_node.param->n_inputs(),minibatch_size);
 		//cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
 		d_Err_t_to_n_d_h_t.setZero(W_h_to_i_node.param->n_outputs(),minibatch_size);
 		d_Err_t_to_n_d_c_t.setZero(W_c_to_i_node.param->n_outputs(),minibatch_size);
@@ -189,6 +190,22 @@ public:
 		tanh_c_prime_t_input_matrix.setZero(tanh_c_prime_t_node.param->n_inputs(),minibatch_size);
 		
 	} 
+	void resizeDropout(int minibatch_size,
+						precision_type dropout_probability){
+		resize (minibatch_size);
+		//If using dropout
+		//cerr<<"In resize dropout "<<endl;
+		//getchar();
+		if (dropout_probability > 0) {
+			//cerr<<"ht cols is "<<this->h_t.rows()<<endl;
+			h_t_dropout_layer = Dropout_layer(this->h_t.rows(), 
+											minibatch_size, 
+											1.-dropout_probability);
+		} else {
+			//cerr<<"Warning the dropout probability has to be greater than 0!"<<endl;
+			//exit(1);
+		}			
+	}
 
 	void set_input_node(input_node_type &input_node){this->input_node = &input_node;}
 
@@ -200,12 +217,14 @@ public:
 	void fPropInputDropout(const MatrixBase<Derived> &data,
 					  Engine &eng) {
 		input_node->fPropDropout(data,eng);
-	}	
-	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	}		
+	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn, typename DerivedH, typename DerivedC>
 	void bProp(const MatrixBase<DerivedData> &data,
 			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   const MatrixBase<DerivedH> &h_t_minus_one,
+			   const MatrixBase<DerivedC> &c_t_minus_one,
 			   bool gradient_check,
 			   bool norm_clipping){
 				   
@@ -214,6 +233,8 @@ public:
 		bPropLSTMBlock(d_Err_t_d_h_t,
 				   d_Err_tPlusOne_to_n_d_c_t,
 				   d_Err_tPlusOne_to_n_d_h_t,
+				   h_t_minus_one,
+				   c_t_minus_one,
 				   gradient_check,
 				   norm_clipping,
 				   current_minibatch_size);	
@@ -221,18 +242,28 @@ public:
 		bPropInput(data);	
 	}
 	
-	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	template<typename DerivedData, typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn, typename DerivedH, typename DerivedC>
 	void bPropDropout(const MatrixBase<DerivedData> &data,
 			   const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   const MatrixBase<DerivedH> &h_t_minus_one,
+			   const MatrixBase<DerivedC> &c_t_minus_one,
 			   bool gradient_check,
 			   bool norm_clipping){
 	   		int current_minibatch_size = data.cols();
-	
+			//Make sure the dropout is applied to both the error from time 
+			//t and time t+1 to n1 and not just d_Err_t_d_h_t because the dropped out h_t
+			//is used for both predicting the output label and for the next
+			//LSTM block
+			//h_t_dropout_layer.bProp(d_Err_t_d_h_t);
+			//h_t_dropout_layer.bProp(d_Err_tPlusOne_to_n_d_h_t);
+			//cerr<<"c_t_minus_one.rows() "<<c_t_minus_one.rows()<<" c_t_minus_one.cols() "<<c_t_minus_one.cols()<<endl;
 	   		bPropLSTMBlock(d_Err_t_d_h_t,
 	   				   d_Err_tPlusOne_to_n_d_c_t,
 	   				   d_Err_tPlusOne_to_n_d_h_t,
+					   h_t_minus_one,
+					   c_t_minus_one,
 	   				   gradient_check,
 	   				   norm_clipping,
 	   				   current_minibatch_size);	
@@ -240,24 +271,30 @@ public:
 	   		bPropInputDropout(data);			
 	}
 
-	template<typename Derived>
-    void fProp(const MatrixBase<Derived> &data) { //,	
+	template<typename Derived, typename DerivedH, typename DerivedC>
+    void fProp(const MatrixBase<Derived> &data,
+			   const MatrixBase<DerivedH> &h_t_minus_one,
+			   const MatrixBase<DerivedC> &c_t_minus_one) { //,	
 
 		fPropInput(data);
-		fPropLSTMBlock();
+		fPropLSTMBlock(h_t_minus_one,
+					   c_t_minus_one);
 
 
 	}
 	
-	template<typename Derived, typename Engine>
+	template<typename Derived, typename Engine, typename DerivedH, typename DerivedC>
     void fPropDropout(const MatrixBase<Derived> &data,
-					  Engine &eng) { //,	
-
+					  Engine &eng,
+	   			   	  const MatrixBase<DerivedH> &h_t_minus_one,
+	   			   	  const MatrixBase<DerivedC> &c_t_minus_one) { 
 		fPropInputDropout(data, eng);
-		fPropLSTMBlock();
-
+		fPropLSTMBlock(h_t_minus_one,
+					   c_t_minus_one);
+		//h_t_dropout_layer.fProp(this->h_t,eng);
 
 	}
+	
 	template<typename DerivedData>	
 	void bPropInput(const MatrixBase<DerivedData> &data){
 		input_node->bProp(data,
@@ -280,7 +317,9 @@ public:
 	
 	#ifdef PEEP
 
-	void fPropLSTMBlock() {	
+	template <typename DerivedH, typename DerivedC>
+	void fPropLSTMBlock(const MatrixBase<DerivedH> &h_t_minus_one,
+						const MatrixBase<DerivedC> &c_t_minus_one) {	
 		//How much to remember
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		W_c_to_i_node.param->fProp(c_t_minus_one,W_c_to_i_node.fProp_matrix);
@@ -328,10 +367,12 @@ public:
 	
 
 		
-	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn, typename DerivedH, typename DerivedC>
 	void bPropLSTMBlock (const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   const MatrixBase<DerivedH> &h_t_minus_one,
+			   const MatrixBase<DerivedC> &c_t_minus_one, 
 			   bool gradient_check,
 			   bool norm_clipping,
 			   int current_minibatch_size) {
@@ -455,14 +496,49 @@ public:
    		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
    		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
    		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));	
-		   	
+		
+		//updateGradient(h_t_minus_one,
+		//			   c_t_minus_one,
+		//			   current_minibatch_size);		
 	}
-	
+
+	template <typename DerivedH, typename DerivedC> 
+	void updateGradient(const MatrixBase<DerivedH> &h_t_minus_one,
+						const MatrixBase<DerivedC> &c_t_minus_one,
+						int current_minibatch_size){
+   	    W_h_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											h_t_minus_one.leftCols(current_minibatch_size));
+   	    //cerr<<"W_h_to_f_node"<<endl;										
+   	    W_h_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											h_t_minus_one.leftCols(current_minibatch_size));
+   		//cerr<<"W_h_to_i_node"<<endl;									
+   	    W_h_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											h_t_minus_one.leftCols(current_minibatch_size));		
+   		//cerr<<"W_h_to_c_node"<<endl;									
+      	W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
+      						 					h_t_minus_one.leftCols(current_minibatch_size));
+									
+   		//Derivative of weights out of c_t and c_t_minus_one
+   	    W_c_to_o_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											this->c_t.leftCols(current_minibatch_size));
+   	    W_c_to_i_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											c_t_minus_one.leftCols(current_minibatch_size));
+   	    W_c_to_f_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size),
+   											c_t_minus_one.leftCols(current_minibatch_size));		
+
+   		// Updating the gradient of the hidden layer biases									
+   		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
+   		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
+   		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
+   		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));			
+	}
 	#else
 
 	//fProp without peeps
 
-	void fPropLSTMBlock() {
+	template <typename DerivedH, typename DerivedC>
+	void fPropLSTMBlock(const MatrixBase<DerivedH> &h_t_minus_one,
+						const MatrixBase<DerivedC> &c_t_minus_one) {
 		//std::cerr<<"x to i fprop"<<W_x_to_i_node.fProp_matrix<<std::endl;
 		W_h_to_i_node.param->fProp(h_t_minus_one,W_h_to_i_node.fProp_matrix);
 		//W_x_to_c_node.param->fProp(input_layer_node.fProp_matrix,W_x_to_c_node.fProp_matrix);
@@ -513,16 +589,21 @@ public:
 		//computing the hidden layer
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
-		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
+		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();	
+		m_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
+		//cerr<<"h_t is "<<h_t<<endl;
+		//cerr<<"m_t is "<<m_t<<endl;
 
 	}
 
 
 	
-	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn>
+	template<typename DerivedIn, typename DerivedDCIn, typename DerivedDHIn, typename DerivedH, typename DerivedC>
 	void bPropLSTMBlock (const MatrixBase<DerivedIn> &d_Err_t_d_h_t,
 			   const MatrixBase<DerivedDCIn> &d_Err_tPlusOne_to_n_d_c_t,
 			   const MatrixBase<DerivedDHIn> &d_Err_tPlusOne_to_n_d_h_t,
+			   const MatrixBase<DerivedH> &h_t_minus_one,
+			   const MatrixBase<DerivedC> &c_t_minus_one,			   
 			   bool gradient_check,
 			   bool norm_clipping,
 			   int current_minibatch_size) {	   
@@ -534,7 +615,9 @@ public:
 		//error function, which is the cross entropy.
 
 		//Error derivatives for h_t
-
+		//cerr<<"d_Err_t_d_h_t.cols() "<<d_Err_t_d_h_t.cols()<<endl;
+		//cerr<<"d_Err_t_d_h_t "<<d_Err_t_d_h_t<<endl;
+		//cerr<<" d_Err_tPlusOne_to_n_d_h_t.cols()"<<d_Err_tPlusOne_to_n_d_h_t.cols()<<endl;
 		d_Err_t_to_n_d_h_t = d_Err_t_d_h_t + d_Err_tPlusOne_to_n_d_h_t;
 
 		//Error derivativs for o_t
@@ -561,6 +644,8 @@ public:
 		d_Err_t_to_n_d_c_t.noalias() =  tanh_c_t_node.bProp_matrix + d_Err_tPlusOne_to_n_d_c_t;
 
 		//Error derivatives for f_t
+		//cerr<<"c_t_minus_one size "<<c_t_minus_one.rows()<<" "<<c_t_minus_one.cols()<<endl;
+		//cerr<<"c_t_minus_one "<<c_t_minus_one<<endl;
 		d_Err_t_to_n_d_f_t.array() = d_Err_t_to_n_d_c_t.array()*c_t_minus_one.array();
 		//cerr<<"d_Err_t_to_n_d_f_t "<<d_Err_t_to_n_d_f_t<<endl;
 		f_t_node.param->bProp(d_Err_t_to_n_d_f_t,
@@ -603,7 +688,15 @@ public:
 		d_Err_t_to_n_d_c_tMinusOne.noalias() = (d_Err_t_to_n_d_c_t.array()*f_t_node.fProp_matrix.array()).matrix();
 	
 
+		updateGradient(h_t_minus_one,
+					   c_t_minus_one,
+					   current_minibatch_size);	   	
+	}	
 	
+	template <typename DerivedH, typename DerivedC> 
+	void updateGradient(const MatrixBase<DerivedH> &h_t_minus_one,
+						const MatrixBase<DerivedC> &c_t_minus_one,
+						int current_minibatch_size){
 		//Computing gradients of the paramters
 		//Derivative of weights out of h_t
 		//cerr<<"W_h_to_o_node"<<endl;
@@ -618,15 +711,15 @@ public:
 		//cerr<<"W_h_to_c_node"<<endl;									
 	  	W_h_to_c_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size),
 	  						 					h_t_minus_one.leftCols(current_minibatch_size));
-	
-								
+
+			
 
 
 		// Updating the gradient of the hidden layer biases									
 		o_t_node.param->updateGradient(o_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		f_t_node.param->updateGradient(f_t_node.bProp_matrix.leftCols(current_minibatch_size));
 		i_t_node.param->updateGradient(i_t_node.bProp_matrix.leftCols(current_minibatch_size));
-		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));		   	
+		tanh_c_prime_t_node.param->updateGradient(tanh_c_prime_t_node.bProp_matrix.leftCols(current_minibatch_size));								
 	}	
 	
 	#endif
@@ -754,7 +847,6 @@ public:
 
 	
 };
-
 
 
 class Standard_input_node{
@@ -911,7 +1003,9 @@ public:
 						Engine &eng){
 		//cerr<<"in fProp dropout"<<endl;
 		fPropInput(data);
-		x_t_dropout_layer.fProp(input_layer_node.fProp_matrix,eng);
+		x_t_dropout_layer.fProp(input_layer_node.fProp_matrix,
+								input_layer_node.fProp_matrix,
+								eng);
 		fPropProjections();
 	}
 	
@@ -963,7 +1057,7 @@ public:
 				f_t_node_bProp_matrix,
 				tanh_c_prime_t_node_bProp_matrix,
 				current_minibatch_size);
-		x_t_dropout_layer.bProp(d_Err_t_to_n_d_x_t);
+		x_t_dropout_layer.bProp(d_Err_t_to_n_d_x_t, d_Err_t_to_n_d_x_t);
 		bPropInput(data);				
 	}
 					

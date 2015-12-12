@@ -1,0 +1,5 @@
+Changes from the previous repo (LSTM_MINIBATCH_NEURAL_MT):
+
+1. The input is now a vector of matrices
+2. LSTMs are now functions (they take in h_t, c_t, and they take in derivatives)
+

@@ -33,7 +33,10 @@ namespace nplm
 		//vector<Matrix<precision_type,Dynamic,Dynamic> > losses;
 		vector<Output_loss_node> losses;
 		vector<Dropout_layer> output_dropout_layers;
+		vector<Node<Dropout_layer> > output_dropout_layer_nodes;
 		SoftmaxNCELoss nce_loss;
+		Matrix<precision_type, Dynamic, Dynamic> dummy_zeros, dummy_ones;
+		
 
 	public:
 	    propagator() : minibatch_size(0), 
@@ -48,6 +51,7 @@ namespace nplm
 					losses(vector<Output_loss_node>(105,Output_loss_node())),
 					unif_real(0.0,1.0),
 					output_dropout_layers(vector<Dropout_layer>()),
+					output_dropout_layer_nodes(vector<Node<Dropout_layer> >()),
 					nce_loss(){ }
 
 	    propagator (model &encoder_lstm, 
@@ -65,6 +69,7 @@ namespace nplm
 			losses(vector<Output_loss_node>(105,Output_loss_node())),
 			unif_real(0.0,1.0),
 			output_dropout_layers(vector<Dropout_layer>()),
+			output_dropout_layer_nodes(vector<Node<Dropout_layer> >()),
 			nce_loss()
 			{
 				resize(minibatch_size);
@@ -135,6 +140,8 @@ namespace nplm
 				
 	    void resize(int minibatch_size) {
 			this->minibatch_size = minibatch_size;
+			dummy_zeros.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
 			resizeOutput(minibatch_size);
 			resizeEncoderNodes(minibatch_size);
 			resizeDecoderNodes(minibatch_size);
@@ -148,11 +155,10 @@ namespace nplm
 			this->output_dropout_layers = vector<Dropout_layer>(105,Dropout_layer(output_layer_node.param->n_inputs(),
 																		minibatch_size,
 																		1-dropout_probability));
-			/*
-			for (int i=0; i<this->output_dropout_layers.size(); i++){
-				this->output_dropout_layers[i].resize(minibatch_size, 1-dropout_probability);
-			}
-			*/
+			this->output_dropout_layer_nodes.clear();
+			for (int i=0; i<output_dropout_layers.size(); i++) {
+				this->output_dropout_layer_nodes.push_back(Node<Dropout_layer>(&this->output_dropout_layers[i], minibatch_size));
+			}																	
 		}
 		
 	    void resizeDropout(int minibatch_size, precision_type dropout_probability) {
@@ -209,49 +215,78 @@ namespace nplm
 			//cerr<<"current h is "<<current_h<<endl;
 			//cerr<<"End pos is "<<end_pos<<endl;
 			//Going over the output sentence to generate the hidden states
+			//Going over the output sentence to generate the hidden states
 			for (int i=0; i<output_sent_len; i++){
 				//cerr<<"i is"<<i<<endl;
 				if (i==0) {
-					//cerr<<"Current c is "<<current_c<<endl;
-					//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-					//decoder_lstm_nodes[i].copyToHiddenStates(const_current_h,const_current_c);//,sequence_cont_indices.row(i));
-					//cerr<<"const_current_c"<<const_current_c<<endl;
-					//cerr<<"const_current_h"<<const_current_h<<endl;
-					decoder_lstm_nodes[i].filterStatesAndErrors(const_current_h,
-																const_current_c,
-																decoder_lstm_nodes[i].h_t_minus_one,
-																decoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));			
-																
-					decoder_lstm_nodes[i].fProp(output_data.row(i));//,	
-					//cerr<<"output data is "<<output_data.row(i)<<endl;
-										//current_c,
-										//current_h);
+
+					decoder_lstm_nodes[i].fProp(output_data.row(i),
+											const_current_h,
+											const_current_c);	
+
 				} else {
-					//cerr<<"Data is "<<data.row(i)<<endl;
-					//cerr<<"index is "<<i<<endl;
-					//decoder_lstm_nodes[i].copyToHiddenStates(decoder_lstm_nodes[i-1].h_t,decoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
 					
-					decoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[i-1].h_t,
-																decoder_lstm_nodes[i-1].c_t,
-																decoder_lstm_nodes[i].h_t_minus_one,
-																decoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));					
-																
-					decoder_lstm_nodes[i].fProp(output_data.row(i));//,
-					
-										//(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix(),
-										//	(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i-1)).matrix());
+						
+					decoder_lstm_nodes[i].fProp(output_data.row(i),
+											decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);
+										
+
 				}
-				//encoder_lstm_nodes.fProp();
-				//cerr<<"decoder_lstm_nodes[i].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes[i].c_t_minus_one "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t_minus_one "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-				//cerr<<"decoder_lstm_nodes["<<i<<"].h_t "<<decoder_lstm_nodes[i].h_t<<endl;
+				zeroOutState(decoder_lstm_nodes[i].h_t,
+							sequence_cont_indices.row(i));
+				zeroOutState(decoder_lstm_nodes[i].c_t,
+							sequence_cont_indices.row(i));	
+
+				
 			}			
 
 	    }
-		
+
+		//Both the input and the output sentences are columns. Even ifs a minibatch of sentences, each sentence is a column
+	    template <typename Type, typename DerivedH, typename DerivedC, typename DerivedS>
+	    void fPropDecoder(const vector<Type> &output_data,
+				const MatrixBase<DerivedC> &const_current_c,
+				const MatrixBase<DerivedH> &const_current_h,
+				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
+	    {
+
+			//The data is just an eigen matrix. Now I have to go over each column and do fProp
+			//int sent_len = input_data.rows();
+			int output_sent_len = output_data.size();
+			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
+			int current_minibatch_size = sequence_cont_indices.cols();
+
+			//Going over the output sentence to generate the hidden states
+			for (int i=0; i<output_sent_len; i++){
+				//cerr<<"i is"<<i<<endl;
+				if (i==0) {
+
+					decoder_lstm_nodes[i].fProp(output_data[i],
+											const_current_h,
+											const_current_c);											
+
+				} else {
+					
+						
+					decoder_lstm_nodes[i].fProp(output_data[i],
+											decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);
+
+				}
+				zeroOutState(decoder_lstm_nodes[i].h_t,
+							sequence_cont_indices.row(i));
+				zeroOutState(decoder_lstm_nodes[i].c_t,
+							sequence_cont_indices.row(i));	
+
+				//cerr<<"i "<<i<<endl;
+				//cerr<<" second_decoder_lstm_nodes[i].h_t "<<second_decoder_lstm_nodes[i].h_t<<endl;
+				//cerr<<" decoder_lstm_nodes[i].h_ "<<decoder_lstm_nodes[i].h_t<<endl;
+				
+			}			
+
+	    }
+				
 		//Both the input and the output sentences are columns. Even ifs a minibatch of sentences, each sentence is a column
 	    template <typename DerivedOutput, typename DerivedH, typename DerivedC, typename DerivedS, typename Engine>
 	    void fPropDecoderDropout(const MatrixBase<DerivedOutput> &output_data,
@@ -271,34 +306,24 @@ namespace nplm
 			for (int i=0; i<output_sent_len; i++){
 				//cerr<<"i is"<<i<<endl;
 				if (i==0) {
-					//cerr<<"Current c is "<<current_c<<endl;
-					//NEED TO CHECK THIS!! YOU SHOULD JUST TAKE THE HIDDEN STATE FROM THE LAST POSITION
-					//decoder_lstm_nodes[i].copyToHiddenStates(const_current_h,const_current_c);//,sequence_cont_indices.row(i));
-					
-					decoder_lstm_nodes[i].filterStatesAndErrors(const_current_h,
-																const_current_c,
-																decoder_lstm_nodes[i].h_t_minus_one,
-																decoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));			
-																
-					decoder_lstm_nodes[i].fPropDropout(output_data.row(i), eng);//,	
-					//cerr<<"output data is "<<output_data.row(i)<<endl;
-										//current_c,
-										//current_h);
+
+					decoder_lstm_nodes[i].fPropDropout(output_data.row(i), eng,
+														const_current_h,
+														const_current_c);//,	
+
 				} else {
 
-					
-					decoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[i-1].h_t,
-																decoder_lstm_nodes[i-1].c_t,
-																decoder_lstm_nodes[i].h_t_minus_one,
-																decoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i));						
-																
-					decoder_lstm_nodes[i].fPropDropout(output_data.row(i), eng);//,
-					
+								
+					decoder_lstm_nodes[i].fPropDropout(output_data.row(i), eng,
+											decoder_lstm_nodes[i-1].h_t,
+											decoder_lstm_nodes[i-1].c_t);
 
 				}
-
+				zeroOutState(decoder_lstm_nodes[i].h_t,
+							sequence_cont_indices.row(i));
+				zeroOutState(decoder_lstm_nodes[i].c_t,
+							sequence_cont_indices.row(i));
+							
 			}			
 
 	    }
@@ -320,42 +345,29 @@ namespace nplm
 			//Matrix<precision_type,Dynamic,Dynamic> c_0,h_0,c_1,h_1;
 			int current_minibatch_size = input_data.cols();
 
+			//Going over the output sentence to generate the hidden states
 			for (int i=0; i<sent_len; i++){
-				//cerr<<"sequence cont indices are "<<sequence_cont_indices.row(i)<<endl;
 				//cerr<<"i is"<<i<<endl;
-				//cerr<<"input is "<<input_data.row(i)<<endl;
 				if (i==0) {
-					//cerr<<"Current c is "<<current_c<<endl;
-					//encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
-					
-				
-					encoder_lstm_nodes[i].filterStatesAndErrors(current_h,
-																current_c,
-																encoder_lstm_nodes[i].h_t_minus_one,
-																encoder_lstm_nodes[i].c_t_minus_one,
-																//dummy_ones); //this might just be a patch for now
-																sequence_cont_indices.row(i));	
-					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one 					"<<encoder_lstm_nodes[i].h_t_minus_one<<endl;											
-					encoder_lstm_nodes[i].fProp(input_data.row(i));//,	
-										//current_c,
-										//current_h);
+
+					encoder_lstm_nodes[i].fProp(input_data.row(i),
+														const_current_h,
+														const_current_c);//,	
+
 				} else {
 
-					//encoder_lstm_nodes[i].copyToHiddenStates(encoder_lstm_nodes[i-1].h_t,encoder_lstm_nodes[i-1].c_t);//,sequence_cont_ind					ices.row(i));
-					
-					encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i-1].h_t,
-																encoder_lstm_nodes[i-1].c_t,
-																encoder_lstm_nodes[i].h_t_minus_one,
-																encoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i-1)); //THIS IS JUST A TEMPORARY FIX THAT ASSUMES THE INITIAL HIDDEN STATES ARE 0
-					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one 					"<<encoder_lstm_nodes[i].h_t_minus_one<<endl;																			
-					encoder_lstm_nodes[i].fProp(input_data.row(i));//,
+								
+					encoder_lstm_nodes[i].fProp(input_data.row(i),
+											encoder_lstm_nodes[i-1].h_t,
+											encoder_lstm_nodes[i-1].c_t);
 
 				}
-				//encoder_lstm_nodes.fProp();
-				//cerr<<"encoder_lstm_nodes["<<i<<"].h_t "<<encoder_lstm_nodes[i].h_t<<endl;
-				
-			}
+				zeroOutState(encoder_lstm_nodes[i].h_t,
+							sequence_cont_indices.row(i));
+				zeroOutState(encoder_lstm_nodes[i].c_t,
+							sequence_cont_indices.row(i));
+							
+			}			
 			//Copying the cell and hidden states if the sequence continuation vectors say so	
 			//cerr<<"end pos is"<<end_pos<<endl;
 			current_c = encoder_lstm_nodes[sent_len-1].c_t;
@@ -371,7 +383,7 @@ namespace nplm
 				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices,
 				Engine &eng)
 	    {
-			//cerr<<"In fprop encoder dropout"<<endl;
+			cerr<<"In fprop encoder dropout"<<endl;
 			//cerr<<"input_data.rows() "<<input_data.rows()<<endl;
 			//cerr<<"input_data "<<input_data<<endl;
 			UNCONST(DerivedC, const_current_c, current_c);
@@ -387,42 +399,35 @@ namespace nplm
 			//Going over the input sentence to generate the hidden states
 			//Matrix<DerivedInput> dummy_ones;
 			//dummy_ones.setOnes(1,current_minibatch_size);
+			//Going over the output sentence to generate the hidden states
 			for (int i=0; i<sent_len; i++){
-				//cerr<<"sequence cont indices are "<<sequence_cont_indices.row(i)<<endl;
 				//cerr<<"i is"<<i<<endl;
-				//cerr<<"input is "<<input_data.row(i)<<endl;
 				if (i==0) {
-					//cerr<<"Current c is "<<current_c<<endl;
-					//encoder_lstm_nodes[i].copyToHiddenStates(current_h,current_c);//,sequence_cont_indices.row(i));
-					
-				
-					encoder_lstm_nodes[i].filterStatesAndErrors(current_h,
-																current_c,
-																encoder_lstm_nodes[i].h_t_minus_one,
-																encoder_lstm_nodes[i].c_t_minus_one,
-																//dummy_ones); //this might just be a patch for now
-																sequence_cont_indices.row(i));	
-					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one "<<encoder_lstm_nodes[i].h_t_minus_one<<endl;											
-					encoder_lstm_nodes[i].fPropDropout(input_data.row(i), eng);//,	
-										//current_c,
-										//current_h);
+					//cerr<<"before encoder_lstm_nodes[0].h_t "<<encoder_lstm_nodes[i].h_t<<endl;
+					//cerr<<"before encoder_lstm_nodes[0].m_t "<<encoder_lstm_nodes[i].m_t<<endl;
+					encoder_lstm_nodes[i].fPropDropout(input_data.row(i), eng,
+														const_current_h,
+														const_current_c);//,
+					//cerr<<"encoder_lstm_nodes[0].h_t "<<encoder_lstm_nodes[i].h_t<<endl;
+					//cerr<<"after encoder_lstm_nodes[0].m_t "<<encoder_lstm_nodes[i].m_t<<endl;
+
 				} else {
 
-					//encoder_lstm_nodes[i].copyToHiddenStates(encoder_lstm_nodes[i-1].h_t,encoder_lstm_nodes[i-1].c_t);//,sequence_cont_indices.row(i));
-					
-					encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i-1].h_t,
-																encoder_lstm_nodes[i-1].c_t,
-																encoder_lstm_nodes[i].h_t_minus_one,
-																encoder_lstm_nodes[i].c_t_minus_one,
-																sequence_cont_indices.row(i-1)); //THIS IS JUST A TEMPORARY FIX THAT ASSUMES THE INITIAL HIDDEN STATES ARE 0
-					//cerr<<"encoder_lstm_nodes["<<i<<"].h_t_minus_one "<<encoder_lstm_nodes[i].h_t_minus_one<<endl;																			
-					encoder_lstm_nodes[i].fPropDropout(input_data.row(i), eng);//,
+					//cerr<<"doing encoder fProp"<<endl;
+					//cerr<<"encoder_lstm_nodes[i-1].h_t size "<<encoder_lstm_nodes[i-1].h_t.rows()<<" "<<encoder_lstm_nodes[i-1].h_t.cols()<<endl;
+					//cerr<<"encoder_lstm_nodes[i-1].h_t "<<encoder_lstm_nodes[i-1].h_t<<endl;
+					//cerr<<"encoder_lstm_nodes[i-1].c_t "<<encoder_lstm_nodes[i-1].c_t<<endl;
+					encoder_lstm_nodes[i].fPropDropout(input_data.row(i), eng,
+											encoder_lstm_nodes[i-1].h_t,
+											encoder_lstm_nodes[i-1].c_t);
 
 				}
-				//encoder_lstm_nodes.fProp();
-				//cerr<<"encoder_lstm_nodes["<<i<<"].h_t "<<encoder_lstm_nodes[i].h_t<<endl;
-				
-			}
+				zeroOutState(encoder_lstm_nodes[i].h_t,
+							sequence_cont_indices.row(i));
+				zeroOutState(encoder_lstm_nodes[i].c_t,
+							sequence_cont_indices.row(i));
+							
+			}			
 			//Copying the cell and hidden states if the sequence continuation vectors say so	
 			//cerr<<"end pos is"<<end_pos<<endl;
 			current_c = encoder_lstm_nodes[sent_len-1].c_t;
@@ -430,7 +435,610 @@ namespace nplm
 
 
 	    }
+
+
+	    // Dense version (for standard log-likelihood)
+	    template <typename DerivedOut, typename DerivedH, typename DerivedC> //, typename DerivedC, typename DerivedH, typename DerivedS>
+	    void bPropDecoder(const MatrixBase<DerivedOut> &output_data,
+			 bool gradient_check,
+			 bool norm_clipping,
+			 const MatrixBase<DerivedH> &init_h,
+			 const MatrixBase<DerivedC> &init_c)
+	    {	
+		
+			//cerr<<"In backprop..."<<endl;
+			int current_minibatch_size = output_data.cols();
+			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+			//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			
+			int output_sent_len = output_data.rows(); 
+			//precision_type log_likelihood = 0.;
+			
+			//first getting decoder loss
+			for (int i=output_sent_len-1; i>=0; i--) {
+				if (i==0 && output_sent_len-1 > 0) {
+				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+							   //init_h,
+				   			   //init_c,
+								losses[i].d_Err_t_d_h_t,
+ 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+ 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+ 							   //ASSUMING THAT THE START VECTORS ARE ALL 0. THIS MIGHT NOT BE THE CASE
+ 							   init_h,
+ 							   init_c,
+ 							   gradient_check,
+ 							   norm_clipping);	
+				}else if (i == 0) {	
+
+
+				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+							   losses[i].d_Err_t_d_h_t,
+							   //output_layer_node.bProp_matrix,
+				   			   dummy_zeros, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+				   			   dummy_zeros,
+				   			   init_h,
+							   init_c,									   
+							   gradient_check,
+							   norm_clipping); 
+				} else if (i == output_sent_len-1) {	
+
+
+				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+							   losses[i].d_Err_t_d_h_t,
+							   //output_layer_node.bProp_matrix,
+				   			   dummy_zeros, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+				   			   dummy_zeros,
+				   			   decoder_lstm_nodes[i-1].h_t,
+							   decoder_lstm_nodes[i-1].c_t,									   
+							   gradient_check,
+							   norm_clipping);
+		
+				} else if (i > 0) {
+					
+				    decoder_lstm_nodes[i].bProp(output_data.row(i),
+							   losses[i].d_Err_t_d_h_t,
+							   //input_layer_node.bProp_matrix,
+				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+				   			   decoder_lstm_nodes[i-1].h_t,
+							   decoder_lstm_nodes[i-1].c_t,							   
+							   gradient_check,
+							   norm_clipping);	
+							   //cerr<<"decoder_lstm_nodes[i-1].h_t "<<decoder_lstm_nodes[i-1].h_t<<endl;
+							   //cerr<<"decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne "<<decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne<<endl;
+				} 		   
+
+			}
+
+	  }
+	  		
+	    // Dense version (for standard log-likelihood)
+	    template <typename DerivedOut, typename DerivedH, typename DerivedC> 
+	    void bPropDecoderDropout(const MatrixBase<DerivedOut> &output_data,
+			 bool gradient_check,
+			 bool norm_clipping,
+			 const MatrixBase<DerivedH> &init_h,
+			 const MatrixBase<DerivedC> &init_c)
+	    {			
+			//cerr<<"In backprop..."<<endl;
+			int current_minibatch_size = output_data.cols();
+			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+			//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+			//same dimension in and LSTM. this might not be a good idea
+			//dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+			//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+			
+			int output_sent_len = output_data.rows(); 
+			//precision_type log_likelihood = 0.;
+			
+			//first getting decoder loss
+			for (int i=output_sent_len-1; i>=0; i--) {
+				if (i==0 && output_sent_len-1 > 0) {
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+							   //losses[i].d_Err_t_d_h_t,
+							   output_dropout_layer_nodes[i].bProp_matrix,
+ 				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+ 							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+ 							   //ASSUMING THAT THE START VECTORS ARE ALL 0. THIS MIGHT NOT BE THE CASE
+ 							   init_h,
+ 							   init_c,
+ 							   gradient_check,
+ 							   norm_clipping);	
+				} else if (i == 0) {	
+
+
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+							   //losses[i].d_Err_t_d_h_t,
+							   output_dropout_layer_nodes[i].bProp_matrix,
+							   //output_layer_node.bProp_matrix,
+				   			   dummy_zeros, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+				   			   dummy_zeros,
+				   			   init_h,
+							   init_c,									   
+							   gradient_check,
+							   norm_clipping); 
+				} else if (i == output_sent_len-1) {	
+
+
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+							   //losses[i].d_Err_t_d_h_t,
+							   output_dropout_layer_nodes[i].bProp_matrix,
+							   //output_layer_node.bProp_matrix,
+				   			   dummy_zeros, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+				   			   dummy_zeros,
+				   			   decoder_lstm_nodes[i-1].h_t,
+							   decoder_lstm_nodes[i-1].c_t,									   
+							   gradient_check,
+							   norm_clipping);
+		
+				} else if (i > 0) {
+					
+				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
+							   //losses[i].d_Err_t_d_h_t,
+							   output_dropout_layer_nodes[i].bProp_matrix,
+							   //input_layer_node.bProp_matrix,
+				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+				   			   decoder_lstm_nodes[i-1].h_t,
+							   decoder_lstm_nodes[i-1].c_t,							   
+							   gradient_check,
+							   norm_clipping);	
+							   //cerr<<"decoder_lstm_nodes[i-1].h_t "<<decoder_lstm_nodes[i-1].h_t<<endl;
+							   //cerr<<"decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne "<<decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne<<endl;
+				} 		   
+
+			}
+
+	  }
+
+
+	  
+  // Dense version (for standard log-likelihood)
+  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
+  void bPropEncoder(const MatrixBase<DerivedIn> &input_data,
+	 bool gradient_check,
+	 bool norm_clipping,
+	 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
+	 //const MatrixBase<DerivedC> &init_c,
+	 //const MatrixBase<DerivedH> &init_h,
+	 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
+  {	
+
+	//cerr<<"In backprop..."<<endl;
+	int current_minibatch_size = input_data.cols();
+	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+	//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+	//same dimension in and LSTM. this might not be a good idea
+	//dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+	//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+	
+	int input_sent_len = input_data.rows();
+
+	//Now backpropping through the encoder
+
+	//cerr<<"dummy zero is "<<dummy_zero<<endl;
+	for (int i=input_sent_len-1; i>=0; i--) {
+		//We need to zero out the backpropagated derivatives from the future if the sequence_cont_indices says so.
+		if (i < input_sent_len-1) { 
+			
+			zeroOutState(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+						sequence_cont_indices.row(i));
+			zeroOutState(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+						sequence_cont_indices.row(i));
+		}				
+		//getchar();
+		// Now calling backprop for the LSTM nodes
+	 	if (i ==0 && input_sent_len-1 > 0) {
+		    encoder_lstm_nodes[i].bProp(input_data.row(i),
+					   dummy_zeros,
+		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+		   			   dummy_zeros,
+					   dummy_zeros,					   
+					   gradient_check,
+					   norm_clipping);	 
+					   		
+	 	} else if (i == input_sent_len-1) {											
+		    encoder_lstm_nodes[i].bProp(input_data.row(i),
+					   dummy_zeros,
+		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
+		   			   encoder_lstm_nodes[i-1].h_t,
+					   encoder_lstm_nodes[i-1].c_t,					   
+					   gradient_check,
+					   norm_clipping);
+
+		} else{
+
+		    encoder_lstm_nodes[i].bProp(input_data.row(i),
+					   dummy_zeros,
+		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+		   			   encoder_lstm_nodes[i-1].h_t,
+					   encoder_lstm_nodes[i-1].c_t,					   
+					   gradient_check,
+					   norm_clipping);				   						
+		} 		   
+   
+	}
+} 	  
+
+
+  // Dense version (for standard log-likelihood)
+  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
+  void bPropEncoderDropout(const MatrixBase<DerivedIn> &input_data,
+	 bool gradient_check,
+	 bool norm_clipping,
+	 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
+	 //const MatrixBase<DerivedC> &init_c,
+	 //const MatrixBase<DerivedH> &init_h,
+	 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
+  {	
+
+	//cerr<<"In backprop..."<<endl;
+	int current_minibatch_size = input_data.cols();
+	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+	//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+	//same dimension in and LSTM. this might not be a good idea
+	
+	int input_sent_len = input_data.rows();
+
+	//Now backpropping through the encoder
+
+	//cerr<<"dummy zero is "<<dummy_zero<<endl;
+	for (int i=input_sent_len-1; i>=0; i--) {
+		//We need to zero out the backpropagated derivatives from the future if the sequence_cont_indices says so.
+		if (i < input_sent_len-1) { 
+			
+			zeroOutState(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+						sequence_cont_indices.row(i));
+			zeroOutState(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+						sequence_cont_indices.row(i));
+
+		} 
+		//getchar();
+	 	if (i ==0 && input_sent_len-1 > 0) {
+		    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
+					   dummy_zeros,
+		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+		   			   dummy_zeros,
+					   dummy_zeros,					   
+					   gradient_check,
+					   norm_clipping);	 
+					   		
+	 	} else if (i == input_sent_len-1) {											
+		    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
+					   dummy_zeros,
+		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
+		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
+		   			   encoder_lstm_nodes[i-1].h_t,
+					   encoder_lstm_nodes[i-1].c_t,					   
+					   gradient_check,
+					   norm_clipping);
+
+		} else{
+
+		    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
+					   dummy_zeros,
+		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
+					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
+		   			   encoder_lstm_nodes[i-1].h_t,
+					   encoder_lstm_nodes[i-1].c_t,					   
+					   gradient_check,
+					   norm_clipping);				   						
+		} 		   
+   
+	}
+} 	  
+
+
+//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
+//losses from the next layer
+template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
+void computeLosses(const MatrixBase<DerivedOut> &output,
+	 precision_type &log_likelihood,
+	 bool gradient_check,
+	 bool norm_clipping,
+	 loss_function_type loss_function,
+	 multinomial<data_type> &unigram,
+	 int num_noise_samples,
+	 boost::random::mt19937 &rng) {
+	 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
+		int current_minibatch_size = output.cols();
+		//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+		//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+		//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+		//same dimension in and LSTM. this might not be a good idea
+		//dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+		//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+		//cerr<<"output is "<<output<<endl;
+		int sent_len = output.rows(); 
+		//precision_type log_likelihood = 0.;
+		//cerr<<"Sent len is "<<sent_len<<endl;
+		for (int i=sent_len-1; i>=0; i--) {
+			//cerr<<"i is "<<i<<endl;
+			precision_type minibatch_log_likelihood;
+			/*
+			string state_type = "h_t";
+			printHiddenStates(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), state_type);
+			state_type = "c_t";
+			printHiddenStates(decoder_lstm_nodes[i].c_t.leftCols(current_minibatch_size), state_type);
+			//getchar();
+			*/
+			if (loss_function == LogLoss) {
+				//First doing fProp for the output layer
+				//The number of columns in scores will be the current minibatch size
+				//cerr<<"ht going into loss"<<decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size)<<endl;
+				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
+				//then compute the log loss of the objective
+				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
+				//cerr<<"Score is"<<endl;
+				//cerr<<scores<<endl;
+		
+		        start_timer(5);
+		        SoftmaxLogLoss().fProp(scores, 
+		                   output.row(i), 
+		                   probs, 
+		                   minibatch_log_likelihood);
+				//cerr<<"probs is "<<probs<<endl;
+				//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
+		        stop_timer(5);
+		        log_likelihood += minibatch_log_likelihood;
+				//getchar();
+		        ///// Backward propagation
+
+		        start_timer(6);
+		        //SoftmaxLogLoss().bProp(output.row(i), 
+		        //           probs.leftCols(current_minibatch_size), 
+		        //           minibatch_weights);
+   		        SoftmaxLogLoss().bProp(output.row(i), 
+   		                   probs.leftCols(current_minibatch_size), 
+   		                   d_Err_t_d_output);
+				//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size)"<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+		        stop_timer(6);
+		
+
+				//Oh wow, i have not even been updating the gradient of the output embeddings
+				//Now computing the derivative of the output layer
+				//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
+   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
+								losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+							   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
+				//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
+				//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
+				//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
+				//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
+   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
+				//cerr<<" i is "<<i<<endl;
+				//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
+			} else if (loss_function == NCELoss){
+				//cerr<<"NOT IMPLEMENTED"<<endl;
+				//exit(1);
 				
+				generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
+				//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
+				//cerr<<"output "<<output<<endl;
+				//cerr<<" output.row(0)" <<output.row(0)<<endl;
+				//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+				//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+				//cerr<<"output.row(0) "<<output.row(0)<<endl;
+				//getchar();
+				minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
+				//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+				//getchar();
+				//preparing the minbatch with no zeros for fprop nce
+				minibatch_samples_no_negative = minibatch_samples;
+				for (int col=0; col<current_minibatch_size; col++){ 
+					if(minibatch_samples_no_negative(0,col) == -1){
+						minibatch_samples_no_negative(0,col) = 0;
+					}
+				}
+
+				//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
+				//getchar();
+				//cerr<<"Score is "<<scores<<endl;
+				scores.setZero();
+				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+												minibatch_samples_no_negative.leftCols(current_minibatch_size),
+												scores);
+				//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
+				//cerr<<"minibatch samples "<<minibatch_samples<<endl;
+				//getchar();
+				nce_loss.fProp(scores, 
+   			 				  minibatch_samples,
+   						   	  probs, 
+   						  	  minibatch_log_likelihood,
+							  this->fixed_partition_function);
+				log_likelihood += minibatch_log_likelihood;
+				//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
+					
+				nce_loss.bProp(probs.leftCols(current_minibatch_size),
+								d_Err_t_d_output);
+				//cerr<<"d_Err_t_d_output "<<d_Err_t_d_output<<endl;
+	 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
+	 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
+											losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+				//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<
+				//		d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+				//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
+				//getchar();
+	 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+											     minibatch_samples_no_negative.leftCols(current_minibatch_size),
+											     d_Err_t_d_output.leftCols(current_minibatch_size));
+			}
+			
+
+		}
+		//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
+		//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
+		//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
+		//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;		  		 	
+}		
+
+/*
+void DropoutHiddens(int sent_len, int current_minibatch_size ){
+	for (int i=0; i<sent_len; i++){
+		output_dropout_layer_nodes[i].param->fProp()
+		output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,
+										output_dropout_layers[i].fProp_matrix,
+										rng);
+	}
+}
+*/
+
+//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
+//losses from the next layer
+template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
+void computeLossesDropout(const MatrixBase<DerivedOut> &output,
+	 precision_type &log_likelihood,
+	 bool gradient_check,
+	 bool norm_clipping,
+	 loss_function_type loss_function,
+	 multinomial<data_type> &unigram,
+	 int num_noise_samples,
+	 boost::random::mt19937 &rng) {
+	 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
+		int current_minibatch_size = output.cols();
+		//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
+		//Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
+		//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
+		//same dimension in and LSTM. this might not be a good idea
+		//dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
+		//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
+	
+		int sent_len = output.rows(); 
+		//precision_type log_likelihood = 0.;
+	
+		for (int i=sent_len-1; i>=0; i--) {
+			//cerr<<"i is "<<i<<endl;
+			precision_type minibatch_log_likelihood;
+			if (loss_function == LogLoss) {
+				//Applying dropout to the output layer
+				//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+				output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,
+												output_dropout_layer_nodes[i].fProp_matrix,
+												rng);				
+				//First doing fProp for the output layer
+				//The number of columns in scores will be the current minibatch size
+				
+				//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), scores);
+
+		
+		        
+		        start_timer(5);
+		        SoftmaxLogLoss().fProp(scores, 
+		                   output.row(i), 
+		                   probs, 
+		                   minibatch_log_likelihood);
+				//cerr<<"probs is "<<probs<<endl;
+				//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
+		        stop_timer(5);
+		        log_likelihood += minibatch_log_likelihood;
+				//getchar();
+		        ///// Backward propagation
+
+		        start_timer(6);
+		        //SoftmaxLogLoss().bProp(output.row(i), 
+		        //           probs.leftCols(current_minibatch_size), 
+		        //           minibatch_weights);
+   		        SoftmaxLogLoss().bProp(output.row(i), 
+   		                   probs.leftCols(current_minibatch_size), 
+   		                   d_Err_t_d_output);
+				//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size)"<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+		        stop_timer(6);
+		
+
+
+				//Now computing the derivative of the output layer
+				//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
+   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
+								losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+							   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
+
+   		        //output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+   				//		       d_Err_t_d_output.leftCols(current_minibatch_size));	
+  		        output_layer_node.param->updateGradient(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
+  						       d_Err_t_d_output.leftCols(current_minibatch_size));								   
+												   	 		   
+				//Applying dropout to the backpropagated loss
+				//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);
+			} else if (loss_function == NCELoss){
+				//cerr<<"NOT IMPLEMENTED"<<endl;
+				//exit(1);
+				output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
+															output_dropout_layer_nodes[i].fProp_matrix,
+															rng);
+				generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
+				//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
+				//cerr<<"output "<<output<<endl;
+				//cerr<<" output.row(0)" <<output.row(0)<<endl;
+				//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
+				//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+				//cerr<<"output.row(0) "<<output.row(0)<<endl;
+				//getchar();
+				minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
+				//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
+				//getchar();
+				//preparing the minbatch with no zeros for fprop nce
+				minibatch_samples_no_negative = minibatch_samples;
+				for (int col=0; col<current_minibatch_size; col++){ 
+					if(minibatch_samples_no_negative(0,col) == -1){
+						minibatch_samples_no_negative(0,col) = 0;
+					}
+				}
+				//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
+				//getchar();
+				//cerr<<"Score is "<<scores<<endl;
+				scores.setZero();
+				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+												minibatch_samples_no_negative.leftCols(current_minibatch_size),
+												scores);
+				//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
+				nce_loss.fProp(scores, 
+   			 				  minibatch_samples,
+   						   	  probs, 
+   						  	  minibatch_log_likelihood,
+							  this->fixed_partition_function);
+				log_likelihood += minibatch_log_likelihood;
+				//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
+					
+				nce_loss.bProp(probs.leftCols(current_minibatch_size),
+								d_Err_t_d_output);
+				//cerr<<"d_Err_t_d_output "<<d_Err_t_d_output<<endl;
+	 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
+	 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
+											losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
+				//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
+				//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
+				//getchar();
+	 	   		//output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+				//							     minibatch_samples_no_negative.leftCols(current_minibatch_size),
+				//							     d_Err_t_d_output.leftCols(current_minibatch_size));	
+	 	   		output_layer_node.param->updateGradient(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
+											     minibatch_samples_no_negative.leftCols(current_minibatch_size),
+											     d_Err_t_d_output.leftCols(current_minibatch_size));													 
+				//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);								 					
+			}
+			//Applying dropout
+			//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);	
+			output_dropout_layer_nodes[i].param->bProp(losses[i].d_Err_t_d_h_t,output_dropout_layer_nodes[i].bProp_matrix);
+												
+   
+		}
+
+}
+
+
+		
 		template <typename DerivedH> 
 		void getHiddenStates(const MatrixBase<DerivedH> &const_hidden_states,
 							const int max_sent_len,
@@ -957,161 +1565,7 @@ namespace nplm
 			}
 		}
 			
-		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
-		//losses from the next layer
-	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
-		void computeLosses(const MatrixBase<DerivedOut> &output,
-			 precision_type &log_likelihood,
-			 bool gradient_check,
-			 bool norm_clipping,
-			 loss_function_type loss_function,
-			 multinomial<data_type> &unigram,
-			 int num_noise_samples,
-			 boost::random::mt19937 &rng) {
-			 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
-	 			int current_minibatch_size = output.cols();
-	 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-	 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-	 			//same dimension in and LSTM. this might not be a good idea
-	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-				//cerr<<"output is "<<output<<endl;
-	 			int sent_len = output.rows(); 
-	 			//precision_type log_likelihood = 0.;
-				//cerr<<"Sent len is "<<sent_len<<endl;
-	 			for (int i=sent_len-1; i>=0; i--) {
-	 				//cerr<<"i is "<<i<<endl;
-					precision_type minibatch_log_likelihood;
-					/*
-					string state_type = "h_t";
-					printHiddenStates(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), state_type);
-					state_type = "c_t";
-					printHiddenStates(decoder_lstm_nodes[i].c_t.leftCols(current_minibatch_size), state_type);
-					//getchar();
-					*/
-	 				if (loss_function == LogLoss) {
-	 					//First doing fProp for the output layer
-	 					//The number of columns in scores will be the current minibatch size
-						//cerr<<"ht going into loss"<<decoder_lstm_nodes[i-1].h_t.leftCols(current_minibatch_size)<<endl;
-	 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
-	 					//cerr<<"scores.rows "<<scores.rows()<<" scores cols "<<scores.cols()<<endl;
-	 					//then compute the log loss of the objective
-	 					//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;
-	 					//cerr<<"Score is"<<endl;
-	 					//cerr<<scores<<endl;
-				
-	 			        start_timer(5);
-	 			        SoftmaxLogLoss().fProp(scores, 
-	 			                   output.row(i), 
-	 			                   probs, 
-	 			                   minibatch_log_likelihood);
-	 					//cerr<<"probs is "<<probs<<endl;
-						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
-	 			        stop_timer(5);
-	 			        log_likelihood += minibatch_log_likelihood;
-	 					//getchar();
-	 			        ///// Backward propagation
-        
-	 			        start_timer(6);
-	 			        //SoftmaxLogLoss().bProp(output.row(i), 
-	 			        //           probs.leftCols(current_minibatch_size), 
-	 			        //           minibatch_weights);
-	 	   		        SoftmaxLogLoss().bProp(output.row(i), 
-	 	   		                   probs.leftCols(current_minibatch_size), 
-	 	   		                   d_Err_t_d_output);
-						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size)"<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
-	 			        stop_timer(6);
-				
 
-	 					//Oh wow, i have not even been updating the gradient of the output embeddings
-	 					//Now computing the derivative of the output layer
-	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
-	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
-	 					//cerr<<"ouput layer bprop matrix rows"<<output_layer_node.bProp_matrix.rows()<<" cols"<<output_layer_node.bProp_matrix.cols()<<endl;
-	 					//cerr<<"output_layer_node.bProp_matrix"<<output_layer_node.bProp_matrix<<endl;
-	 					//cerr<<"Dimensions if d_Err_t_d_output "<<d_Err_t_d_output.rows()<<","<<d_Err_t_d_output.cols()<<endl;
-	 					//cerr<<"output_layer_node.bProp_matrix "<<output_layer_node.bProp_matrix<<endl;
-	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));									   	 		   
-	 					//cerr<<" i is "<<i<<endl;
-	 					//cerr<<"backprop matrix is "<<output_layer_node.bProp_matrix<<endl;		   	 					
-	 				} else if (loss_function == NCELoss){
-						//cerr<<"NOT IMPLEMENTED"<<endl;
-						//exit(1);
-						
-						generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
-						//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
-						//cerr<<"output "<<output<<endl;
-						//cerr<<" output.row(0)" <<output.row(0)<<endl;
-						//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
-						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
-						//cerr<<"output.row(0) "<<output.row(0)<<endl;
-						//getchar();
-						minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
-						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
-						//getchar();
-						//preparing the minbatch with no zeros for fprop nce
-						minibatch_samples_no_negative = minibatch_samples;
-						for (int col=0; col<current_minibatch_size; col++){ 
-							if(minibatch_samples_no_negative(0,col) == -1){
-								minibatch_samples_no_negative(0,col) = 0;
-							}
-						}
-						/*
-						int num_noise_samples = minibatch_samples.rows()-1;
-						//std::cerr<<"num noise samples are "<<num_noise_samples<<std::endl;
-						precision_type log_num_noise_samples = std::log(num_noise_samples);	
-						for (int row=0; row<minibatch_samples_no_negative.rows(); row++) {
-							for (int col =0; col<minibatch_samples_no_negative.row(row).cols(); col++){
-								int sample = minibatch_samples_no_negative(row,col);
-								cerr<<" minibatch sample "<<sample<<" \nand prob is "<<
-									log_num_noise_samples + unigram->logprob(sample)<<endl;
-							}
-						}
-						*/
-						//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
-						//getchar();
-						//cerr<<"Score is "<<scores<<endl;
-						scores.setZero();
-						output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-														minibatch_samples_no_negative.leftCols(current_minibatch_size),
-														scores);
-						//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
-						//cerr<<"minibatch samples "<<minibatch_samples<<endl;
-						//getchar();
-						nce_loss.fProp(scores, 
-	       			 				  minibatch_samples,
-	       						   	  probs, 
-		   						  	  minibatch_log_likelihood,
-									  this->fixed_partition_function);
-						log_likelihood += minibatch_log_likelihood;
-						//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
-							
-						nce_loss.bProp(probs.leftCols(current_minibatch_size),
-										d_Err_t_d_output);
-						//cerr<<"d_Err_t_d_output "<<d_Err_t_d_output<<endl;
-			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
-			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
-													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<
-						//		d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
-						//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
-						//getchar();
-			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-													     minibatch_samples_no_negative.leftCols(current_minibatch_size),
-													     d_Err_t_d_output.leftCols(current_minibatch_size));
-	 				}
-					
-
-	 			}
-	 			//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-	 			//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-	 			//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-	 			//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;		  		 	
-		}
 		
 		template <typename Derived, typename Engine> 
 		void generateSamples(MatrixBase<Derived> const &minibatch, multinomial<data_size_t> &unigram, Engine &eng){	
@@ -1135,408 +1589,7 @@ namespace nplm
 			//cerr<<"samples are "<<my_minibatch<<endl;
 			//getchar();
 		}
-		//Computing losses separately. Makes more sense because some LSTM units might not output units but will be receiving 
-		//losses from the next layer
-	    template <typename DerivedOut, typename data_type> //, typename DerivedC, typename DerivedH, typename DerivedS>
-		void computeLossesDropout(const MatrixBase<DerivedOut> &output,
-			 precision_type &log_likelihood,
-			 bool gradient_check,
-			 bool norm_clipping,
-			 loss_function_type loss_function,
-			 multinomial<data_type> &unigram,
-			 int num_noise_samples,
-			 boost::random::mt19937 &rng) {
-			 //SoftmaxNCELoss<multinomial<data_type> > &softmax_nce_loss){
-	 			int current_minibatch_size = output.cols();
-	 			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	 			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-	 			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-	 			//same dimension in and LSTM. this might not be a good idea
-	 			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-	 			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-			
-	 			int sent_len = output.rows(); 
-	 			//precision_type log_likelihood = 0.;
-			
-	 			for (int i=sent_len-1; i>=0; i--) {
-	 				//cerr<<"i is "<<i<<endl;
-					precision_type minibatch_log_likelihood;
-	 				if (loss_function == LogLoss) {
-						//Applying dropout to the output layer
-						output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
-	 					//First doing fProp for the output layer
-	 					//The number of columns in scores will be the current minibatch size
-						
-	 					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 
-				
-	 			        
-	 			        start_timer(5);
-	 			        SoftmaxLogLoss().fProp(scores, 
-	 			                   output.row(i), 
-	 			                   probs, 
-	 			                   minibatch_log_likelihood);
-	 					//cerr<<"probs is "<<probs<<endl;
-						//cerr<< " minibatch log likelihood is "<<minibatch_log_likelihood<<endl;	
-	 			        stop_timer(5);
-	 			        log_likelihood += minibatch_log_likelihood;
-	 					//getchar();
-	 			        ///// Backward propagation
-        
-	 			        start_timer(6);
-	 			        //SoftmaxLogLoss().bProp(output.row(i), 
-	 			        //           probs.leftCols(current_minibatch_size), 
-	 			        //           minibatch_weights);
-	 	   		        SoftmaxLogLoss().bProp(output.row(i), 
-	 	   		                   probs.leftCols(current_minibatch_size), 
-	 	   		                   d_Err_t_d_output);
-						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size)"<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
-	 			        stop_timer(6);
-				
-
-
-	 					//Now computing the derivative of the output layer
-	 					//The number of colums in output_layer_node.bProp_matrix will be the current minibatch size
-	 	   		        output_layer_node.param->bProp(d_Err_t_d_output.leftCols(current_minibatch_size),
-										losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-									   //output_layer_node.bProp_matrix.leftCols(current_minibatch_size));	
-
-	 	   		        output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-	 	   						       d_Err_t_d_output.leftCols(current_minibatch_size));	
-														   	 		   
-						//Applying dropout to the backpropagated loss
-						//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);
-	 				} else if (loss_function == NCELoss){
-						//cerr<<"NOT IMPLEMENTED"<<endl;
-						//exit(1);
-						output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
-						generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
-						//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
-						//cerr<<"output "<<output<<endl;
-						//cerr<<" output.row(0)" <<output.row(0)<<endl;
-						//minibatch_samples.row(0) = output.row(0); //The first item is the minbiatch instance
-						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
-						//cerr<<"output.row(0) "<<output.row(0)<<endl;
-						//getchar();
-						minibatch_samples.block(0, 0, 1, current_minibatch_size) = output.row(i);
-						//cerr<<"minibatch_samples "<<minibatch_samples<<endl;
-						//getchar();
-						//preparing the minbatch with no zeros for fprop nce
-						minibatch_samples_no_negative = minibatch_samples;
-						for (int col=0; col<current_minibatch_size; col++){ 
-							if(minibatch_samples_no_negative(0,col) == -1){
-								minibatch_samples_no_negative(0,col) = 0;
-							}
-						}
-						//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
-						//getchar();
-						//cerr<<"Score is "<<scores<<endl;
-						scores.setZero();
-						output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-														minibatch_samples_no_negative.leftCols(current_minibatch_size),
-														scores);
-						//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
-						nce_loss.fProp(scores, 
-	       			 				  minibatch_samples,
-	       						   	  probs, 
-		   						  	  minibatch_log_likelihood,
-									  this->fixed_partition_function);
-						log_likelihood += minibatch_log_likelihood;
-						//cerr<<"probs.leftCols(current_minibatch_size) "<<probs.leftCols(current_minibatch_size)<<endl;
-							
-						nce_loss.bProp(probs.leftCols(current_minibatch_size),
-										d_Err_t_d_output);
-						//cerr<<"d_Err_t_d_output "<<d_Err_t_d_output<<endl;
-			 	   		output_layer_node.param->bProp(minibatch_samples_no_negative.leftCols(current_minibatch_size),
-			 	   									d_Err_t_d_output.leftCols(current_minibatch_size),
-													losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size));
-						//cerr<<"d_Err_t_d_output.leftCols(current_minibatch_size) "<<d_Err_t_d_output.leftCols(current_minibatch_size)<<endl;
-						//cerr<<"losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size) "<<losses[i].d_Err_t_d_h_t.leftCols(current_minibatch_size)<<endl;
-						//getchar();
-			 	   		output_layer_node.param->updateGradient(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
-													     minibatch_samples_no_negative.leftCols(current_minibatch_size),
-													     d_Err_t_d_output.leftCols(current_minibatch_size));	
-						//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);								 					
-	 				}
-					//Applying dropout
-					output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);		
-		   
-	 			}
- 	
-		}
-		
-	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
-	    void bPropDecoder(const MatrixBase<DerivedOut> &output_data,
-			 bool gradient_check,
-			 bool norm_clipping)
-	    {	
-		
-			//cerr<<"In backprop..."<<endl;
-			int current_minibatch_size = output_data.cols();
-			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-			//same dimension in and LSTM. this might not be a good idea
-			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-			
-			int output_sent_len = output_data.rows(); 
-			//precision_type log_likelihood = 0.;
-			
-			//first getting decoder loss
-			for (int i=output_sent_len-1; i>=0; i--) {
-				//cerr<<"i in decoder bprop is "<<i<<endl;
-				//getchar();
-				// Now calling backprop for the LSTM nodes
-				//cerr<<"losses[i].d_Err_t_d_h_t "<<losses[i].d_Err_t_d_h_t<<endl;
-				//getchar();
-				if (i==0 && output_sent_len-1 > 0) {
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
-							   //init_h,
-				   			   //init_c,
-								losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);	
-				} else if (i == output_sent_len-1) {	
-
-					//cerr<<"previous ht is "<<decoder_lstm_nodes[i].h_t_minus_one<<endl;
-					//cerr<<"previous ct is "<<decoder_lstm_nodes[i].c_t_minus_one<<endl;
-					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
-							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   dummy_zero,
-							   gradient_check,
-							   norm_clipping);
-		
-				} else if (i > 0) {
-					
-				    decoder_lstm_nodes[i].bProp(output_data.row(i),
-							   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-				   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);		
-					   						
-				} 		   
-				//cerr<<" decoder_lstm_nodes[i].d_Err_t_to_n_d_h_tMinusOne "<<decoder_lstm_nodes[i].d_Err_t_to_n_d_h_tMinusOne<<endl;
-				//cerr<<" decoder_lstm_nodes[i].d_Err_t_to_n_d_c_tMinusOne "<<decoder_lstm_nodes[i].d_Err_t_to_n_d_c_tMinusOne<<endl;
-				//getchar();
-			}
-
-	  }
-	  		
-	    // Dense version (for standard log-likelihood)
-	    template <typename DerivedOut> //, typename DerivedC, typename DerivedH, typename DerivedS>
-	    void bPropDecoderDropout(const MatrixBase<DerivedOut> &output_data,
-			 bool gradient_check,
-			 bool norm_clipping)
-	    {			
-			//cerr<<"In backprop..."<<endl;
-			int current_minibatch_size = output_data.cols();
-			//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-			Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-			//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-			//same dimension in and LSTM. this might not be a good idea
-			dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-			dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-			
-			int output_sent_len = output_data.rows(); 
-			//precision_type log_likelihood = 0.;
-			
-			//first getting decoder loss
-			for (int i=output_sent_len-1; i>=0; i--) {
-
-				if (i==0 && output_sent_len-1 > 0) {
-					
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
-								losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);	
-				} else if (i == output_sent_len-1) {	
-
-
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
-							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   dummy_zero, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-				   			   dummy_zero,
-							   gradient_check,
-							   norm_clipping);
-		
-				} else if (i > 0) {
-					
-				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
-
-							   losses[i].d_Err_t_d_h_t,
-							   //output_layer_node.bProp_matrix,
-				   			   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-							   decoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-							   gradient_check,
-							   norm_clipping);		
-					   						
-				} 		   
-
-			}
-
-	  }
-
-
-	  
-  // Dense version (for standard log-likelihood)
-  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
-  void bPropEncoder(const MatrixBase<DerivedIn> &input_data,
-	 bool gradient_check,
-	 bool norm_clipping,
-	 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
-	 //const MatrixBase<DerivedC> &init_c,
-	 //const MatrixBase<DerivedH> &init_h,
-	 //const Eigen::ArrayBase<DerivedS> &sequence_cont_indices) 
-  {	
-
-	//cerr<<"In backprop..."<<endl;
-	int current_minibatch_size = input_data.cols();
-	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-	//same dimension in and LSTM. this might not be a good idea
-	dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-	//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-	
-	int input_sent_len = input_data.rows();
-
-	//Now backpropping through the encoder
-
-	//cerr<<"log likelihood base e is"<<log_likelihood<<endl;
-	//cerr<<"log likelihood base 10 is"<<log_likelihood/log(10.)<<endl;
-	//cerr<<"The cross entropy in base 10 is "<<log_likelihood/(log(10.)*sent_len)<<endl;
-	//cerr<<"The training perplexity is "<<exp(-log_likelihood/sent_len)<<endl;
-	//first getting decoder loss
-	//cerr<<"dummy zero is "<<dummy_zero<<endl;
-	for (int i=input_sent_len-1; i>=0; i--) {
-		//getchar();
-		// Now calling backprop for the LSTM nodes
-		if (i == input_sent_len-1) {	
-			
-			//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
-			encoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));			
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne<<endl;
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne<<endl;												
-		    encoder_lstm_nodes[i].bProp(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);
-
-		} else{
-			encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));		
-																	
-		    encoder_lstm_nodes[i].bProp(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);								   
-			   						
-		} 		   
-   
-	}
-} 	  
-
-  // Dense version (for standard log-likelihood)
-  template <typename DerivedIn, typename DerivedS> //, typename DerivedC, typename DerivedH, typename DerivedS>
-  void bPropEncoderDropout(const MatrixBase<DerivedIn> &input_data,
-	 bool gradient_check,
-	 bool norm_clipping,
-	 const Eigen::ArrayBase<DerivedS> &sequence_cont_indices)
-  {	
-
-	//cerr<<"In backprop..."<<endl;
-	int current_minibatch_size = input_data.cols();
-	//cerr<<"Current minibatch size is "<<current_minibatch_size<<endl;
-	Matrix<precision_type,Dynamic,Dynamic> dummy_zero,dummy_ones;
-	//Right now, I'm setting the dimension of dummy zero to the output embedding dimension becase everything has the 
-	//same dimension in and LSTM. this might not be a good idea
-	dummy_zero.setZero(output_layer_node.param->n_inputs(),minibatch_size);
-	//dummy_ones.setOnes(output_layer_node.param->n_inputs(),minibatch_size);
-	
-	int input_sent_len = input_data.rows();
-
-	//Now backpropping through the encoder
-
-
-	for (int i=input_sent_len-1; i>=0; i--) {
-		//getchar();
-		// Now calling backprop for the LSTM nodes
-		if (i == input_sent_len-1) {	
-			
-			//cerr<<"previous ct is "<<encoder_lstm_nodes[i-1].c_t<<endl;
-			encoder_lstm_nodes[i].filterStatesAndErrors(decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-														decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));			
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne<<endl;
-			//cerr<<"decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne is "<<decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne<<endl;												
-		    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_c_tMinusOne, //for the last lstm node, I just need to supply a bunch of zeros as the gradient of the future
-		   			   decoder_lstm_nodes[0].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);
-
-		} else{
-			encoder_lstm_nodes[i].filterStatesAndErrors(encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-														encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-														sequence_cont_indices.row(i));		
-																	
-		    encoder_lstm_nodes[i].bPropDropout(input_data.row(i),
-					   //(encoder_lstm_nodes[i-1].h_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-		   			   //(encoder_lstm_nodes[i-1].c_t.array().rowwise()*sequence_cont_indices.row(i)).matrix(),
-					   dummy_zero,
-					   //output_layer_node.bProp_matrix,
-		   			   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_c_tMinusOne,
-					   encoder_lstm_nodes[i+1].d_Err_t_to_n_d_h_tMinusOne,
-					   gradient_check,
-					   norm_clipping);								   
-			   						
-		} 		   
-   
-	}
-} 
 	 precision_type getGradSqdNorm(bool arg_run_lm){
  		//cerr<<"current minibatch size is "<<current_minibatch_size<<endl;
  		//cerr<<"updating params "<<endl;
@@ -1766,11 +1819,15 @@ namespace nplm
 				//cerr<<"i in gradient check is "<<i<<endl;
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
-					output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);					
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
-										scores.leftCols(current_minibatch_size));
+					//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
+																output_dropout_layer_nodes[i].fProp_matrix,
+																rng);					
+					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+					//					scores.leftCols(current_minibatch_size));
 
-	
+					output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix, 
+										scores.leftCols(current_minibatch_size));	
 			        precision_type minibatch_log_likelihood;
 			        start_timer(5);
 			        SoftmaxLogLoss().fProp(scores.leftCols(current_minibatch_size), 
@@ -1784,7 +1841,10 @@ namespace nplm
 					//cerr<<"NOT IMPLEMENTED"<<endl;
 					//exit(1);
 					precision_type minibatch_log_likelihood;
-					output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+					//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
+					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
+															   output_dropout_layer_nodes[i].fProp_matrix,
+															   rng);
 					generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
 					//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
 					//cerr<<"output "<<output<<endl;
@@ -1803,10 +1863,12 @@ namespace nplm
 					}
 					//cerr<<"minibatch_samples_no_negative "<<minibatch_samples_no_negative<<endl;
 					//getchar();
-					output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+					//								minibatch_samples_no_negative.leftCols(current_minibatch_size),
+					//								scores);
+					output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), 
 													minibatch_samples_no_negative.leftCols(current_minibatch_size),
 													scores);
-
 					nce_loss.fProp(scores, 
        			 				  minibatch_samples,
        						   	  probs, 
