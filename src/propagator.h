@@ -470,9 +470,7 @@ namespace nplm
  							   init_c,
  							   gradient_check,
  							   norm_clipping);	
-				}else if (i == 0) {	
-
-
+				} else if (i == 0 && output_sent_len == 1) {	
 				    decoder_lstm_nodes[i].bProp(output_data.row(i),
 							   losses[i].d_Err_t_d_h_t,
 							   //output_layer_node.bProp_matrix,
@@ -547,9 +545,7 @@ namespace nplm
  							   init_c,
  							   gradient_check,
  							   norm_clipping);	
-				} else if (i == 0) {	
-
-
+				} else if (i == 0 && output_sent_len == 1) {	
 				    decoder_lstm_nodes[i].bPropDropout(output_data.row(i),
 							   //losses[i].d_Err_t_d_h_t,
 							   output_dropout_layer_nodes[i].bProp_matrix,

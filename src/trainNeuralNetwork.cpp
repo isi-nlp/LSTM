@@ -356,7 +356,11 @@ int main(int argc, char** argv)
 
 	//Even sentences are input
 	if (arg_run_lm == 0) {
-		readEvenSentFile(myParam.training_sent_file, word_training_input_sent, total_input_tokens, 1, 0, myParam.reverse_input);
+		readEvenSentFile(myParam.training_sent_file, 
+				word_training_input_sent, total_input_tokens, 
+				1, 
+				0, 
+				myParam.reverse_input);
 		if (myParam.input_words_file == "") {
 		   	//input_vocab.insert_word("<s>");
 			createVocabulary(word_training_input_sent, input_vocab);
@@ -370,7 +374,12 @@ int main(int argc, char** argv)
 	}
 	
 	//Reading output 
-	readOddSentFile(myParam.training_sent_file, word_training_output_sent, total_output_tokens,1,1, 0); //We do not reverse the output
+	readOddSentFile(myParam.training_sent_file, 
+				word_training_output_sent, 
+				total_output_tokens,
+				1,
+				1, 
+				0); //We do not reverse the output
 				
 	int decoder_input_vocab_size;
 	int decoder_output_vocab_size;
@@ -526,7 +535,7 @@ int main(int argc, char** argv)
         myParam.input_embedding_dimension,
         myParam.num_hidden,
         myParam.output_embedding_dimension);
-
+    //cerr<<"myParam.output_vocab_size "<<myParam.output_vocab_size
     nn.initialize(rng,
         myParam.init_normal,
         myParam.init_range,
@@ -831,12 +840,6 @@ int main(int argc, char** argv)
 			Map< Matrix<int, Dynamic, Dynamic> >  decoder_training_input_sent_data (minibatch_decoder_input_sentences.data(),
 																						max_output_sent_len,
 																						current_minibatch_size);	
-			/*																			
-			for (int sent_id=0; sent_id<decoder_training_output_sent_data.cols(); sent_id++){
-				cerr<<"decoder_training_output_sent_data.col(sent_id) "<<decoder_training_output_sent_data.col(sent_id)<<endl;					
-			}															
-			getchar();	
-			*/
 			//cerr<<"decoder_training_input_sent_data "<<decoder_training_input_sent_data<<endl;		
 								
 			minibatch_output_tokens =0;	
@@ -962,7 +965,8 @@ int main(int argc, char** argv)
 				}		
 				if (arg_global_norm == 1){
 					//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
-					precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+					//precision_type minibatch_scale = max_input_sent_len + max_output_sent_len;
+					precision_type minibatch_scale = current_minibatch_size;
 					precision_type model_squared_norm = prop.getGradSqdNorm(arg_run_lm);
 					precision_type final_scale = 1.0f/minibatch_scale;
 					//cerr<<"model squared norm is "<<model_squared_norm<<endl;
@@ -991,18 +995,7 @@ int main(int argc, char** argv)
 							loss_function,
 							arg_run_lm);	
 				}
-				//Updating using global grad norms	
-					/*												
-				prop.updateParams(adjusted_learning_rate,
-							//max_sent_len,
-							max_input_sent_len + max_output_sent_len,
-					  		current_momentum,
-							myParam.L2_reg,
-							grad_scale,
-							loss_function,
-							arg_run_lm);				
-				//Resetting the gradients
-					*/
+
 				prop.resetGradient();
 	      //}
 		  

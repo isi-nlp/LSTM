@@ -636,6 +636,24 @@ void writeMatrix(const Eigen::MatrixBase<Derived> &param, std::ofstream &OUT)
     }
 }
 
+
+template <typename Derived, typename DerivedS>
+void zeroOutState(const Eigen::MatrixBase<Derived> &const_state,
+						const Eigen::ArrayBase<DerivedS> &sequence_cont_indices){
+	int current_minibatch_size = sequence_cont_indices.cols();						
+	UNCONST(Derived, const_state, state);
+	//std::cerr<<" state "<<state<<std::endl;
+	#pragma omp parallel for 
+	for (int index=0; index<current_minibatch_size; index++){ 
+		//UNCONST(DerivedS,const_sequence_cont_indices,sequence_cont_indices);		
+		//cerr<<"current minibatch size "<<current_minibatch_size<<endl;
+		if (sequence_cont_indices(index) == 0) {
+			state.col(index).setZero(); 	
+		}		
+	}
+	//std::cerr<<" after state "<<state<<std::endl;			
+}
+
 template <typename Derived>
 double logsum(const Eigen::MatrixBase<Derived> &v)
 {

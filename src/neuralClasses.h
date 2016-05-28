@@ -812,6 +812,8 @@ template <typename DerivedIn, typename DerivedGOut>
   }
   
   precision_type getGradSqdNorm(){
+    //If the udpate map has size 0, then we used NCE and the grad norm
+    //comes from the words that are being updated. 
 	  if (update_map.size() == 0) {
 		  return (W_gradient.squaredNorm()+b_gradient.squaredNorm());
 	  } else {

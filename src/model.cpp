@@ -715,8 +715,8 @@ precision_type model::getGradSqdNorm(){
 						o_t.getGradSqdNorm() +
 						f_t.getGradSqdNorm() +
 						i_t.getGradSqdNorm() +
-						tanh_c_prime_t.getGradSqdNorm() +
-						input->getGradSqdNorm();		
+						tanh_c_prime_t.getGradSqdNorm();// +
+						//input->getGradSqdNorm();		
 		//cerr<<endl<<"model grad squared norm is "<<model_grad_squared_norm<<endl;
 		return(model_grad_squared_norm);
 	}
