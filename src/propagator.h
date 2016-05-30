@@ -383,7 +383,7 @@ namespace nplm
 				const Eigen::ArrayBase<DerivedS> &sequence_cont_indices,
 				Engine &eng)
 	    {
-			cerr<<"In fprop encoder dropout"<<endl;
+			//cerr<<"In fprop encoder dropout"<<endl;
 			//cerr<<"input_data.rows() "<<input_data.rows()<<endl;
 			//cerr<<"input_data "<<input_data<<endl;
 			UNCONST(DerivedC, const_current_c, current_c);
