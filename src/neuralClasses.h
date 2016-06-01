@@ -86,14 +86,14 @@ class Dropout_layer
 		//cerr<<"Before dropout the fProp input is"<<input<<endl;
 		dropout(input,
 				output,
-				this->dropout_mask);		
+				this->dropout_mask.leftCols(input.cols()));		
 		//cerr<<"After dropout the fProp input is"<<input<<endl;
 		//UNCONST(Derived, input, my_input);
 		//my_input.array().noalias() *= dropout_mask.array();
 		
 	}
 	int n_inputs(){ return dropout_mask.rows();}
-	int n_outputs() {return dropout_mask.cols();}
+	int n_outputs() {return dropout_mask.rows();}
 	//Its possible that this might just want to be used a function by itself
 	template<typename DerivedIn, typename DerivedOut, typename DropMask>
 	static void dropout(const MatrixBase<DerivedIn> &input,

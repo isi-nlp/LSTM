@@ -919,14 +919,15 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 			if (loss_function == LogLoss) {
 				//Applying dropout to the output layer
 				//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
-				output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,
-												output_dropout_layer_nodes[i].fProp_matrix,
+				output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+												output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
 												rng);				
 				//First doing fProp for the output layer
 				//The number of columns in scores will be the current minibatch size
 				
 				//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
-				output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), scores);
+				output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), 
+						scores);
 
 		
 		        
@@ -970,8 +971,11 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 			} else if (loss_function == NCELoss){
 				//cerr<<"NOT IMPLEMENTED"<<endl;
 				//exit(1);
-				output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
-															output_dropout_layer_nodes[i].fProp_matrix,
+				//decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size)
+				//cerr<<"decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size) "<<
+				//	decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size)<<endl;
+				output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+															output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
 															rng);
 				generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
 				//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
@@ -995,9 +999,10 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 				//getchar();
 				//cerr<<"Score is "<<scores<<endl;
 				scores.setZero();
-				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
+				output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), 
 												minibatch_samples_no_negative.leftCols(current_minibatch_size),
 												scores);
+				//cerr<<"scores "<<scores<<endl;
 				//cerr<<"this->fixed_partition_function "<<this->fixed_partition_function<<endl;
 				nce_loss.fProp(scores, 
    			 				  minibatch_samples,
@@ -1026,7 +1031,8 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 			}
 			//Applying dropout
 			//output_dropout_layers[i].bProp(losses[i].d_Err_t_d_h_t);	
-			output_dropout_layer_nodes[i].param->bProp(losses[i].d_Err_t_d_h_t,output_dropout_layer_nodes[i].bProp_matrix);
+			output_dropout_layer_nodes[i].param->bProp(losses[i].d_Err_t_d_h_t,
+					output_dropout_layer_nodes[i].bProp_matrix);
 												
    
 		}
@@ -1816,8 +1822,8 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 				//First doing fProp for the output layer
 				if (loss_function == LogLoss) {
 					//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
-					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
-																output_dropout_layer_nodes[i].fProp_matrix,
+					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+																output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
 																rng);					
 					//output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), 
 					//					scores.leftCols(current_minibatch_size));
@@ -1838,8 +1844,10 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 					//exit(1);
 					precision_type minibatch_log_likelihood;
 					//output_dropout_layers[i].fProp(decoder_lstm_nodes[i].h_t,rng);
-					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t,
-															   output_dropout_layer_nodes[i].fProp_matrix,
+					//cerr<<"decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size) "<<
+					//	decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size)<<endl;
+					output_dropout_layer_nodes[i].param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size),
+															   output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size),
 															   rng);
 					generateSamples(minibatch_samples.block(1,0, num_noise_samples,current_minibatch_size), unigram, rng);
 					//cerr<<"minibatch_samples.rows() "<<minibatch_samples.rows()<<" minibatch_samples.cols() "<<minibatch_samples.cols()<<endl;
@@ -1865,6 +1873,7 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 					output_layer_node.param->fProp(output_dropout_layer_nodes[i].fProp_matrix.leftCols(current_minibatch_size), 
 													minibatch_samples_no_negative.leftCols(current_minibatch_size),
 													scores);
+					//cerr<<"scores "<<scores<<endl;
 					nce_loss.fProp(scores, 
        			 				  minibatch_samples,
        						   	  probs, 
@@ -1934,6 +1943,8 @@ void computeLossesDropout(const MatrixBase<DerivedOut> &output,
 			for (int i=sent_len-1; i>=0; i--) {
 				//cerr<<"i is "<<i<<endl;
 				//First doing fProp for the output layer
+				cerr<<"decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size)"<<
+					decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size)<<endl;
 				output_layer_node.param->fProp(decoder_lstm_nodes[i].h_t.leftCols(current_minibatch_size), scores);
 				//then compute the log loss of the objective
 				//cerr<<"probs dimension is "<<probs.rows()<<" "<<probs.cols()<<endl;

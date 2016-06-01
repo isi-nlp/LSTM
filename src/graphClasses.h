@@ -590,7 +590,7 @@ public:
 		tanh_c_t_node.param->fProp(c_t,tanh_c_t_node.fProp_matrix);
 		//<<"tanh_c_t_node.fProp_matrix is "<<tanh_c_t_node.fProp_matrix<<endl;
 		h_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();	
-		m_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
+		//m_t.array() = o_t_node.fProp_matrix.array()*tanh_c_t_node.fProp_matrix.array();		
 		//cerr<<"h_t is "<<h_t<<endl;
 		//cerr<<"m_t is "<<m_t<<endl;
 
